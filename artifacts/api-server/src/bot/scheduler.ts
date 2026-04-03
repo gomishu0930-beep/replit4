@@ -16,7 +16,7 @@ async function postItem(item: any, type: string, label: string) {
   console.log(`  📝 [${label}] 投稿処理開始: ${item.title?.slice(0, 30)}`);
 
   const topPatterns = getTopPatterns(5);
-  const text = await generateTweetText(item, type);
+  const text = await generateTweetText(item, type, topPatterns);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);

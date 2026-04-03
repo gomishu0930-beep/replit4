@@ -3,6 +3,7 @@ import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleI
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText } from '../bot/ai.js';
 import { recordPost, getTopPatterns } from '../bot/storage.js';
+
 import { refreshRecentMetrics } from '../bot/analytics.js';
 
 const router = Router();
@@ -12,7 +13,8 @@ const TRIGGER_SECRET = process.env.TRIGGER_SECRET ?? 'fanza-bot-trigger';
 let isPosting = false;
 
 async function postItem(item: any, type: string) {
-  const text = await generateTweetText(item, type);
+  const topPatterns = getTopPatterns(5);
+  const text = await generateTweetText(item, type, topPatterns);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
