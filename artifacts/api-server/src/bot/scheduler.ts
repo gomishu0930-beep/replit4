@@ -69,10 +69,10 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
-  // 08:30 JST — 素人 3件
-  cron.schedule('30 8 * * *', async () => {
+  // 09:00 JST — 素人 3件
+  cron.schedule('0 9 * * *', async () => {
     const items = await getAmateurItems(3);
-    await postItems(items, 'amateur', '08:30 素人');
+    await postItems(items, 'amateur', '09:00 素人');
   }, { timezone: 'Asia/Tokyo' });
 
   // 12:00 JST — ランキング 3件
@@ -112,7 +112,7 @@ export function startScheduler() {
   console.log('╠══════════════════════════════════════════╣');
   console.log('║  06:00 JST  外部パターン収集             ║');
   console.log('║  07:40 JST  【臨時テスト】外部パターン収集║');
-  console.log('║  08:30 JST  素人 3件                     ║');
+  console.log('║  09:00 JST  素人 3件                     ║');
   console.log('║  12:00 JST  ランキング 3件               ║');
   console.log('║  15:00 JST  セール品 3件                 ║');
   console.log('║  18:00 JST  バズ 3件 + 指標更新          ║');
