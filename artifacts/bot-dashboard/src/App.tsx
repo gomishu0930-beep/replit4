@@ -80,20 +80,24 @@ function formatDate(iso: string) {
 
 function typeLabel(type: string) {
   const map: Record<string, string> = {
+    amateur: "素人",
     rank: "ランキング",
     sale: "セール",
     buzz: "バズ",
     random: "ランダム",
+    external: "外部収集",
   };
   return map[type] ?? type;
 }
 
 function typeBadgeClass(type: string) {
   const map: Record<string, string> = {
+    amateur: "bg-rose-500/20 text-rose-300 border-rose-500/30",
     rank: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
     sale: "bg-green-500/20 text-green-300 border-green-500/30",
     buzz: "bg-pink-500/20 text-pink-300 border-pink-500/30",
     random: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+    external: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   };
   return map[type] ?? "bg-gray-500/20 text-gray-300 border-gray-500/30";
 }

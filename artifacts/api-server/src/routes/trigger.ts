@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleImages } from '../bot/fanza.js';
+import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
@@ -77,6 +77,12 @@ router.post('/trigger/buzz', auth, async (_req, res) => {
 // 21:00 JST ランダム
 router.post('/trigger/random', auth, async (_req, res) => {
   const result = await runJob('random', '21:00 ランダム', () => getRandomItems(3));
+  res.json(result);
+});
+
+// 08:30 JST 素人
+router.post('/trigger/amateur', auth, async (_req, res) => {
+  const result = await runJob('amateur', '08:30 素人', () => getAmateurItems(3));
   res.json(result);
 });
 

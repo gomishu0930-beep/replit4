@@ -58,6 +58,13 @@ export async function getRandomItems(count = 3) {
   return pickN(items, count);
 }
 
+export async function getAmateurItems(count = 3) {
+  const sorts = ['rank', 'review', 'date'];
+  const sort = sorts[Math.floor(Math.random() * sorts.length)];
+  const items = await fetchItems({ sort, keyword: '素人', hits: '50' });
+  return pickN(items, count);
+}
+
 export function getSampleImages(item: any): string[] {
   const samples: string[] = item.sampleImageURL?.sample_l?.image ?? [];
   const main: string | null = item.imageURL?.large ?? item.imageURL?.list ?? null;

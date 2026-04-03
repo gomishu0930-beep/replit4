@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { mkdirSync } from 'fs';
 import { resolve } from 'path';
 
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleImages } from './fanza.js';
+import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from './storage.js';
@@ -69,6 +69,12 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
+  // 08:30 JST — 素人 3件
+  cron.schedule('30 8 * * *', async () => {
+    const items = await getAmateurItems(3);
+    await postItems(items, 'amateur', '08:30 素人');
+  }, { timezone: 'Asia/Tokyo' });
+
   // 12:00 JST — ランキング 3件
   cron.schedule('0 12 * * *', async () => {
     const items = await getRankingItems(3);
@@ -106,6 +112,7 @@ export function startScheduler() {
   console.log('╠══════════════════════════════════════════╣');
   console.log('║  06:00 JST  外部パターン収集             ║');
   console.log('║  07:40 JST  【臨時テスト】外部パターン収集║');
+  console.log('║  08:30 JST  素人 3件                     ║');
   console.log('║  12:00 JST  ランキング 3件               ║');
   console.log('║  15:00 JST  セール品 3件                 ║');
   console.log('║  18:00 JST  バズ 3件 + 指標更新          ║');

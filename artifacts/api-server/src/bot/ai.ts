@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 const TEMPLATES: Record<string, string[]> = {
+  amateur: [
+    '🔞💕【素人】\n{actress}ちゃんの本物感がたまらない✨\n「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価🔥\nリンクはリプ欄へ👇\n#FANZA #fanza #素人',
+    '🔞🎀 素人娘の破壊力がすごい\n出演：{actress}\n「{shortTitle}」\n\n⭐{reviewAvg}点（{reviewCount}件）の人気作💫\n詳細はリプ欄から👇\n#FANZA #fanza #素人',
+    '🔞🌸 素人系で今一番アツい作品\n{actress}「{shortTitle}」\n\nリアルな雰囲気がたまらない💓\nレビュー平均{reviewAvg}点の高評価作品🏆\n#FANZA #fanza #素人',
+  ],
   rank: [
     '🔞【ランキング{rank}位】\n{actress}主演の話題作✨\n「{shortTitle}」\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🔥\nサンプル画像チェック必須👀\n#FANZA #fanza #{genreTag}',
     '🔞📊 今週の注目作品！\n{actress}が魅せる圧巻のパフォーマンス💥\n「{shortTitle}」\n⭐{reviewAvg}点（{reviewCount}件）の超高評価\nランキング上位常連の名作🏆\n#FANZA #fanza #{genreTag}',
@@ -72,6 +77,7 @@ function buildTemplateText(item: any, type: string): string {
 
 function buildTypeLabel(type: string): string {
   const map: Record<string, string> = {
+    amateur: '素人系・リアル感のある作品',
     rank: 'ランキング上位作品',
     sale: 'セール品・お得な作品',
     buzz: '話題沸騰・高評価作品',

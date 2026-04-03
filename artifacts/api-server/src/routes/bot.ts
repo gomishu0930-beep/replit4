@@ -11,6 +11,8 @@ router.get('/bot/status', (_req, res) => {
     account: '@ero_senpai1',
     schedule: [
       { time: '06:00 JST', type: 'external', label: '外部パターン収集' },
+      { time: '07:40 JST', type: 'external', label: '【臨時テスト】外部パターン収集' },
+      { time: '08:30 JST', type: 'amateur', label: '素人' },
       { time: '12:00 JST', type: 'rank', label: 'ランキング' },
       { time: '15:00 JST', type: 'sale', label: 'セール' },
       { time: '18:00 JST', type: 'buzz', label: 'バズ + 指標更新' },
