@@ -41,10 +41,7 @@ export async function uploadImages(imageUrls) {
  * @returns {string} tweetId
  */
 export async function postTweet(text, mediaIds = []) {
-  const params = {
-    text,
-    possibly_sensitive: true,
-  };
+  const params = { text };
   if (mediaIds.length > 0) {
     params.media = { media_ids: mediaIds };
   }
