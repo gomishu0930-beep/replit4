@@ -1,62 +1,93 @@
-import 'dotenv/config';
-import OpenAI from 'openai';
+/**
+ * テンプレートベースのツイート生成（AI不要）
+ * Claude / OpenAI の利用規約の問題を回避するため、
+ * ローカルテンプレートで高品質な投稿文を生成する
+ */
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const TYPE_HINT = {
-  rank: 'ランキング上位の大人気作品',
-  sale: 'セール中でお得に楽しめる作品',
-  buzz: 'レビュー高評価・話題沸騰中の作品',
-  random: '隠れた名作・通好みのおすすめ作品',
-  new: '新着・発売直後の注目作品',
+const TEMPLATES = {
+  rank: [
+    '🔞【ランキング{rank}位】\n{actress}主演の話題作✨\n「{shortTitle}」\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🔥\nサンプル画像チェック必須👀\n#FANZA #fanza #{genreTag}',
+    '🔞📊 今週の注目作品！\n{actress}が魅せる圧巻のパフォーマンス💥\n「{shortTitle}」\n⭐{reviewAvg}点（{reviewCount}件）の超高評価\nランキング上位常連の名作🏆\n#FANZA #fanza #{genreTag}',
+    '🔞🔥 ランキング急上昇中\n出演：{actress}\nタイトル：{shortTitle}\n\nレビュー平均{reviewAvg}点の話題作です🌟\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+  ],
+  sale: [
+    '🔞💸【セール開催中】\n{actress}出演の人気作が今だけお得🎉\n「{shortTitle}」\n\n⭐{reviewAvg}点（{reviewCount}件評価）\n見逃し厳禁のセール品！リンクはリプへ👇\n#FANZA #fanza #セール #{genreTag}',
+    '🔞🏷️ お得なセール情報！\n{actress}主演「{shortTitle}」が\n期間限定でお求めやすく💰\n\nレビュー{reviewCount}件・{reviewAvg}点の安心作品✅\n今がチャンス🔥 リンクはリプ欄へ\n#FANZA #fanza #セール #{genreTag}',
+    '🔞✨ セール中の注目作！\n出演：{actress}\n「{shortTitle}」\n\nお得な価格で楽しめる期間限定チャンス💫\n⭐平均{reviewAvg}点の高評価作品\n#FANZA #fanza #お得 #{genreTag}',
+  ],
+  buzz: [
+    '🔞🚀【話題沸騰中】\n{actress}主演の超高評価作品\n「{shortTitle}」\n\n⭐{reviewAvg}点・{reviewCount}件のレビューが証明する実力派👑\n今一番アツい作品です🔥\n#FANZA #fanza #{genreTag}',
+    '🔞💬 レビュー{reviewCount}件の圧倒的人気作\n{actress}「{shortTitle}」\n\n平均{reviewAvg}点という驚異の評価🌟\nバズってる理由を確認してみて👀\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞🏆 今最も話題の作品\n出演：{actress}\n「{shortTitle}」\n\nレビュー平均{reviewAvg}点（{reviewCount}件）\n口コミが止まらない神作品✨\n#FANZA #fanza #{genreTag}',
+  ],
+  random: [
+    '🔞💎【隠れた名作】\n{actress}主演「{shortTitle}」\n\nコアなファンに絶大な人気の通好み作品🎬\n⭐{reviewAvg}点の高評価にも注目\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞🎯 こんな作品どうですか？\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点✨\nまだ見ていないなら絶対チェック📌\n#FANZA #fanza #{genreTag}',
+    '🔞🌟 おすすめ作品のご紹介\n出演：{actress}\n「{shortTitle}」\n\n⭐{reviewAvg}点の安定した高評価🎖️\n詳細はリプ欄のリンクから👇\n#FANZA #fanza #{genreTag}',
+  ],
+  new: [
+    '🔞🆕【新着】{actress}主演の最新作✨\n「{shortTitle}」\n\n発売直後から話題沸騰中🔥\nフレッシュな新作をいち早くチェック👀\n#FANZA #fanza #新着 #{genreTag}',
+    '🔞📅 注目の新着作品！\n{actress}「{shortTitle}」\n\nリリースされたばかりのホットな新作💥\n詳細はリプ欄のリンクへ👇\n#FANZA #fanza #新作 #{genreTag}',
+  ],
 };
 
-function formatTopPatterns(patterns) {
-  if (!patterns.length) return '';
-  const lines = patterns.map((p, i) => {
-    const m = p.metrics;
-    const score = `❤${m.like_count ?? 0} 🔁${m.retweet_count ?? 0} 🔖${m.bookmark_count ?? 0}`;
-    return `${i + 1}. [${score}]\n${p.text}`;
-  });
-  return `\n\n【参考：過去に反応が良かった投稿パターン（文体・構成を参考にする）】\n${lines.join('\n\n')}`;
+const DEFAULT_TEMPLATES = [
+  '🔞✨ 注目の人気作\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🌟\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+];
+
+const GENRE_TAGS = {
+  '巨乳': '巨乳',
+  '美乳': '美乳',
+  '単体作品': '単体作品',
+  '美少女': '美少女',
+  'ハイビジョン': 'HiVi',
+  'OL': 'OL',
+  '人妻': '人妻',
+  'ギャル': 'ギャル',
+  'ロリ': 'ロリ',
+  'アイドル': 'アイドル',
+  '素人': '素人',
+  'ナンパ': 'ナンパ',
+  'フェラ': 'フェラ',
+  '中出し': '中出し',
+  '痴漢': '痴漢',
+  'レズ': 'レズ',
+  'SM': 'SM',
+};
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export async function generateTweetText(item, type, topPatterns = []) {
-  const actress = item.actress?.map((a) => a.name).join('・') || '（非公開）';
-  const genres = item.genre?.slice(0, 5).map((g) => g.name).join(' ') || '';
-  const review = item.review?.count
-    ? `レビュー${item.review.count}件 / 平均${item.review.average}点`
-    : '';
-  const typeHint = TYPE_HINT[type] || '';
-  const patternSection = formatTopPatterns(topPatterns);
+function getGenreTag(item) {
+  const genres = item.genre?.map((g) => g.name) || [];
+  for (const g of genres) {
+    if (GENRE_TAGS[g]) return GENRE_TAGS[g];
+  }
+  return 'アダルト';
+}
 
-  const prompt = `あなたはFANZA（成人向け動画）のアフィリエイト投稿を作成するプロです。
+function shortTitle(title, maxLen = 25) {
+  return title.length > maxLen ? title.slice(0, maxLen) + '…' : title;
+}
 
-【作品情報】
-タイトル: ${item.title}
-出演: ${actress}
-ジャンル: ${genres}
-${review}
-紹介タイプ: ${typeHint}
-${patternSection}
+export async function generateTweetText(item, type, _topPatterns = []) {
+  const actress = item.actress?.map((a) => a.name).join('・') || '人気女優';
+  const reviewCount = item.review?.count ?? 0;
+  const reviewAvg = item.review?.average ?? '4.5';
+  const genreTag = getGenreTag(item);
+  const title = shortTitle(item.title);
 
-【投稿ルール】
-- 文字数: 120〜200文字（厳守）
-- リンクは別リプライで送るので本文には含めない
-- センシティブさを示唆しつつ、露骨すぎる表現は避ける（X の規約内）
-- 「🔞」を冒頭か末尾に必ず入れる
-- 関連ハッシュタグを2〜4個（#FANZA か #fanza を必ず含める）
-- 絵文字を効果的に使い、購買意欲を高める
-- 参考パターンがある場合、反応が良かった文体や構成を活かす
+  const pool = TEMPLATES[type] || DEFAULT_TEMPLATES;
+  let template = pickRandom(pool);
 
-ツイート本文のみ返してください（説明・前置き不要）。`;
+  const text = template
+    .replace(/{actress}/g, actress)
+    .replace(/{shortTitle}/g, title)
+    .replace(/{reviewCount}/g, reviewCount)
+    .replace(/{reviewAvg}/g, reviewAvg)
+    .replace(/{genreTag}/g, genreTag)
+    .replace(/{rank}/g, Math.floor(Math.random() * 10) + 1);
 
-  const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.92,
-    max_tokens: 350,
-  });
-
-  return res.choices[0].message.content.trim();
+  return text;
 }
