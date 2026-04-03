@@ -86,14 +86,45 @@ export async function searchTweetsByHashtag(
   query: string,
   maxResults = 20,
 ): Promise<SearchedTweet[]> {
-  const myUserId = process.env.TWITTER_USER_ID ?? '';
-  const exclusion = myUserId ? ` -from:${myUserId}` : '';
-  const fullQuery = `${query} has:media lang:ja -is:retweet${exclusion}`;
+  const fullQuery = `${query} -is:retweet lang:ja`;
 
   const res = await client.v2.search(fullQuery, {
-    max_results: Math.min(maxResults, 100),
+    max_results: Math.min(Math.max(maxResults, 10), 100),
     'tweet.fields': ['public_metrics', 'created_at', 'author_id'],
-    sort_order: 'relevancy',
+  });
+
+  const myUserId = process.env.TWITTER_USER_ID ?? '';
+  const tweets: SearchedTweet[] = [];
+  for (const t of res.data?.data ?? []) {
+    if (myUserId && t.author_id === myUserId) continue;
+    const m = t.public_metrics ?? ({} as any);
+    tweets.push({
+      id: t.id,
+      text: t.text,
+      authorId: t.author_id ?? '',
+      like_count: m.like_count ?? 0,
+      retweet_count: m.retweet_count ?? 0,
+      reply_count: m.reply_count ?? 0,
+      bookmark_count: m.bookmark_count ?? 0,
+      impression_count: m.impression_count ?? 0,
+      createdAt: t.created_at ?? new Date().toISOString(),
+    });
+  }
+  return tweets;
+}
+
+export async function fetchUserTimelineByUsername(
+  username: string,
+  count = 20,
+): Promise<SearchedTweet[]> {
+  const userRes = await client.v2.userByUsername(username, {});
+  const userId = userRes.data?.id;
+  if (!userId) throw new Error(`ユーザー @${username} が見つかりません`);
+
+  const res = await client.v2.userTimeline(userId, {
+    max_results: Math.min(count, 100),
+    'tweet.fields': ['public_metrics', 'created_at', 'author_id'],
+    exclude: ['retweets', 'replies'],
   });
 
   const tweets: SearchedTweet[] = [];
@@ -102,7 +133,7 @@ export async function searchTweetsByHashtag(
     tweets.push({
       id: t.id,
       text: t.text,
-      authorId: t.author_id ?? '',
+      authorId: userId,
       like_count: m.like_count ?? 0,
       retweet_count: m.retweet_count ?? 0,
       reply_count: m.reply_count ?? 0,
