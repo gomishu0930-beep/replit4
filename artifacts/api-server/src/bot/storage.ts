@@ -3,6 +3,7 @@ import { resolve } from 'path';
 
 const DATA_DIR = resolve(process.cwd(), 'fanza-bot/data');
 const DB_FILE = resolve(DATA_DIR, 'posts.json');
+const EXT_FILE = resolve(DATA_DIR, 'external-patterns.json');
 
 function ensureDir() {
   mkdirSync(DATA_DIR, { recursive: true });
@@ -93,6 +94,90 @@ export function getRecentPostIds(days = 7): string[] {
 export function getAllPosts(): PostRecord[] {
   return loadData().posts;
 }
+
+// ─── External Patterns ───────────────────────────────────────────────────────
+
+export interface ExternalPattern {
+  tweetId: string;
+  text: string;
+  authorId: string;
+  like_count: number;
+  retweet_count: number;
+  reply_count: number;
+  bookmark_count: number;
+  impression_count: number;
+  score: number;
+  source: string;
+  savedAt: string;
+}
+
+interface ExternalPatternsData {
+  patterns: ExternalPattern[];
+  lastRefreshedAt: string | null;
+  queries: string[];
+}
+
+function loadExternalData(): ExternalPatternsData {
+  ensureDir();
+  if (!existsSync(EXT_FILE)) return { patterns: [], lastRefreshedAt: null, queries: [] };
+  try {
+    return JSON.parse(readFileSync(EXT_FILE, 'utf-8')) as ExternalPatternsData;
+  } catch {
+    return { patterns: [], lastRefreshedAt: null, queries: [] };
+  }
+}
+
+function saveExternalData(data: ExternalPatternsData) {
+  ensureDir();
+  writeFileSync(EXT_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+export function upsertExternalPatterns(
+  incoming: Omit<ExternalPattern, 'savedAt'>[],
+  source: string,
+) {
+  const data = loadExternalData();
+  const existingIds = new Set(data.patterns.map((p) => p.tweetId));
+  let added = 0;
+  for (const p of incoming) {
+    if (!existingIds.has(p.tweetId)) {
+      data.patterns.push({ ...p, source, savedAt: new Date().toISOString() });
+      added++;
+    } else {
+      const existing = data.patterns.find((e) => e.tweetId === p.tweetId);
+      if (existing) {
+        existing.like_count = p.like_count;
+        existing.retweet_count = p.retweet_count;
+        existing.bookmark_count = p.bookmark_count;
+        existing.impression_count = p.impression_count;
+        existing.score = p.score;
+      }
+    }
+  }
+  data.patterns.sort((a, b) => b.score - a.score);
+  data.patterns = data.patterns.slice(0, 100);
+  data.lastRefreshedAt = new Date().toISOString();
+  if (source && !data.queries.includes(source)) data.queries.push(source);
+  saveExternalData(data);
+  return added;
+}
+
+export function getExternalTopPatterns(limit = 5): ExternalPattern[] {
+  const data = loadExternalData();
+  return data.patterns.slice(0, limit);
+}
+
+export function getExternalPatternsInfo() {
+  const data = loadExternalData();
+  return {
+    count: data.patterns.length,
+    lastRefreshedAt: data.lastRefreshedAt,
+    queries: data.queries,
+    topPatterns: data.patterns.slice(0, 10),
+  };
+}
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
 
 export function getStats() {
   const posts = getAllPosts();
