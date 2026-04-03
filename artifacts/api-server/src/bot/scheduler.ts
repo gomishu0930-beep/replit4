@@ -5,8 +5,8 @@ import { resolve } from 'path';
 import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText } from './ai.js';
-import { recordPost, getTopPatterns } from './storage.js';
-import { refreshRecentMetrics } from './analytics.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns } from './storage.js';
+import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 
 mkdirSync(resolve(process.cwd(), 'fanza-bot/data'), { recursive: true });
 
@@ -16,7 +16,8 @@ async function postItem(item: any, type: string, label: string) {
   console.log(`  📝 [${label}] 投稿処理開始: ${item.title?.slice(0, 30)}`);
 
   const topPatterns = getTopPatterns(5);
-  const text = await generateTweetText(item, type, topPatterns);
+  const externalPatterns = getExternalTopPatterns(5);
+  const text = await generateTweetText(item, type, topPatterns, externalPatterns);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -47,6 +48,16 @@ async function postItems(items: any[], type: string, label: string) {
 }
 
 export function startScheduler() {
+  // 06:00 JST — 外部パターン収集
+  cron.schedule('0 6 * * *', async () => {
+    console.log(`\n[${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}] 外部パターン収集開始`);
+    try {
+      await refreshExternalPatterns();
+    } catch (e: any) {
+      console.error(`  ❌ 外部パターン収集エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
   // 12:00 JST — ランキング 3件
   cron.schedule('0 12 * * *', async () => {
     const items = await getRankingItems(3);
@@ -82,6 +93,7 @@ export function startScheduler() {
   console.log('╔══════════════════════════════════════════╗');
   console.log('║    FANZA X Bot スケジューラー起動        ║');
   console.log('╠══════════════════════════════════════════╣');
+  console.log('║  06:00 JST  外部パターン収集             ║');
   console.log('║  12:00 JST  ランキング 3件               ║');
   console.log('║  15:00 JST  セール品 3件                 ║');
   console.log('║  18:00 JST  バズ 3件 + 指標更新          ║');

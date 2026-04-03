@@ -32,6 +32,25 @@ interface BotStatus {
   stats: Stats;
 }
 
+interface ExternalPattern {
+  tweetId: string;
+  text: string;
+  authorId: string;
+  like_count: number;
+  retweet_count: number;
+  bookmark_count: number;
+  score: number;
+  source: string;
+  savedAt: string;
+}
+
+interface ExternalInfo {
+  count: number;
+  lastRefreshedAt: string | null;
+  queries: string[];
+  topPatterns: ExternalPattern[];
+}
+
 interface Post {
   tweetId: string;
   type: string;
@@ -115,6 +134,16 @@ function Dashboard() {
       return res.json();
     },
     refetchInterval: 60000,
+  });
+
+  const { data: externalInfo } = useQuery<ExternalInfo>({
+    queryKey: ["externalPatterns", tick],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/bot/external-patterns`);
+      if (!res.ok) throw new Error("Failed to fetch external patterns");
+      return res.json();
+    },
+    refetchInterval: 300000,
   });
 
   const posts = postsData?.posts ?? [];
@@ -276,10 +305,72 @@ function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* External Patterns */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              外部パターン（他アカウント参考）
+            </h2>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full">
+                {externalInfo?.count ?? 0} 件保存済
+              </span>
+              {externalInfo?.lastRefreshedAt && (
+                <span>最終収集: {formatDate(externalInfo.lastRefreshedAt)}</span>
+              )}
+            </div>
+          </div>
+
+          {externalInfo?.queries && externalInfo.queries.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              <span className="text-xs text-muted-foreground">収集クエリ:</span>
+              {externalInfo.queries.map((q) => (
+                <span key={q} className="text-xs bg-secondary/60 border border-border/50 px-2 py-0.5 rounded-full">
+                  {q}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {!externalInfo || externalInfo.topPatterns.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              まだデータがありません。<br />
+              毎日 6:00 JST に自動収集されます 🔍
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {externalInfo.topPatterns.slice(0, 5).map((p, i) => (
+                <div key={p.tweetId} className="p-3 rounded-lg bg-secondary/30 border border-border/40">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-blue-400 font-mono">#{i + 1} スコア {p.score}</span>
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      <span>❤ {p.like_count}</span>
+                      <span>🔁 {p.retweet_count}</span>
+                      {p.bookmark_count > 0 && <span>🔖 {p.bookmark_count}</span>}
+                    </div>
+                  </div>
+                  <p className="text-xs text-foreground/70 line-clamp-3 whitespace-pre-wrap">{p.text}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-xs text-muted-foreground/60">クエリ: {p.source}</span>
+                    <a
+                      href={`https://twitter.com/i/web/status/${p.tweetId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Xで見る →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
 
       <footer className="border-t border-border mt-8 py-4 text-center text-xs text-muted-foreground">
-        FANZA X Bot — 毎日 5回自動投稿中 🤖
+        FANZA X Bot — 毎日 6回自動稼働中 🤖
       </footer>
     </div>
   );

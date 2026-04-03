@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStats, getAllPosts } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo } from '../bot/storage.js';
 
 const router = Router();
 
@@ -10,6 +10,7 @@ router.get('/bot/status', (_req, res) => {
     uptime: Math.floor(process.uptime()),
     account: '@ero_senpai1',
     schedule: [
+      { time: '06:00 JST', type: 'external', label: '外部パターン収集' },
       { time: '12:00 JST', type: 'rank', label: 'ランキング' },
       { time: '15:00 JST', type: 'sale', label: 'セール' },
       { time: '18:00 JST', type: 'buzz', label: 'バズ + 指標更新' },
@@ -23,6 +24,11 @@ router.get('/bot/status', (_req, res) => {
 router.get('/bot/posts', (_req, res) => {
   const posts = getAllPosts().slice(-30).reverse();
   res.json({ posts });
+});
+
+router.get('/bot/external-patterns', (_req, res) => {
+  const info = getExternalPatternsInfo();
+  res.json(info);
 });
 
 export default router;

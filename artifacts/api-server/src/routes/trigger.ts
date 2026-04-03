@@ -2,9 +2,9 @@ import { Router } from 'express';
 import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText } from '../bot/ai.js';
-import { recordPost, getTopPatterns } from '../bot/storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
 
-import { refreshRecentMetrics } from '../bot/analytics.js';
+import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 
 const router = Router();
 
@@ -14,7 +14,8 @@ let isPosting = false;
 
 async function postItem(item: any, type: string) {
   const topPatterns = getTopPatterns(5);
-  const text = await generateTweetText(item, type, topPatterns);
+  const externalPatterns = getExternalTopPatterns(5);
+  const text = await generateTweetText(item, type, topPatterns, externalPatterns);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -77,6 +78,21 @@ router.post('/trigger/buzz', auth, async (_req, res) => {
 router.post('/trigger/random', auth, async (_req, res) => {
   const result = await runJob('random', '21:00 ランダム', () => getRandomItems(3));
   res.json(result);
+});
+
+// 外部パターン収集 (06:00 JST / 手動)
+router.post('/trigger/external-patterns', auth, async (_req, res) => {
+  if (isPosting) {
+    res.status(429).json({ ok: false, error: '投稿処理中のためスキップ' });
+    return;
+  }
+  try {
+    console.log('\n[外部パターン収集] 手動トリガー');
+    const added = await refreshExternalPatterns();
+    res.json({ ok: true, added });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 export default router;

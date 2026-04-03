@@ -80,7 +80,7 @@ function buildTypeLabel(type: string): string {
   return map[type] ?? '注目作品';
 }
 
-async function generateWithClaude(item: any, type: string, topPatterns: any[]): Promise<string | null> {
+async function generateWithClaude(item: any, type: string, topPatterns: any[], externalPatterns: any[] = []): Promise<string | null> {
   const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   if (!baseUrl || !apiKey) return null;
@@ -94,10 +94,15 @@ async function generateWithClaude(item: any, type: string, topPatterns: any[]): 
   const title = shortTitle(item.title, 30);
   const typeLabel = buildTypeLabel(type);
 
-  const examplesSection = topPatterns.length > 0
-    ? `\n過去に高いエンゲージメントを得たツイート例（参考にしてください）:\n${
-        topPatterns.slice(0, 3).map((p, i) => `例${i + 1}:\n${p.text}`).join('\n\n')
-      }\n`
+  const ownExamples = topPatterns.slice(0, 2);
+  const extExamples = externalPatterns.slice(0, 2);
+
+  const ownSection = ownExamples.length > 0
+    ? `\n【自分の過去高エンゲージメント投稿】:\n${ownExamples.map((p, i) => `例${i + 1}: ${p.text}`).join('\n\n')}\n`
+    : '';
+
+  const extSection = extExamples.length > 0
+    ? `\n【他アカウントの高エンゲージメント投稿（スタイル参考のみ）】:\n${extExamples.map((p, i) => `参考${i + 1}: ${p.text}`).join('\n\n')}\n`
     : '';
 
   const prompt = `あなたは日本のSNSマーケティングの専門家です。FANZAアフィリエイト向けのプロモーションツイートを1件生成してください。
@@ -109,7 +114,7 @@ async function generateWithClaude(item: any, type: string, topPatterns: any[]): 
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点
 - ジャンルタグ: #${genreTag}
-${examplesSection}
+${ownSection}${extSection}
 ルール:
 - 日本語で書く
 - 冒頭に 🔞 絵文字を必ず入れる
@@ -117,7 +122,7 @@ ${examplesSection}
 - 必ず #FANZA #fanza #${genreTag} のハッシュタグを末尾に入れる
 - 「リンクはリプ欄へ👇」または「リンクはリプへ👇」を入れる
 - 絵文字を効果的に使う
-- 過去例がある場合はそのスタイルを参考にしつつ、異なる表現にする
+- 参考例がある場合はそのスタイルを活かしつつ、オリジナルの表現にする
 
 ツイート本文のみを返してください（説明文は不要）:`;
 
@@ -135,9 +140,14 @@ ${examplesSection}
   return text;
 }
 
-export async function generateTweetText(item: any, type: string, topPatterns: any[] = []): Promise<string> {
+export async function generateTweetText(
+  item: any,
+  type: string,
+  topPatterns: any[] = [],
+  externalPatterns: any[] = [],
+): Promise<string> {
   try {
-    const aiText = await generateWithClaude(item, type, topPatterns);
+    const aiText = await generateWithClaude(item, type, topPatterns, externalPatterns);
     if (aiText) {
       console.log('  ✨ Claude で文章生成成功');
       return aiText;
