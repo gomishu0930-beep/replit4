@@ -58,6 +58,17 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
+  // 07:40 JST — 臨時テスト：外部パターン収集
+  cron.schedule('40 7 * * *', async () => {
+    console.log(`\n[${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}] 【臨時テスト】外部パターン収集開始`);
+    try {
+      await refreshExternalPatterns();
+      console.log('  ✅ 臨時テスト収集完了');
+    } catch (e: any) {
+      console.error(`  ❌ 臨時テスト収集エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
   // 12:00 JST — ランキング 3件
   cron.schedule('0 12 * * *', async () => {
     const items = await getRankingItems(3);
@@ -94,6 +105,7 @@ export function startScheduler() {
   console.log('║    FANZA X Bot スケジューラー起動        ║');
   console.log('╠══════════════════════════════════════════╣');
   console.log('║  06:00 JST  外部パターン収集             ║');
+  console.log('║  07:40 JST  【臨時テスト】外部パターン収集║');
   console.log('║  12:00 JST  ランキング 3件               ║');
   console.log('║  15:00 JST  セール品 3件                 ║');
   console.log('║  18:00 JST  バズ 3件 + 指標更新          ║');
