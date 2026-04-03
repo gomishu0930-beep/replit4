@@ -1,0 +1,16 @@
+{
+  "name": "fanza-x-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "post-now": "node post-now.js",
+    "metrics": "node check-metrics.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "openai": "^4.52.7",
+    "twitter-api-v2": "^1.18.2"
+  }
+}
