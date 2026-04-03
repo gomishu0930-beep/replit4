@@ -30,12 +30,13 @@ args = "FANZA X Bot"
 name = "FANZA X Bot"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd fanza-bot && node index.js"
-
-[workflows.workflow.metadata]
-outputType = "console"
+waitForPort = 3000
 
 [agent]
 stack = "PNPM_WORKSPACE"

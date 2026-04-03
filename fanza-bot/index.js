@@ -9,6 +9,7 @@
 import 'dotenv/config';
 import cron from 'node-cron';
 import { mkdirSync } from 'fs';
+import { createServer } from 'http';
 
 import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getSampleImages } from './lib/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './lib/twitter.js';
@@ -107,6 +108,39 @@ cron.schedule('0 23 * * *', async () => {
   const items = await getSaleItems(3);
   await postItems(items, 'sale', '23:00 セール');
 }, { timezone: 'Asia/Tokyo' });
+
+// ─── ヘルスチェック用 HTTP サーバー ────────────────────────────────────────
+// Replit のデプロイ環境がプロセスを常時監視できるようにするためのサーバー
+// このサーバーが動いていることで、誰もブラウザを開いていなくても
+// ボットが止まらず 24 時間稼働し続ける
+
+const PORT = process.env.PORT || 3000;
+
+const server = createServer((req, res) => {
+  if (req.url === '/health' || req.url === '/') {
+    const status = {
+      status: 'ok',
+      bot: 'FANZA X Bot',
+      uptime: Math.floor(process.uptime()) + 's',
+      nextPosts: {
+        '12:00 JST': 'ランキング 3件',
+        '15:00 JST': 'セール品 3件',
+        '18:00 JST': 'バズ 3件',
+        '21:00 JST': 'ランダム 3件',
+        '23:00 JST': 'セール品 3件',
+      },
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(status));
+  } else {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`🌐 ヘルスチェックサーバー起動: http://localhost:${PORT}`);
+});
 
 // ─── 起動メッセージ ─────────────────────────────────────────────────────────
 
