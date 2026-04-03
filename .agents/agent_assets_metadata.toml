@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "wfdAwBpJndMb9jPTDjCBd"
+uri = "file://fanza-bot.tar.gz"
+type = "unspecified"
+title = "fanza-bot（圧縮ファイル）"
