@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { mkdirSync } from 'fs';
 import { resolve } from 'path';
 
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
+import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from './storage.js';
@@ -88,10 +88,10 @@ export function startScheduler() {
     await postItems(items, 'amateur', '09:00 素人');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 12:00 JST — ランキング 2件
+  // 12:00 JST — おすすめ度高（評価4.7以上・ジャンルローテーション）2件
   cron.schedule('0 12 * * *', async () => {
-    const items = await getRankingItems(2);
-    await postItems(items, 'rank', '12:00 ランキング');
+    const items = await getHighRatedItems(2);
+    await postItems(items, 'buzz', '12:00 高評価');
   }, { timezone: 'Asia/Tokyo' });
 
   // 18:00 JST — バズ 2件 + 指標更新
@@ -118,11 +118,11 @@ export function startScheduler() {
   console.log('║    FANZA X Bot スケジューラー起動        ║');
   console.log('╠══════════════════════════════════════════╣');
   console.log('║  06:00 JST  外部パターン収集             ║');
-  console.log('║  09:00 JST  素人    2件（間隔ランダム）  ║');
-  console.log('║  12:00 JST  ランキング 2件（間隔ランダム）║');
+  console.log('║  09:00 JST  素人系  2件（キーワードRand）║');
+  console.log('║  12:00 JST  高評価  2件（4.7点以上）    ║');
   console.log('║  18:00 JST  バズ    2件 + 指標更新      ║');
-  console.log('║  21:00 JST  ランダム 2件（間隔ランダム）  ║');
-  console.log('║  23:00 JST  セール   2件（間隔ランダム）  ║');
+  console.log('║  21:00 JST  ランダム 2件               ║');
+  console.log('║  23:00 JST  セール   2件               ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 }

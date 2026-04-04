@@ -59,6 +59,19 @@ export function recordPost({ tweetId, replyId, item, text, type }: {
   saveData(data);
 }
 
+// 過去30日に投稿済みのcontent_idセットを返す（重複回避用）
+export function getRecentlyPostedIds(days = 30): Set<string> {
+  const data = loadData();
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const ids = new Set<string>();
+  for (const p of data.posts) {
+    if (new Date(p.postedAt).getTime() > cutoff && p.item?.id) {
+      ids.add(p.item.id);
+    }
+  }
+  return ids;
+}
+
 export function updateMetrics(tweetId: string, metrics: any) {
   const data = loadData();
   const post = data.posts.find((p) => p.tweetId === tweetId);

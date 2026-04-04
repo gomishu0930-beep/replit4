@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
+import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
@@ -58,9 +58,9 @@ function auth(req: any, res: any, next: any) {
   next();
 }
 
-// 12:00 JST ランキング
+// 12:00 JST 高評価
 router.post('/trigger/rank', auth, async (_req, res) => {
-  const result = await runJob('rank', '12:00 ランキング', () => getRankingItems(3));
+  const result = await runJob('buzz', '12:00 高評価', () => getHighRatedItems(2));
   res.json(result);
 });
 
