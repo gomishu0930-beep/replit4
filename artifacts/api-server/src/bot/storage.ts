@@ -108,6 +108,11 @@ export function getAllPosts(): PostRecord[] {
   return loadData().posts;
 }
 
+// 指定時刻以降に投稿されたレコードを返す（取りこぼし検出用）
+export function getPostsAfter(since: Date): PostRecord[] {
+  return loadData().posts.filter((p) => new Date(p.postedAt) >= since);
+}
+
 // ─── External Patterns ───────────────────────────────────────────────────────
 
 export interface ExternalPattern {

@@ -5,7 +5,7 @@ import { resolve } from 'path';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns } from './storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 
 mkdirSync(resolve(process.cwd(), 'fanza-bot/data'), { recursive: true });
@@ -93,9 +93,71 @@ async function monitoringLoop() {
   }
 }
 
+// ─── 取りこぼしスロット補完（起動時チェック）────────────────────────────────
+interface Slot {
+  hour: number;
+  minute: number;
+  type: string;
+  label: string;
+  fetchFn: (n: number) => Promise<any[]>;
+  extra?: () => Promise<void>;
+}
+
+const SLOTS: Slot[] = [
+  { hour:  9, minute: 0, type: 'amateur', label: '09:00 素人（補完）',  fetchFn: (n) => getAmateurItems(n) },
+  { hour: 12, minute: 0, type: 'buzz',   label: '12:00 高評価（補完）', fetchFn: (n) => getHighRatedItems(n) },
+  { hour: 18, minute: 0, type: 'buzz',   label: '18:00 バズ（補完）',   fetchFn: (n) => getBuzzItems(n),
+    extra: async () => { await refreshRecentMetrics(); } },
+  { hour: 21, minute: 0, type: 'random', label: '21:00 ランダム（補完）', fetchFn: (n) => getRandomItems(n) },
+  { hour: 23, minute: 0, type: 'sale',   label: '23:00 セール（補完）',  fetchFn: (n) => getSaleItems(n) },
+];
+
+async function catchUpMissedSlots() {
+  const nowUtc = Date.now();
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const nowJst = new Date(nowUtc + jstOffset);
+
+  const todayMidnightJst = new Date(
+    Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate()) - jstOffset,
+  );
+
+  const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+  for (const slot of SLOTS) {
+    const slotTime = new Date(todayMidnightJst.getTime() + (slot.hour * 60 + slot.minute) * 60 * 1000);
+    const slotPastMs = nowUtc - slotTime.getTime();
+
+    // スロット未到達、または6時間以上前のものはスキップ
+    if (slotPastMs < 0 || slotPastMs > 6 * 60 * 60 * 1000) continue;
+
+    // スロット時刻以降に投稿があればスキップ
+    const postsAfter = getPostsAfter(slotTime);
+    if (postsAfter.length > 0) {
+      console.log(`  ✅ [${slot.label}] 投稿済み確認 → スキップ`);
+      continue;
+    }
+
+    // 取りこぼし検出 → 補完投稿
+    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${slot.label} → 補完投稿開始`);
+    try {
+      if (slot.extra) await slot.extra();
+      const items = await slot.fetchFn(2);
+      await postItems(items, slot.type, slot.label);
+    } catch (e: any) {
+      console.error(`  ❌ 補完投稿失敗 [${slot.label}]: ${e.message}`);
+    }
+
+    // 補完は1スロットのみ（複数取りこぼしの場合は次の起動で対応）
+    break;
+  }
+}
+
 export function startScheduler() {
   // ── 常時監視ループを起動（5分後に初回実行、以降3時間ごと）──────────────
   sleep(5 * 60 * 1000).then(() => monitoringLoop());
+
+  // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────
+  sleep(2 * 60 * 1000).then(() => catchUpMissedSlots());
 
   // ── 投稿スケジュール ─────────────────────────────────────────────────────
 
