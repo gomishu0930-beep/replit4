@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
+import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
@@ -87,6 +87,33 @@ router.post('/trigger/random', auth, async (_req, res) => {
 router.post('/trigger/amateur', auth, async (_req, res) => {
   const result = await runJob('amateur', '08:30 素人', () => getAmateurItems(3));
   res.json(result);
+});
+
+// 商品ID指定投稿（cid で作品ピンポイント指定）
+router.post('/trigger/cid', auth, async (req, res) => {
+  const cid = (req.query.cid as string) || (req.body?.cid as string);
+  if (!cid) {
+    res.status(400).json({ ok: false, error: 'クエリ ?cid=商品ID を指定してください' });
+    return;
+  }
+  if (isPosting) {
+    res.status(429).json({ ok: false, error: '別の投稿が進行中' });
+    return;
+  }
+  isPosting = true;
+  try {
+    const item = await getItemById(cid);
+    if (!item) {
+      res.status(404).json({ ok: false, error: `商品ID [${cid}] が見つかりませんでした` });
+      return;
+    }
+    const tweetId = await postItem(item, 'amateur');
+    res.json({ ok: true, tweetId, title: item.title });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  } finally {
+    isPosting = false;
+  }
 });
 
 // キーワード指定投稿（特定作品を1件投稿）

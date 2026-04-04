@@ -70,6 +70,11 @@ export async function getKeywordItems(keyword: string, count = 1) {
   return pickN(items, count);
 }
 
+export async function getItemById(cid: string): Promise<any | null> {
+  const items = await fetchItems({ cid });
+  return items[0] ?? null;
+}
+
 export function getSampleImages(item: any): string[] {
   const samples: string[] = item.sampleImageURL?.sample_l?.image ?? [];
   const main: string | null = item.imageURL?.large ?? item.imageURL?.list ?? null;
