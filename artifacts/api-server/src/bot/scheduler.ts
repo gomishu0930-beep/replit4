@@ -3,9 +3,10 @@ import cron from 'node-cron';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from './storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
+import { contact } from './contact.js';
 
 let isPosting = false;
 
@@ -63,6 +64,7 @@ async function postItems(items: any[], type: string, label: string) {
     }
   } catch (e: any) {
     console.error(`  ❌ [${label}] エラー: ${e.message}`);
+    await contact.postingFailed(label, e.message);
   } finally {
     isPosting = false;
   }
@@ -114,6 +116,7 @@ async function postCelebritySlot(label: string) {
     await postCelebrityItem(items[0], label, mapping);
   } catch (e: any) {
     console.error(`  ❌ [${label}] エラー: ${e.message}`);
+    await contact.postingFailed(label, e.message);
   } finally {
     isPosting = false;
   }
@@ -238,6 +241,18 @@ export function startScheduler() {
   cron.schedule('0 23 * * *', async () => {
     const items = await getSaleItems(2);
     await postItems(items, 'sale', '23:00 セール');
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 月曜 08:00 JST — 週次パフォーマンスレポート（連絡チーム）
+  cron.schedule('0 8 * * 1', async () => {
+    const stats = getStats();
+    const extInfo = getExternalPatternsInfo();
+    const dynInfo = getDynamicTemplatesInfo();
+    await contact.weeklyReport({
+      投稿統計: stats,
+      外部パターン: { 総数: extInfo.count, 最終更新: extInfo.lastRefreshedAt },
+      動的テンプレート: { 総数: dynInfo.count, 進化回数: dynInfo.evolutionCount, 最終進化: dynInfo.lastEvolvedAt },
+    });
   }, { timezone: 'Asia/Tokyo' });
 
   // 芸能人スロット — エンゲージメント最高時間帯（動的）

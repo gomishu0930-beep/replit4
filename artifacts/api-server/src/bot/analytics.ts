@@ -1,6 +1,7 @@
 import { getRecentPostIds, updateMetrics, upsertExternalPatterns, getExternalTopPatterns, upsertDynamicTemplates } from './storage.js';
 import { getTweetMetrics, searchTweetsByHashtag, fetchUserTimelineByUsername } from './twitter.js';
 import Anthropic from '@anthropic-ai/sdk';
+import { contact } from './contact.js';
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -228,4 +229,5 @@ ${PLACEHOLDER_EXPLANATION}
 
   upsertDynamicTemplates(toSave);
   console.log(`  ✅ テンプレート進化完了: ${valid.length}件 保存 (元データ平均スコア: ${Math.round(avgScore)})`);
+  await contact.templateEvolved(valid.length, Math.round(avgScore));
 }

@@ -229,7 +229,6 @@ function saveDynTemplatesAsync() {
 }
 
 export function upsertDynamicTemplates(newTemplates: Omit<DynamicTemplate, 'usedCount'>[]) {
-  const now = new Date().toISOString();
   for (const t of newTemplates) {
     dynTemplatesCache.templates.push({ ...t, usedCount: 0 });
   }
