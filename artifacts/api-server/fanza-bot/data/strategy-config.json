@@ -1,0 +1,60 @@
+{
+  "monitorIntervalHours": 3,
+  "typeWeights": {
+    "amateur": 1,
+    "buzz": 1,
+    "rank": 1,
+    "sale": 0.8,
+    "random": 0.8
+  },
+  "cycleStats": {
+    "lastNewPatterns": 0,
+    "avgNewPatterns": 0,
+    "totalCycles": 1
+  },
+  "hypotheses": [
+    {
+      "id": "monitor-interval",
+      "question": "外部情報の収集間隔（現在 3h）は最適か？",
+      "status": "pending",
+      "finding": "データ蓄積中 (1サイクル, 直近 0件新規)",
+      "adjustment": null,
+      "testedAt": "2026-04-04T12:47:51.451Z"
+    },
+    {
+      "id": "type-weights",
+      "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
+      "status": "pending",
+      "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
+      "adjustment": null,
+      "testedAt": "2026-04-04T12:47:51.451Z"
+    },
+    {
+      "id": "dynamic-templates",
+      "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
+      "status": "pending",
+      "finding": "データ不足で評価不可",
+      "adjustment": null,
+      "testedAt": "2026-04-04T12:47:51.451Z"
+    },
+    {
+      "id": "posting-hours",
+      "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
+      "status": "pending",
+      "finding": "データ不足で評価不可",
+      "adjustment": null,
+      "testedAt": "2026-04-04T12:47:51.451Z"
+    }
+  ],
+  "decisionLog": [
+    {
+      "at": "2026-04-04T12:47:51.451Z",
+      "cycle": 1,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    }
+  ],
+  "lastEvaluatedAt": "2026-04-04T12:47:51.451Z",
+  "version": 2
+}
