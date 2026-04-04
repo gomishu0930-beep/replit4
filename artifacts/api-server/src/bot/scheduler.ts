@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
-import { generateTweetText } from './ai.js';
+import { generateTweetText, generateEngagementReply } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 
@@ -24,6 +24,10 @@ async function postItem(item: any, type: string, label: string) {
 
   const affiliateURL = item.affiliateURL ?? '';
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+
+  // 3投目：エンゲージメント誘導リプライ（リプ・いいね促進）
+  const engagementText = generateEngagementReply(type);
+  await replyToTweet(replyId, engagementText);
 
   recordPost({ tweetId, replyId, item, text, type });
   console.log(`  ✅ [${label}] 投稿完了 (${tweetId})`);

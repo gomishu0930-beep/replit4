@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
-import { generateTweetText } from '../bot/ai.js';
+import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
@@ -20,6 +20,9 @@ async function postItem(item: any, type: string) {
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${item.affiliateURL ?? ''}`);
+  // 3投目：エンゲージメント誘導リプライ
+  const engagementText = generateEngagementReply(type);
+  await replyToTweet(replyId, engagementText);
   recordPost({ tweetId, replyId, item, text, type });
   return tweetId;
 }

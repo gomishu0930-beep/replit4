@@ -1,36 +1,82 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+// ─── フック型テンプレート（止める1行目 → 情報 → 数字 → CTA）────────────────
+
 const TEMPLATES: Record<string, string[]> = {
   amateur: [
-    '🔞💕【素人】\n{actress}ちゃんの本物感がたまらない✨\n「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価🔥\nリンクはリプ欄へ👇\n#FANZA #fanza #素人',
-    '🔞🎀 素人娘の破壊力がすごい\n出演：{actress}\n「{shortTitle}」\n\n⭐{reviewAvg}点（{reviewCount}件）の人気作💫\n詳細はリプ欄から👇\n#FANZA #fanza #素人',
-    '🔞🌸 素人系で今一番アツい作品\n{actress}「{shortTitle}」\n\nリアルな雰囲気がたまらない💓\nレビュー平均{reviewAvg}点の高評価作品🏆\n#FANZA #fanza #素人',
+    '🔞「これ知らないと損」\n素人なのにこのクオリティ、反則すぎる\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・{reviewAvg}点の本物💓\nリンクはリプ欄へ👇\n#FANZA #fanza #素人',
+    '🔞やばすぎて頭から離れない\n{actress}のリアルな反応が最高すぎる件\n「{shortTitle}」\n\n⭐{reviewAvg}点({reviewCount}件)の高評価が全てを語る🔥\nリプ欄チェック必須👇\n#FANZA #fanza #素人',
+    '🔞正直に言う、今一番刺さってる\n素人系の中でも別格の一本がこれ👇\n{actress}「{shortTitle}」\n\nレビュー平均{reviewAvg}点の本物の実力🏆\n#FANZA #fanza #素人',
+    '🔞素人なのになんでこんなにうまいの\n{actress}ちゃんの「{shortTitle}」\n\nレビュー{reviewCount}件・{reviewAvg}点の怪物作品💥\n今すぐリプ欄でチェック👇\n#FANZA #fanza #素人',
   ],
   rank: [
-    '🔞【ランキング{rank}位】\n{actress}主演の話題作✨\n「{shortTitle}」\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🔥\nサンプル画像チェック必須👀\n#FANZA #fanza #{genreTag}',
-    '🔞📊 今週の注目作品！\n{actress}が魅せる圧巻のパフォーマンス💥\n「{shortTitle}」\n⭐{reviewAvg}点（{reviewCount}件）の超高評価\nランキング上位常連の名作🏆\n#FANZA #fanza #{genreTag}',
-    '🔞🔥 ランキング急上昇中\n出演：{actress}\nタイトル：{shortTitle}\n\nレビュー平均{reviewAvg}点の話題作🌟\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞「今これが一番売れてる」\nランキング上位を独走中の神作品👑\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・{reviewAvg}点が証明する実力\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞見た人全員が言う→やばすぎ\n{actress}のランキング1位作品がこれ💥\n「{shortTitle}」\n\n⭐{reviewAvg}点({reviewCount}件)の化け物評価\nリプ欄からどうぞ👇\n#FANZA #fanza #{genreTag}',
+    '🔞ランキング上位が伊達じゃない理由\n{actress}「{shortTitle}」\n\n結論：クオリティが全然違う\n理由：レビュー{reviewCount}件・{reviewAvg}点\nリプ欄でチェック👇\n#FANZA #fanza #{genreTag}',
+    '🔞これ知らないと損します\n{actress}主演がランキングを席巻中🔥\n「{shortTitle}」\n\nレビュー{reviewAvg}点({reviewCount}件)の本物\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
   ],
   sale: [
-    '🔞💸【セール開催中】\n{actress}出演の人気作が今だけお得🎉\n「{shortTitle}」\n\n⭐{reviewAvg}点（{reviewCount}件評価）\n見逃し厳禁！リンクはリプへ👇\n#FANZA #fanza #セール #{genreTag}',
-    '🔞🏷️ お得なセール情報！\n{actress}主演「{shortTitle}」が\n期間限定でお求めやすく💰\n\nレビュー{reviewCount}件・{reviewAvg}点の安心作品✅\n今がチャンス🔥\n#FANZA #fanza #セール #{genreTag}',
-    '🔞✨ セール中の注目作！\n出演：{actress}\n「{shortTitle}」\n\nお得な価格で楽しめる期間限定チャンス💫\n⭐平均{reviewAvg}点の高評価作品\n#FANZA #fanza #お得 #{genreTag}',
+    '🔞「今だけ」を見逃すと後悔する件\n{actress}「{shortTitle}」がセール中💸\n\n⭐{reviewAvg}点({reviewCount}件)の神作品が期間限定\n今しかない→リプ欄へ👇\n#FANZA #fanza #セール #{genreTag}',
+    '🔞正直言う、これ安すぎる\n{actress}のセール作品がヤバい💰\n「{shortTitle}」\n\nレビュー{reviewCount}件・{reviewAvg}点の高評価\n終わる前に→リプ欄チェック👇\n#FANZA #fanza #セール #{genreTag}',
+    '🔞セールで一番コスパいい作品はこれ\n{actress}「{shortTitle}」\n\n結論：{reviewAvg}点が全てを語ってる✅\nレビュー{reviewCount}件の本物\n期間限定→リプ欄へ👇\n#FANZA #fanza #お得 #{genreTag}',
   ],
   buzz: [
-    '🔞🚀【話題沸騰中】\n{actress}主演の超高評価作品\n「{shortTitle}」\n\n⭐{reviewAvg}点・{reviewCount}件のレビューが証明する実力派👑\n今一番アツい作品🔥\n#FANZA #fanza #{genreTag}',
-    '🔞💬 レビュー{reviewCount}件の圧倒的人気作\n{actress}「{shortTitle}」\n\n平均{reviewAvg}点という驚異の評価🌟\nバズってる理由を確認してみて👀\n#FANZA #fanza #{genreTag}',
-    '🔞🏆 今最も話題の作品\n出演：{actress}\n「{shortTitle}」\n\nレビュー平均{reviewAvg}点（{reviewCount}件）\n口コミが止まらない神作品✨\n#FANZA #fanza #{genreTag}',
+    '🔞「なんで今まで見てなかったんだ」\nレビュー{reviewCount}件が絶賛する理由がわかった\n{actress}「{shortTitle}」\n\n⭐{reviewAvg}点の化け物評価💥\nリプ欄からどうぞ👇\n#FANZA #fanza #{genreTag}',
+    '🔞バズってる理由を確かめた結果\n{actress}「{shortTitle}」は本物だった🔥\n\nレビュー{reviewCount}件・平均{reviewAvg}点\nこれが今一番アツい作品👑\nリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞口コミが止まらない神作品\n{actress}「{shortTitle}」\n\n結論：レビュー{reviewCount}件は伊達じゃない💬\n平均{reviewAvg}点の実力\n詳細→リプ欄へ👇\n#FANZA #fanza #{genreTag}',
   ],
   random: [
-    '🔞💎【隠れた名作】\n{actress}主演「{shortTitle}」\n\nコアなファンに絶大な人気🎬\n⭐{reviewAvg}点の高評価にも注目\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
-    '🔞🎯 こんな作品どうですか？\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点✨\nまだ見ていないなら絶対チェック📌\n#FANZA #fanza #{genreTag}',
-    '🔞🌟 おすすめ作品のご紹介\n出演：{actress}\n「{shortTitle}」\n\n⭐{reviewAvg}点の安定した高評価🎖️\n詳細はリプ欄から👇\n#FANZA #fanza #{genreTag}',
+    '🔞まだ知らない人に教えたい隠れた名作\n{actress}「{shortTitle}」\n\n⭐{reviewAvg}点({reviewCount}件)なのに埋もれてる💎\nリプ欄からチェック👇\n#FANZA #fanza #{genreTag}',
+    '🔞正直これが一番好みに刺さった\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・{reviewAvg}点の実力派🎯\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+    '🔞知らないと絶対損するやつ\n{actress}の「{shortTitle}」\n\n平均{reviewAvg}点が物語る本物のクオリティ🌟\nリプ欄でどうぞ👇\n#FANZA #fanza #{genreTag}',
   ],
 };
 
 const DEFAULT_TEMPLATES = [
-  '🔞✨ 注目の人気作\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🌟\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
+  '🔞これ知らないと損です\n{actress}「{shortTitle}」\n\nレビュー{reviewCount}件・平均{reviewAvg}点の高評価作品🔥\nリンクはリプ欄へ👇\n#FANZA #fanza #{genreTag}',
 ];
+
+// ─── エンゲージメント誘導リプライ（3投目）────────────────────────────────
+
+const ENGAGEMENT_REPLIES: Record<string, string[]> = {
+  amateur: [
+    '💬 あなたはどんなタイプの素人が好みですか？\nコメントで教えてください👇',
+    '🗳️ 素人系で好みはどっち？\n👉 天然系 or 積極系\nどちらか教えて！',
+    '💭 このジャンル好きな方→🔥いいね！\n嫌いな方→💬コメントで教えて',
+  ],
+  rank: [
+    '💬 ランキング上位作品、あなたはもう見ましたか？\nコメントで感想教えてください👇',
+    '🗳️ 好みはどっち？\n👉 ランキング上位 or 隠れた名作\nコメントで！',
+    '💭 顔派？スタイル派？どっちが好きですか？\nコメントで教えてください👇',
+  ],
+  sale: [
+    '💬 セール中に買うか、定価で買うか迷う派ですか？\nコメントで教えてください👇',
+    '🗳️ セールで一番重視するのは？\n👉 値段 or クオリティ\nどちらか教えて！',
+    '💭 お得な情報は保存しておきたい派ですか？\nいいね🤍で教えてください！',
+  ],
+  buzz: [
+    '💬 話題作と隠れた名作、どちら派ですか？\nコメントで教えてください👇',
+    '🗳️ 好みはどっち？\n👉 バズってる作品 or 通好みの作品\nコメントで！',
+    '💭 レビュー数が多い作品、信頼できると思う？\nいいね🤍orコメントで👇',
+  ],
+  random: [
+    '💬 今一番気になるジャンルは何ですか？\nコメントで教えてください👇',
+    '🗳️ 好みはどっち？\n👉 人気女優 or 新人女優\nコメントで！',
+    '💭 知られていない名作、好きですか？\nいいね🤍で教えてください！',
+  ],
+};
+
+const DEFAULT_ENGAGEMENT = [
+  '💬 気になるジャンルや女優さんはいますか？\nコメントで教えてください👇',
+  '🗳️ 好みはどっち？\n👉 王道系 or 個性派\nコメントで！',
+];
+
+export function generateEngagementReply(type: string): string {
+  const pool = ENGAGEMENT_REPLIES[type] || DEFAULT_ENGAGEMENT;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ─── ジャンルタグ・ユーティリティ────────────────────────────────────────────
 
 const GENRE_TAGS: Record<string, string> = {
   '巨乳': '巨乳', '美乳': '美乳', '単体作品': '単体作品', '美少女': '美少女',
@@ -86,7 +132,30 @@ function buildTypeLabel(type: string): string {
   return map[type] ?? '注目作品';
 }
 
-async function generateWithClaude(item: any, type: string, topPatterns: any[], externalPatterns: any[] = []): Promise<string | null> {
+// ─── 拒否文検出・バリデーション────────────────────────────────────────────
+
+const REFUSAL_PATTERNS = [
+  'できません', '申し訳', 'お断り', 'ご連絡いただきありがとう',
+  'unable to', 'i cannot', "i'm unable", 'i am unable', 'not able to',
+  'nsfw', 'adult content', 'promotional content for', 'affiliate marketing',
+  'i apologize', 'unfortunately', 'cannot assist', 'cannot create',
+  'cannot help', 'content policy', 'お手伝いいたします',
+];
+
+function isRefusal(text: string): boolean {
+  const lower = text.toLowerCase();
+  return REFUSAL_PATTERNS.some((p) => lower.includes(p.toLowerCase()));
+}
+
+function isValidTweet(text: string): boolean {
+  return text.includes('🔞') && text.includes('#FANZA');
+}
+
+// ─── Claude 生成────────────────────────────────────────────────────────────
+
+async function generateWithClaude(
+  item: any, type: string, topPatterns: any[], externalPatterns: any[] = [],
+): Promise<string | null> {
   const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   if (!baseUrl || !apiKey) return null;
@@ -104,14 +173,14 @@ async function generateWithClaude(item: any, type: string, topPatterns: any[], e
   const extExamples = externalPatterns.slice(0, 2);
 
   const ownSection = ownExamples.length > 0
-    ? `\n【自分の過去高エンゲージメント投稿】:\n${ownExamples.map((p, i) => `例${i + 1}: ${p.text}`).join('\n\n')}\n`
+    ? `\n【自分の過去高エンゲージメント投稿（スタイル参考）】:\n${ownExamples.map((p, i) => `例${i + 1}: ${p.text}`).join('\n\n')}\n`
     : '';
 
   const extSection = extExamples.length > 0
     ? `\n【他アカウントの高エンゲージメント投稿（スタイル参考のみ）】:\n${extExamples.map((p, i) => `参考${i + 1}: ${p.text}`).join('\n\n')}\n`
     : '';
 
-  const prompt = `あなたは日本のSNSコピーライターです。動画配信サービスのアフィリエイト用ツイートを1件作成してください。
+  const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。動画配信サービスのアフィリエイト紹介ツイートを1件作成してください。
 
 作品情報:
 - タイトル: ${title}
@@ -119,21 +188,26 @@ async function generateWithClaude(item: any, type: string, topPatterns: any[], e
 - カテゴリ: ${typeLabel}
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点
-- ハッシュタグ: #${genreTag}
+- ジャンルタグ: #${genreTag}
 ${ownSection}${extSection}
+【バズる投稿の構成（必ず守る）】
+① 1行目：スクロールを止めるフック（「〇〇知らないと損」「やばすぎ」「正直言う」「なんでこんなに」系）
+② 2行目：出演者と作品名
+③ 3行目：レビュー数・評価点などの具体的な数字（信頼性）
+④ 4行目：「リプ欄へ👇」のCTA
+
 出力ルール（厳守）:
 - 必ず 🔞 から始める（1文字目）
 - 日本語140文字以内
 - 末尾に必ず #FANZA #fanza #${genreTag} を付ける
-- 「リンクはリプ欄へ👇」を必ず含める
+- 「リプ欄へ👇」「リプ欄からどうぞ👇」のどちらかを含める
 - 絵文字を2〜4個使う
-- 参考例のスタイルを参考にしつつ新しい表現にする
 
 ツイート本文だけを出力してください:`;
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 300,
+    max_tokens: 350,
     messages: [
       { role: 'user', content: prompt },
       { role: 'assistant', content: '🔞' },
@@ -142,10 +216,9 @@ ${ownSection}${extSection}
 
   const block = message.content[0];
   if (block.type !== 'text') return null;
-  // アシスタントの事前入力「🔞」と結合する
   const text = ('🔞' + block.text).trim();
 
-  if (text.length < 10 || text.length > 400) return null;
+  if (text.length < 10 || text.length > 450) return null;
   if (isRefusal(text)) {
     console.warn('  ⚠ Claude が拒否応答を返したためテンプレートで代替');
     return null;
@@ -157,37 +230,7 @@ ${ownSection}${extSection}
   return text;
 }
 
-const REFUSAL_PATTERNS = [
-  'できません',
-  '申し訳',
-  'お断り',
-  'ご連絡いただきありがとう',
-  'unable to',
-  'i cannot',
-  "i'm unable",
-  'i am unable',
-  'not able to',
-  'nsfw',
-  'adult content',
-  'promotional content for',
-  'affiliate marketing',
-  'i apologize',
-  'unfortunately',
-  'cannot assist',
-  'cannot create',
-  'cannot help',
-  'content policy',
-  'お手伝いいたします', // 拒否後の代替提案フレーズ
-];
-
-function isRefusal(text: string): boolean {
-  const lower = text.toLowerCase();
-  return REFUSAL_PATTERNS.some((p) => lower.includes(p.toLowerCase()));
-}
-
-function isValidTweet(text: string): boolean {
-  return text.includes('🔞') && text.includes('#FANZA');
-}
+// ─── メインエクスポート────────────────────────────────────────────────────
 
 export async function generateTweetText(
   item: any,
