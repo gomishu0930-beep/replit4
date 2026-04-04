@@ -51,10 +51,27 @@ interface ExternalPatternsData {
   queries: string[];
 }
 
+// ─── 動的テンプレート型 ───────────────────────────────────────────────────────
+
+export interface DynamicTemplate {
+  text: string;             // テンプレート文字列（{actress}等のプレースホルダーあり）
+  type: string;             // 対応スロット種別（amateur/rank/sale/buzz/random/any）
+  sourceScore: number;      // 生成元外部パターンの平均スコア
+  generatedAt: string;
+  usedCount: number;        // 実際に使われた回数
+}
+
+interface DynamicTemplatesData {
+  templates: DynamicTemplate[];
+  lastEvolvedAt: string | null;
+  evolutionCount: number;
+}
+
 // ─── インメモリキャッシュ ─────────────────────────────────────────────────────
 
 let postsCache: PostsData = { posts: [] };
 let extCache: ExternalPatternsData = { patterns: [], lastRefreshedAt: null, queries: [] };
+let dynTemplatesCache: DynamicTemplatesData = { templates: [], lastEvolvedAt: null, evolutionCount: 0 };
 let initialized = false;
 
 // ─── 初期化（起動時に1回だけ呼ぶ）───────────────────────────────────────────
@@ -66,8 +83,13 @@ export async function initStorage(): Promise<void> {
   extCache      = await readJson<ExternalPatternsData>('external-patterns.json', {
     patterns: [], lastRefreshedAt: null, queries: [],
   });
+  dynTemplatesCache = await readJson<DynamicTemplatesData>('dynamic-templates.json', {
+    templates: [], lastEvolvedAt: null, evolutionCount: 0,
+  });
   initialized = true;
-  console.log(`  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件)`);
+  console.log(
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件)`,
+  );
 }
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
@@ -196,6 +218,57 @@ export function upsertExternalPatterns(
 
 export function getExternalTopPatterns(limit = 10): ExternalPattern[] {
   return extCache.patterns.slice(0, limit);
+}
+
+// ─── Dynamic Templates ────────────────────────────────────────────────────────
+
+function saveDynTemplatesAsync() {
+  writeJson('dynamic-templates.json', dynTemplatesCache).catch((e: any) =>
+    console.warn('  ⚠ dynamic-templates.json 保存失敗:', e.message),
+  );
+}
+
+export function upsertDynamicTemplates(newTemplates: Omit<DynamicTemplate, 'usedCount'>[]) {
+  const now = new Date().toISOString();
+  for (const t of newTemplates) {
+    dynTemplatesCache.templates.push({ ...t, usedCount: 0 });
+  }
+  // 最新100件に絞る（使用回数が多いものを優先残留）
+  dynTemplatesCache.templates.sort((a, b) => b.sourceScore - a.sourceScore);
+  dynTemplatesCache.templates = dynTemplatesCache.templates.slice(0, 100);
+  dynTemplatesCache.lastEvolvedAt = now;
+  dynTemplatesCache.evolutionCount++;
+  saveDynTemplatesAsync();
+}
+
+export function getDynamicTemplates(type?: string, limit = 5): DynamicTemplate[] {
+  const pool = type
+    ? dynTemplatesCache.templates.filter((t) => t.type === type || t.type === 'any')
+    : dynTemplatesCache.templates;
+  // 使用回数が少ないものを優先（まんべんなく使う）
+  return [...pool].sort((a, b) => a.usedCount - b.usedCount).slice(0, limit);
+}
+
+export function recordDynamicTemplateUsed(text: string) {
+  const t = dynTemplatesCache.templates.find((t) => t.text === text);
+  if (t) {
+    t.usedCount++;
+    saveDynTemplatesAsync();
+  }
+}
+
+export function getDynamicTemplatesInfo() {
+  return {
+    count: dynTemplatesCache.templates.length,
+    lastEvolvedAt: dynTemplatesCache.lastEvolvedAt,
+    evolutionCount: dynTemplatesCache.evolutionCount,
+    topTemplates: dynTemplatesCache.templates.slice(0, 5).map((t) => ({
+      type: t.type,
+      preview: t.text.slice(0, 40),
+      usedCount: t.usedCount,
+      sourceScore: t.sourceScore,
+    })),
+  };
 }
 
 export function getExternalPatternsInfo() {

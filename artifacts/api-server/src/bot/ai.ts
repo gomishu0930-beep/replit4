@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { getDynamicTemplates, recordDynamicTemplateUsed } from './storage.js';
 
 // ─── バイラル特化テンプレート（ハッシュタグなし）────────────────────────────
 // 構造：フック（止める）→ 作品情報 → 数字の根拠 → CTA
@@ -107,6 +108,17 @@ function buildTemplateText(item: any, type: string): string {
     reviewAvg: String(item.review?.average ?? '4.5'),
     shortTitle: shortTitle(item.title),
   };
+
+  // 動的テンプレートが存在する場合は 70% の確率で優先使用
+  const dynPool = getDynamicTemplates(type, 5);
+  if (dynPool.length > 0 && Math.random() < 0.7) {
+    const chosen = dynPool[Math.floor(Math.random() * dynPool.length)];
+    const text = fillTemplate(chosen.text, vars);
+    recordDynamicTemplateUsed(chosen.text);
+    console.log('  🧬 動的テンプレート使用');
+    return text;
+  }
+
   const pool = TEMPLATES[type] || DEFAULT_TEMPLATES;
   return fillTemplate(pickRandom(pool), vars);
 }

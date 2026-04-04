@@ -1,5 +1,6 @@
-import { getRecentPostIds, updateMetrics, upsertExternalPatterns } from './storage.js';
+import { getRecentPostIds, updateMetrics, upsertExternalPatterns, getExternalTopPatterns, upsertDynamicTemplates } from './storage.js';
 import { getTweetMetrics, searchTweetsByHashtag, fetchUserTimelineByUsername } from './twitter.js';
+import Anthropic from '@anthropic-ai/sdk';
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -101,5 +102,130 @@ export async function refreshExternalPatterns() {
   }
 
   console.log(`  外部パターン収集完了 (新規 ${totalAdded} 件)`);
+
+  // 外部パターンが10件以上あればテンプレート進化を試みる
+  const externalPatterns = getExternalTopPatterns(20);
+  if (externalPatterns.length >= 10) {
+    try {
+      await evolveTemplates(externalPatterns);
+    } catch (e: any) {
+      console.warn(`  ⚠ テンプレート進化スキップ: ${e.message}`);
+    }
+  } else {
+    console.log(`  📝 外部パターン不足 (${externalPatterns.length}件) → テンプレート進化スキップ`);
+  }
+
   return totalAdded;
+}
+
+// ─── テンプレート自動進化 ────────────────────────────────────────────────────
+
+const PLACEHOLDER_EXPLANATION = `
+使えるプレースホルダー:
+- {actress}      → 出演者名（例: 葵つかさ）
+- {reviewCount}  → レビュー件数（例: 234）
+- {reviewAvg}    → 平均評価（例: 4.8）
+- {shortTitle}   → 作品タイトル（短縮版）
+`.trim();
+
+export async function evolveTemplates(externalPatterns: any[]): Promise<void> {
+  const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  const apiKey  = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  if (!baseUrl || !apiKey) {
+    console.log('  ⚠ Claude API 未設定 → テンプレート進化スキップ');
+    return;
+  }
+
+  const client = new Anthropic({ baseURL: baseUrl, apiKey });
+
+  // スコアの高い外部パターン上位10件を例として渡す
+  const topExamples = externalPatterns
+    .slice(0, 10)
+    .map((p, i) => `【例${i + 1}】(スコア: ${p.score})\n${p.text}`)
+    .join('\n\n');
+
+  const avgScore = externalPatterns.slice(0, 10).reduce((s, p) => s + p.score, 0) / Math.min(10, externalPatterns.length);
+
+  const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。
+
+以下は実際にX(Twitter)で高エンゲージメントを獲得したアダルトコンテンツ紹介ツイートの実例です：
+
+${topExamples}
+
+これらの投稿を深く分析し、「なぜバズったか」の共通パターン・フック・感情トリガー・CTA構造を抽出してください。
+その分析を踏まえて、FANZAアフィリエイト用の新テンプレートを6件生成してください。
+
+${PLACEHOLDER_EXPLANATION}
+
+生成ルール:
+- 必ず 🔞 から始める
+- 140文字以内（日本語）
+- ハッシュタグ（#）は一切禁止
+- 「リプ欄へ👇」または「リプ欄からどうぞ👇」を必ず含める
+- 絵文字を2〜4個使う
+- スロット種別: amateur(2件), buzz(2件), any(2件)
+
+以下の JSON 形式のみで出力（解説文不要）:
+[
+  {"type": "amateur", "text": "テンプレート文字列"},
+  {"type": "amateur", "text": "テンプレート文字列"},
+  {"type": "buzz",    "text": "テンプレート文字列"},
+  {"type": "buzz",    "text": "テンプレート文字列"},
+  {"type": "any",     "text": "テンプレート文字列"},
+  {"type": "any",     "text": "テンプレート文字列"}
+]`;
+
+  console.log('  🧬 外部データを元にテンプレート進化中...');
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 1200,
+    messages: [
+      { role: 'user', content: prompt },
+      { role: 'assistant', content: '[' },
+    ],
+  });
+
+  const block = message.content[0];
+  if (block.type !== 'text') return;
+
+  const raw = ('[' + block.text).trim();
+
+  let parsed: Array<{ type: string; text: string }>;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // JSONが壊れている場合は部分パースを試みる
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) {
+      console.warn('  ⚠ テンプレートJSONパース失敗 → スキップ');
+      return;
+    }
+    parsed = JSON.parse(match[0]);
+  }
+
+  // バリデーション：🔞 含む・{actress}等のプレースホルダー含む・短すぎない
+  const valid = parsed.filter((t) =>
+    typeof t.text === 'string' &&
+    t.text.includes('🔞') &&
+    t.text.length >= 20 &&
+    t.text.length <= 280 &&
+    !t.text.includes('#') &&
+    (t.text.includes('{actress}') || t.text.includes('{reviewCount}') || t.text.includes('{shortTitle}')),
+  );
+
+  if (valid.length === 0) {
+    console.warn('  ⚠ 有効なテンプレートが生成されませんでした');
+    return;
+  }
+
+  const toSave = valid.map((t) => ({
+    text: t.text,
+    type: t.type,
+    sourceScore: Math.round(avgScore),
+    generatedAt: new Date().toISOString(),
+  }));
+
+  upsertDynamicTemplates(toSave);
+  console.log(`  ✅ テンプレート進化完了: ${valid.length}件 保存 (元データ平均スコア: ${Math.round(avgScore)})`);
 }
