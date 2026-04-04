@@ -102,11 +102,16 @@ export async function getRankingItems(count = 2) {
   return pickNUnique(items, count);
 }
 
-// セール品
+// セール品：キャンペーンIDが不明なため keyword で代替
+const SALE_KEYWORDS = ['期間限定セール', 'SALE', '割引', '半額', '特価', 'お得'];
 export async function getSaleItems(count = 2) {
+  const keyword = pickRandom(SALE_KEYWORDS);
   const offset = randomOffset(50);
-  const items = await fetchItems({ sort: 'rank', article: 'campaign', offset });
-  return pickNUnique(items, count);
+  console.log(`  🔍 セール検索: keyword="${keyword}" offset=${offset}`);
+  const items = await fetchItems({ sort: 'rank', keyword, offset });
+  // セール作品が0件の場合はランダム上位にフォールバック
+  const pool = items.length > 0 ? items : await fetchItems({ sort: 'rank', offset: randomOffset(200) });
+  return pickNUnique(pool, count);
 }
 
 // ランダム

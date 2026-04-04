@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 3,
+  "monitorIntervalHours": 5,
   "typeWeights": {
     "amateur": 1,
     "buzz": 1,
@@ -10,16 +10,16 @@
   "cycleStats": {
     "lastNewPatterns": 0,
     "avgNewPatterns": 0,
-    "totalCycles": 1
+    "totalCycles": 4
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 3h）は最適か？",
-      "status": "pending",
-      "finding": "データ蓄積中 (1サイクル, 直近 0件新規)",
-      "adjustment": null,
-      "testedAt": "2026-04-04T12:47:51.451Z"
+      "question": "外部情報の収集間隔（現在 4h）は最適か？",
+      "status": "adjusted",
+      "finding": "4サイクル実績 / 平均新規パターン 0.0件/サイクル",
+      "adjustment": "監視間隔を 4h → 5h に延長（平均新規パターン 0.0件/サイクル）",
+      "testedAt": "2026-04-04T13:59:04.015Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "pending",
       "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-04T12:47:51.451Z"
+      "testedAt": "2026-04-04T13:59:04.015Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T12:47:51.451Z"
+      "testedAt": "2026-04-04T13:59:04.015Z"
     },
     {
       "id": "posting-hours",
@@ -43,18 +43,39 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T12:47:51.451Z"
+      "testedAt": "2026-04-04T13:59:04.015Z"
     }
   ],
   "decisionLog": [
     {
-      "at": "2026-04-04T12:47:51.451Z",
+      "at": "2026-04-04T13:59:04.015Z",
+      "cycle": 4,
+      "decisions": [
+        "監視間隔を 4h → 5h に延長（平均新規パターン 0.0件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-04T13:18:28.114Z",
+      "cycle": 3,
+      "decisions": [
+        "監視間隔を 3h → 4h に延長（平均新規パターン 0.0件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-04T12:58:22.054Z",
+      "cycle": 2,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T12:49:44.941Z",
       "cycle": 1,
       "decisions": [
         "評価完了 / 変更なし"
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-04T12:47:51.451Z",
-  "version": 2
+  "lastEvaluatedAt": "2026-04-04T13:59:04.015Z",
+  "version": 5
 }

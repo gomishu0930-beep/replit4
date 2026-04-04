@@ -17,7 +17,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, async (err) => {
+const server = app.listen(port, async (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -29,3 +29,20 @@ app.listen(port, async (err) => {
   await initStorage();
   startScheduler();
 });
+
+// グレースフルシャットダウン：投稿中でも最大60秒待ってから終了
+function gracefulShutdown(signal: string) {
+  logger.info(`${signal} received — graceful shutdown started`);
+  server.close(() => {
+    logger.info("HTTP server closed");
+    process.exit(0);
+  });
+  // 60秒以内に終わらなければ強制終了
+  setTimeout(() => {
+    logger.warn("Graceful shutdown timeout — forcing exit");
+    process.exit(1);
+  }, 60_000).unref();
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
