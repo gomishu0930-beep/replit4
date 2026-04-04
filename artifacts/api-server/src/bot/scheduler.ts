@@ -7,6 +7,7 @@ import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getS
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
+import { loadStrategyConfig, evaluateAndAdapt, getMonitorIntervalMs } from './strategy.js';
 
 let isPosting = false;
 
@@ -122,25 +123,30 @@ async function postCelebritySlot(label: string) {
   }
 }
 
-// ─── 常時監視ループ（3時間ごとに繰り返し）──────────────────────────────────
-const MONITOR_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3時間
+// ─── 常時監視ループ（間隔は戦略エンジンが動的に調整）────────────────────────
 
 async function monitoringLoop() {
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
   while (true) {
+    const intervalMs = getMonitorIntervalMs();
+    const intervalH = Math.round(intervalMs / 3600000 * 10) / 10;
+
     try {
-      // 投稿中はスキップして次のサイクルまで待機
       if (isPosting) {
         console.log(`\n[${jst()}] 📡 監視スキップ（投稿処理中）`);
       } else {
         console.log(`\n[${jst()}] 📡 外部パターン監視サイクル開始`);
-        await refreshExternalPatterns();
-        console.log(`[${jst()}] 📡 監視サイクル完了 → 次回は3時間後`);
+        const newPatterns = await refreshExternalPatterns();
+        console.log(`[${jst()}] 📡 監視サイクル完了 → 次回は${intervalH}時間後`);
+
+        // 戦略エンジン：仮説検証 → 自動パラメータ調整
+        await evaluateAndAdapt(newPatterns ?? 0);
       }
     } catch (e: any) {
       console.error(`  ❌ 監視サイクルエラー: ${e.message}`);
     }
-    await sleep(MONITOR_INTERVAL_MS);
+
+    await sleep(intervalMs);
   }
 }
 
@@ -204,7 +210,12 @@ async function catchUpMissedSlots() {
 }
 
 export function startScheduler() {
-  // ── 常時監視ループを起動（5分後に初回実行、以降3時間ごと）──────────────
+  // ── 戦略設定を読み込んでから起動 ─────────────────────────────────────────
+  loadStrategyConfig().catch((e: any) =>
+    console.warn('  ⚠ 戦略設定読み込み失敗 (デフォルト値で動作):', e.message),
+  );
+
+  // ── 常時監視ループを起動（5分後に初回実行）───────────────────────────────
   sleep(5 * 60 * 1000).then(() => monitoringLoop());
 
   // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────

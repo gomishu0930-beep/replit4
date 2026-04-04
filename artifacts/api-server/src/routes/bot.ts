@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo } from '../bot/storage.js';
 import { getMyUsername } from '../bot/twitter.js';
+import { getStrategySummary } from '../bot/strategy.js';
 
 const router = Router();
 
@@ -31,6 +32,12 @@ router.get('/bot/posts', (_req, res) => {
 router.get('/bot/external-patterns', (_req, res) => {
   const info = getExternalPatternsInfo();
   res.json(info);
+});
+
+router.get('/bot/strategy', (_req, res) => {
+  const summary = getStrategySummary();
+  const dynInfo = getDynamicTemplatesInfo();
+  res.json({ ...summary, dynamicTemplates: dynInfo });
 });
 
 export default router;
