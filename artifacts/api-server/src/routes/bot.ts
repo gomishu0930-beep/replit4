@@ -1,23 +1,23 @@
 import { Router } from 'express';
 import { getStats, getAllPosts, getExternalPatternsInfo } from '../bot/storage.js';
+import { getMyUsername } from '../bot/twitter.js';
 
 const router = Router();
 
-router.get('/bot/status', (_req, res) => {
+router.get('/bot/status', async (_req, res) => {
   const stats = getStats();
+  const account = await getMyUsername();
+
   res.json({
     status: 'running',
     uptime: Math.floor(process.uptime()),
-    account: '@ero_senpai1',
+    account,
     schedule: [
-      { time: '06:00 JST', type: 'external', label: '外部パターン収集' },
-      { time: '07:40 JST', type: 'external', label: '【臨時テスト】外部パターン収集' },
       { time: '09:00 JST', type: 'amateur', label: '素人' },
-      { time: '12:00 JST', type: 'rank', label: 'ランキング' },
-      { time: '15:00 JST', type: 'sale', label: 'セール' },
-      { time: '18:00 JST', type: 'buzz', label: 'バズ + 指標更新' },
+      { time: '12:00 JST', type: 'buzz',   label: '高評価（4.7点以上）' },
+      { time: '18:00 JST', type: 'buzz',   label: 'バズ + 指標更新' },
       { time: '21:00 JST', type: 'random', label: 'ランダム' },
-      { time: '23:00 JST', type: 'sale', label: 'セール' },
+      { time: '23:00 JST', type: 'sale',   label: 'セール' },
     ],
     stats,
   });

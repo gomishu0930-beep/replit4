@@ -9,6 +9,21 @@ const client = new TwitterApi({
 
 const rw = client.readWrite;
 
+let _cachedUsername: string | null = null;
+
+export async function getMyUsername(): Promise<string> {
+  if (_cachedUsername) return _cachedUsername;
+  try {
+    const userId = process.env.TWITTER_USER_ID;
+    if (!userId) return process.env.TWITTER_USERNAME ?? '不明';
+    const res = await client.v2.user(userId, { 'user.fields': ['username'] });
+    _cachedUsername = `@${res.data.username}`;
+    return _cachedUsername;
+  } catch {
+    return process.env.TWITTER_USERNAME ? `@${process.env.TWITTER_USERNAME.replace(/^@/, '')}` : '不明';
+  }
+}
+
 async function downloadImageBuffer(url: string): Promise<Buffer> {
   const res = await fetch(url, { headers: { 'User-Agent': 'FanzaBot/1.0' } });
   if (!res.ok) throw new Error(`Image download failed: ${url} (${res.status})`);

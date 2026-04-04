@@ -163,7 +163,7 @@ function Dashboard() {
             <div>
               <h1 className="text-lg font-bold leading-tight">FANZA X Bot</h1>
               <p className="text-xs text-muted-foreground">
-                {status?.account ?? "@ero_senpai1"} • 自動投稿ダッシュボード
+                {status?.account ?? "読み込み中..."} • 自動投稿ダッシュボード
               </p>
             </div>
           </div>
@@ -242,7 +242,7 @@ function Dashboard() {
                   <p className="text-sm font-medium line-clamp-2">{stats.lastPostTitle}</p>
                 </div>
                 <a
-                  href={`https://twitter.com/${(status?.account ?? "@ero_senpai1").replace("@", "")}`}
+                  href={`https://twitter.com/${(status?.account ?? "").replace("@", "").replace(/^ID:.*/, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-2"
@@ -340,7 +340,7 @@ function Dashboard() {
           {!externalInfo || externalInfo.topPatterns.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               まだデータがありません。<br />
-              毎日 6:00 JST に自動収集されます 🔍
+              3時間ごとに自動収集されます 🔍
             </p>
           ) : (
             <div className="space-y-2">
@@ -374,7 +374,7 @@ function Dashboard() {
       </main>
 
       <footer className="border-t border-border mt-8 py-4 text-center text-xs text-muted-foreground">
-        FANZA X Bot — 毎日 6回自動稼働中 🤖
+        FANZA X Bot — 1日5回投稿 + 常時監視ループ稼働中 🤖
       </footer>
     </div>
   );
