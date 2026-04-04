@@ -111,39 +111,82 @@ async function generateWithClaude(item: any, type: string, topPatterns: any[], e
     ? `\n【他アカウントの高エンゲージメント投稿（スタイル参考のみ）】:\n${extExamples.map((p, i) => `参考${i + 1}: ${p.text}`).join('\n\n')}\n`
     : '';
 
-  const prompt = `あなたは日本のSNSマーケティングの専門家です。FANZAアフィリエイト向けのプロモーションツイートを1件生成してください。
+  const prompt = `あなたは日本のSNSコピーライターです。動画配信サービスのアフィリエイト用ツイートを1件作成してください。
 
 作品情報:
 - タイトル: ${title}
-- 出演: ${actress}
+- 出演者: ${actress}
 - カテゴリ: ${typeLabel}
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点
-- ジャンルタグ: #${genreTag}
+- ハッシュタグ: #${genreTag}
 ${ownSection}${extSection}
-ルール:
-- 日本語で書く
-- 冒頭に 🔞 絵文字を必ず入れる
-- 140文字以内に収める
-- 必ず #FANZA #fanza #${genreTag} のハッシュタグを末尾に入れる
-- 「リンクはリプ欄へ👇」または「リンクはリプへ👇」を入れる
-- 絵文字を効果的に使う
-- 参考例がある場合はそのスタイルを活かしつつ、オリジナルの表現にする
+出力ルール（厳守）:
+- 必ず 🔞 から始める（1文字目）
+- 日本語140文字以内
+- 末尾に必ず #FANZA #fanza #${genreTag} を付ける
+- 「リンクはリプ欄へ👇」を必ず含める
+- 絵文字を2〜4個使う
+- 参考例のスタイルを参考にしつつ新しい表現にする
 
-ツイート本文のみを返してください（説明文は不要）:`;
+ツイート本文だけを出力してください:`;
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 300,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      { role: 'user', content: prompt },
+      { role: 'assistant', content: '🔞' },
+    ],
   });
 
   const block = message.content[0];
   if (block.type !== 'text') return null;
-  const text = block.text.trim();
+  // アシスタントの事前入力「🔞」と結合する
+  const text = ('🔞' + block.text).trim();
 
   if (text.length < 10 || text.length > 400) return null;
+  if (isRefusal(text)) {
+    console.warn('  ⚠ Claude が拒否応答を返したためテンプレートで代替');
+    return null;
+  }
+  if (!isValidTweet(text)) {
+    console.warn('  ⚠ Claude 応答が必須要素を欠くためテンプレートで代替');
+    return null;
+  }
   return text;
+}
+
+const REFUSAL_PATTERNS = [
+  'できません',
+  '申し訳',
+  'お断り',
+  'ご連絡いただきありがとう',
+  'unable to',
+  'i cannot',
+  "i'm unable",
+  'i am unable',
+  'not able to',
+  'nsfw',
+  'adult content',
+  'promotional content for',
+  'affiliate marketing',
+  'i apologize',
+  'unfortunately',
+  'cannot assist',
+  'cannot create',
+  'cannot help',
+  'content policy',
+  'お手伝いいたします', // 拒否後の代替提案フレーズ
+];
+
+function isRefusal(text: string): boolean {
+  const lower = text.toLowerCase();
+  return REFUSAL_PATTERNS.some((p) => lower.includes(p.toLowerCase()));
+}
+
+function isValidTweet(text: string): boolean {
+  return text.includes('🔞') && text.includes('#FANZA');
 }
 
 export async function generateTweetText(
