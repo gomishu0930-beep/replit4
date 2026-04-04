@@ -75,6 +75,21 @@ interface StrategyData {
   recentDecisions: DecisionLog[];
   dynamicTemplates: { count: number; lastEvolvedAt: string | null; evolutionCount: number };
 }
+interface WatchdogEvent {
+  at: string;
+  level: "info" | "warn" | "error" | "recovery";
+  detail: string;
+}
+interface WatchdogData {
+  lastCheckAt: string | null;
+  lastIssueAt: string | null;
+  lastRecoveryAt: string | null;
+  status: "healthy" | "issue" | "recovering" | "failed";
+  issueCount: number;
+  recoveryCount: number;
+  consecutiveFailures: number;
+  events: WatchdogEvent[];
+}
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
 
@@ -210,6 +225,78 @@ function EngagementChart({ posts }: { posts: Post[] }) {
   );
 }
 
+// ─── ウォッチドッグパネル ─────────────────────────────────────────────────────
+
+function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
+  if (!data) return (
+    <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+      <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">🐕 自己修復ウォッチドッグ</h2>
+      <p className="text-xs text-white/30">読み込み中...</p>
+    </div>
+  );
+
+  const statusCfg = {
+    healthy:    { icon: "🟢", label: "正常稼働中",   cls: "border-emerald-500/30 bg-emerald-500/8" },
+    issue:      { icon: "🟡", label: "問題検知",     cls: "border-yellow-500/30 bg-yellow-500/8" },
+    recovering: { icon: "🔄", label: "回復処理中",   cls: "border-blue-500/30 bg-blue-500/8" },
+    failed:     { icon: "🔴", label: "回復失敗",     cls: "border-red-500/30 bg-red-500/8" },
+  }[data.status];
+
+  const levelIcon = { info: "ℹ", warn: "⚠", error: "❌", recovery: "✅" };
+  const levelCls = {
+    info: "text-white/50",
+    warn: "text-yellow-400",
+    error: "text-red-400",
+    recovery: "text-emerald-400",
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 ${statusCfg.cls}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">{statusCfg.icon}</span>
+          <h2 className="text-xs font-semibold text-white/70">🐕 自己修復ウォッチドッグ</h2>
+          <span className="text-xs text-white/50">{statusCfg.label}</span>
+        </div>
+        <div className="text-[10px] text-white/30 text-right">
+          <div>問題検知: {data.issueCount}回</div>
+          <div>自動回復: <span className="text-emerald-400 font-medium">{data.recoveryCount}回</span></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-3 text-[10px]">
+        <div className="bg-white/5 rounded p-2">
+          <p className="text-white/30 mb-0.5">最終チェック</p>
+          <p className="text-white/70">{data.lastCheckAt ? fmtDate(data.lastCheckAt) : "未実行"}</p>
+        </div>
+        <div className="bg-white/5 rounded p-2">
+          <p className="text-white/30 mb-0.5">最終問題検知</p>
+          <p className="text-yellow-400">{data.lastIssueAt ? fmtDate(data.lastIssueAt) : "なし"}</p>
+        </div>
+        <div className="bg-white/5 rounded p-2">
+          <p className="text-white/30 mb-0.5">最終自動回復</p>
+          <p className="text-emerald-400">{data.lastRecoveryAt ? fmtDate(data.lastRecoveryAt) : "なし"}</p>
+        </div>
+      </div>
+
+      {data.events.length > 0 && (
+        <div>
+          <p className="text-[10px] text-white/30 mb-1.5">最新ログ</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {data.events.slice(0, 8).map((ev, i) => (
+              <div key={i} className="flex items-start gap-1.5 text-[10px]">
+                <span className="shrink-0 text-white/30 font-mono">{fmtDate(ev.at).slice(5)}</span>
+                <span className="shrink-0">{levelIcon[ev.level]}</span>
+                <span className={levelCls[ev.level]}>{ev.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── メインダッシュボード ─────────────────────────────────────────────────────
 
 function Dashboard() {
@@ -239,6 +326,11 @@ function Dashboard() {
   const { data: strategy } = useQuery<StrategyData>({
     queryKey: ["strategy", tick],
     queryFn: () => fetch(`${API}/api/bot/strategy`).then((r) => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: watchdog } = useQuery<WatchdogData>({
+    queryKey: ["watchdog", tick],
+    queryFn: () => fetch(`${API}/api/bot/watchdog`).then((r) => r.json()),
     refetchInterval: 60000,
   });
 
@@ -364,6 +456,8 @@ function Dashboard() {
                 )}
               </div>
             </div>
+
+            <WatchdogPanel data={watchdog} />
           </>
         )}
 

@@ -3,6 +3,7 @@ import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo
 import { getMyUsername } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
+import { getWatchdogState } from '../bot/watchdog.js';
 
 const router = Router();
 
@@ -39,6 +40,11 @@ router.get('/bot/strategy', (_req, res) => {
   const summary = getStrategySummary();
   const dynInfo = getDynamicTemplatesInfo();
   res.json({ ...summary, dynamicTemplates: dynInfo });
+});
+
+// ウォッチドッグ状態
+router.get('/bot/watchdog', (_req, res) => {
+  res.json(getWatchdogState());
 });
 
 // キャンペーンID情報

@@ -8,8 +8,19 @@ import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, getMonitorIntervalMs } from './strategy.js';
+import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 
 let isPosting = false;
+let _postingStartedAt: number | null = null;
+
+// ウォッチドッグ向けフック公開
+export function getIsPosting() { return isPosting; }
+export function getPostingStartedAt() { return _postingStartedAt; }
+export function forceResetIsPosting() {
+  console.log('  🔧 [WATCHDOG] isPostingフラグを強制リセット');
+  isPosting = false;
+  _postingStartedAt = null;
+}
 
 // ランダム待機（凍結対策）
 function sleep(ms: number) {
@@ -54,11 +65,11 @@ async function postItems(items: any[], type: string, label: string) {
     return;
   }
   isPosting = true;
+  _postingStartedAt = Date.now();
   try {
     console.log(`\n[${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}] ${label} 投稿開始 (${items.length}件)`);
     for (let i = 0; i < items.length; i++) {
       await postItem(items[i], type, label);
-      // 作品間：5〜15分のランダム待機（スパム判定回避）
       if (i < items.length - 1) {
         await randomSleep(5 * 60, 15 * 60);
       }
@@ -68,7 +79,15 @@ async function postItems(items: any[], type: string, label: string) {
     await contact.postingFailed(label, e.message);
   } finally {
     isPosting = false;
+    _postingStartedAt = null;
   }
+}
+
+// ウォッチドッグ用：緊急投稿（ランダム1件を即時投稿）
+export async function triggerEmergencyPost(): Promise<void> {
+  const items = await getRandomItems(1);
+  if (items.length === 0) throw new Error('緊急投稿: アイテム取得失敗');
+  await postItems(items, 'emergency', '緊急回復投稿');
 }
 
 // ─── 芸能人スロット専用：投稿処理 ────────────────────────────────────────────
@@ -105,6 +124,7 @@ async function postCelebritySlot(label: string) {
     return;
   }
   isPosting = true;
+  _postingStartedAt = Date.now();
   try {
     const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
     console.log(`\n[${jst}] ${label} 芸能人スロット開始`);
@@ -120,6 +140,7 @@ async function postCelebritySlot(label: string) {
     await contact.postingFailed(label, e.message);
   } finally {
     isPosting = false;
+    _postingStartedAt = null;
   }
 }
 
@@ -214,6 +235,15 @@ export function startScheduler() {
   loadStrategyConfig().catch((e: any) =>
     console.warn('  ⚠ 戦略設定読み込み失敗 (デフォルト値で動作):', e.message),
   );
+
+  // ── ウォッチドッグにスケジューラーフックを注入して起動 ────────────────────
+  injectSchedulerHooks({
+    getIsPosting,
+    getPostingStartedAt,
+    forceResetIsPosting,
+    triggerEmergencyPost,
+  });
+  sleep(3 * 60 * 1000).then(() => startWatchdog()); // 3分後に初回チェック
 
   // ── 常時監視ループを起動（5分後に初回実行）───────────────────────────────
   sleep(5 * 60 * 1000).then(() => monitoringLoop());
