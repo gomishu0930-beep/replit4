@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo } from '../bot/storage.js';
 import { getMyUsername } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
+import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 
 const router = Router();
 
@@ -38,6 +39,29 @@ router.get('/bot/strategy', (_req, res) => {
   const summary = getStrategySummary();
   const dynInfo = getDynamicTemplatesInfo();
   res.json({ ...summary, dynamicTemplates: dynInfo });
+});
+
+// キャンペーンID情報
+router.get('/bot/campaign-ids', async (_req, res) => {
+  try {
+    const info = await getCampaignCacheInfo();
+    res.json(info);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// キャンペーンID手動再探索（POST）
+router.post('/bot/campaign-ids/discover', async (_req, res) => {
+  try {
+    // バックグラウンドで実行（レスポンスはすぐ返す）
+    discoverCampaignIds({ force: true, maxProbe: 500 }).catch((e: any) =>
+      console.warn('  ⚠ 手動探索失敗:', e.message),
+    );
+    res.json({ status: 'started', message: 'キャンペーンID探索を開始しました（バックグラウンド実行中）' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

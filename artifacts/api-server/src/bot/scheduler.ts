@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 
-import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
+import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
@@ -220,6 +220,21 @@ export function startScheduler() {
 
   // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────
   sleep(2 * 60 * 1000).then(() => catchUpMissedSlots());
+
+  // ── 起動10分後にキャンペーンID探索（キャッシュが新鮮な場合はスキップ）──
+  sleep(10 * 60 * 1000).then(() =>
+    discoverCampaignIds({ maxProbe: 200 }).catch((e: any) =>
+      console.warn('  ⚠ キャンペーンID探索失敗:', e.message),
+    ),
+  );
+
+  // 毎週日曜 03:00 JST — キャンペーンID週次再探索（次の範囲を探索）
+  cron.schedule('0 3 * * 0', async () => {
+    console.log('\n  🔄 [週次] キャンペーンID再探索開始');
+    await discoverCampaignIds({ maxProbe: 300 }).catch((e: any) =>
+      console.warn('  ⚠ キャンペーンID週次探索失敗:', e.message),
+    );
+  }, { timezone: 'Asia/Tokyo' });
 
   // ── 投稿スケジュール ─────────────────────────────────────────────────────
 

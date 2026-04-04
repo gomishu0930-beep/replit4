@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 5,
+  "monitorIntervalHours": 6,
   "typeWeights": {
     "amateur": 1,
     "buzz": 1,
@@ -10,16 +10,16 @@
   "cycleStats": {
     "lastNewPatterns": 0,
     "avgNewPatterns": 0,
-    "totalCycles": 4
+    "totalCycles": 6
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 4h）は最適か？",
-      "status": "adjusted",
-      "finding": "4サイクル実績 / 平均新規パターン 0.0件/サイクル",
-      "adjustment": "監視間隔を 4h → 5h に延長（平均新規パターン 0.0件/サイクル）",
-      "testedAt": "2026-04-04T13:59:04.015Z"
+      "question": "外部情報の収集間隔（現在 6h）は最適か？",
+      "status": "confirmed",
+      "finding": "6サイクル実績 / 平均新規パターン 0.0件/サイクル",
+      "adjustment": null,
+      "testedAt": "2026-04-04T18:53:28.990Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "pending",
       "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-04T13:59:04.015Z"
+      "testedAt": "2026-04-04T18:53:28.990Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T13:59:04.015Z"
+      "testedAt": "2026-04-04T18:53:28.990Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,24 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T13:59:04.015Z"
+      "testedAt": "2026-04-04T18:53:28.990Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-04T18:53:28.991Z",
+      "cycle": 6,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T18:43:31.233Z",
+      "cycle": 5,
+      "decisions": [
+        "監視間隔を 5h → 6h に延長（平均新規パターン 0.0件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-04T13:59:04.015Z",
       "cycle": 4,
@@ -76,6 +90,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-04T13:59:04.015Z",
-  "version": 5
+  "lastEvaluatedAt": "2026-04-04T18:53:28.990Z",
+  "version": 7
 }
