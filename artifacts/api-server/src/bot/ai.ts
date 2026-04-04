@@ -223,6 +223,33 @@ ${ownSection}${extSection}
   return text;
 }
 
+// ─── 芸能人スロット専用：本文生成 ───────────────────────────────────────────
+
+export function generateCelebrityMainTweet(celebrity: string, hook: string, item: any): string {
+  const actress = item.actress?.map((a: any) => a.name).join('・') || '人気女優';
+  const reviewAvg = item.review?.average ?? '4.5';
+  const reviewCount = item.review?.count ?? 0;
+  return [
+    `🔞${hook}`,
+    ``,
+    `出演: ${actress}`,
+    `⭐${reviewAvg}点 / レビュー${reviewCount}件`,
+    ``,
+    `詳細はリプ欄👇`,
+  ].join('\n');
+}
+
+export function generateCelebrityIntroReply(introLine: string, item: any): string {
+  const title = item.title?.slice(0, 30) ?? '';
+  const actress = item.actress?.map((a: any) => a.name).join('・') || '人気女優';
+  return [
+    introLine,
+    ``,
+    `👤 ${actress}`,
+    `🎬 「${title}」`,
+  ].join('\n');
+}
+
 // ─── メインエクスポート────────────────────────────────────────────────────
 
 export async function generateTweetText(

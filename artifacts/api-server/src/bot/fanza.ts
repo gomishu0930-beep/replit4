@@ -2,7 +2,7 @@ import { getRecentlyPostedIds } from './storage.js';
 
 const API_BASE = 'https://api.dmm.com/affiliate/v3/ItemList';
 
-async function fetchItems(extra: Record<string, string> = {}): Promise<any[]> {
+export async function fetchItems(extra: Record<string, string> = {}): Promise<any[]> {
   const params = new URLSearchParams({
     api_id: process.env.DMM_API_ID ?? '',
     affiliate_id: process.env.DMM_AFFILIATE_ID ?? '',

@@ -2,9 +2,10 @@ import cron from 'node-cron';
 
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
-import { generateTweetText, generateEngagementReply } from './ai.js';
+import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
+import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 
 let isPosting = false;
 
@@ -60,6 +61,57 @@ async function postItems(items: any[], type: string, label: string) {
         await randomSleep(5 * 60, 15 * 60);
       }
     }
+  } catch (e: any) {
+    console.error(`  ❌ [${label}] エラー: ${e.message}`);
+  } finally {
+    isPosting = false;
+  }
+}
+
+// ─── 芸能人スロット専用：投稿処理 ────────────────────────────────────────────
+
+async function postCelebrityItem(item: any, label: string, mapping: CelebrityMapping) {
+  const hook = pickRandom(mapping.hooks);
+  const introLine = pickRandom(mapping.introLines);
+
+  console.log(`  🎭 [${label}] 芸能人スロット: ${mapping.celebrity} → "${hook.slice(0, 20)}..."`);
+
+  // ツイート①：芸能人フック + 女優サンプル画像
+  const mainText = generateCelebrityMainTweet(mapping.celebrity, hook, item);
+  const imageUrls = getSampleImages(item);
+  const mediaIds = await uploadImages(imageUrls);
+  const tweetId = await postTweet(mainText, mediaIds);
+
+  // リプライ①：女優紹介（30〜90秒後）
+  await randomSleep(30, 90);
+  const introText = generateCelebrityIntroReply(introLine, item);
+  const introReplyId = await replyToTweet(tweetId, introText);
+
+  // リプライ②：アフィリエイトリンク（20〜60秒後）
+  await randomSleep(20, 60);
+  const affiliateURL = item.affiliateURL ?? '';
+  await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+
+  recordPost({ tweetId, replyId: introReplyId, item, text: mainText, type: 'celebrity' });
+  console.log(`  ✅ [${label}] 芸能人スロット投稿完了 (${tweetId})`);
+}
+
+async function postCelebritySlot(label: string) {
+  if (isPosting) {
+    console.log(`  ⚠ [${label}] 前の投稿処理が進行中 — スキップ`);
+    return;
+  }
+  isPosting = true;
+  try {
+    const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    console.log(`\n[${jst}] ${label} 芸能人スロット開始`);
+    const mapping = pickCelebrity();
+    const items = await getCelebrityLikeItems(mapping, 1);
+    if (items.length === 0) {
+      console.warn(`  ⚠ [${label}] 対象作品が見つかりませんでした`);
+      return;
+    }
+    await postCelebrityItem(items[0], label, mapping);
   } catch (e: any) {
     console.error(`  ❌ [${label}] エラー: ${e.message}`);
   } finally {
@@ -188,10 +240,17 @@ export function startScheduler() {
     await postItems(items, 'sale', '23:00 セール');
   }, { timezone: 'Asia/Tokyo' });
 
+  // 芸能人スロット — エンゲージメント最高時間帯（動的）
+  const bestHour = getBestPostingHour();
+  cron.schedule(`0 ${bestHour} * * *`, async () => {
+    await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人似`);
+  }, { timezone: 'Asia/Tokyo' });
+
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║    FANZA X Bot スケジューラー起動        ║');
   console.log('╠══════════════════════════════════════════╣');
+  console.log(`║  🎭 芸能人スロット: ${String(bestHour).padStart(2, '0')}:00 JST              ║`);
   console.log('║  📡 外部監視  常時ループ（3時間ごと）    ║');
   console.log('║  09:00 JST  素人系  2件                 ║');
   console.log('║  12:00 JST  高評価  2件（4.7点以上）    ║');
