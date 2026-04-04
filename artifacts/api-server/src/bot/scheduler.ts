@@ -1,14 +1,10 @@
 import cron from 'node-cron';
-import { mkdirSync } from 'fs';
-import { resolve } from 'path';
 
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
-
-mkdirSync(resolve(process.cwd(), 'fanza-bot/data'), { recursive: true });
 
 let isPosting = false;
 
