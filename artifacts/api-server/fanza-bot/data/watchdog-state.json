@@ -1,0 +1,21 @@
+{
+  "lastCheckAt": "2026-04-04T19:05:51.383Z",
+  "lastIssueAt": null,
+  "lastRecoveryAt": null,
+  "status": "healthy",
+  "issueCount": 0,
+  "recoveryCount": 0,
+  "consecutiveFailures": 0,
+  "recentEvents": [
+    {
+      "at": "2026-04-04T19:05:51.383Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-04T19:05:51.383Z",
+      "level": "info",
+      "detail": "最終投稿から 7h — 正常範囲"
+    }
+  ]
+}
