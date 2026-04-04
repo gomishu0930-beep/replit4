@@ -25,8 +25,8 @@ function randomSleep(minSec: number, maxSec: number) {
 async function postItem(item: any, type: string, label: string) {
   console.log(`  📝 [${label}] 投稿処理開始: ${item.title?.slice(0, 30)}`);
 
-  const topPatterns = getTopPatterns(5);
-  const externalPatterns = getExternalTopPatterns(5);
+  const topPatterns = getTopPatterns(10);
+  const externalPatterns = getExternalTopPatterns(10);
   const text = await generateTweetText(item, type, topPatterns, externalPatterns);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
