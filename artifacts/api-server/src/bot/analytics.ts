@@ -56,7 +56,7 @@ export async function refreshExternalPatterns() {
   if (searchSupported) {
     for (const query of SEARCH_QUERIES) {
       try {
-        const tweets = await searchTweetsByHashtag(query, 30);
+        const tweets = await searchTweetsByHashtag(query, 50);
         const scored = tweets
           .map((t) => ({ ...t, score: calcScore(t) }))
           .filter((t) => t.score >= 3);
@@ -82,7 +82,7 @@ export async function refreshExternalPatterns() {
     console.log(`    📋 追跡アカウント: ${trackAccounts.join(', ')}`);
     for (const username of trackAccounts) {
       try {
-        const tweets = await fetchUserTimelineByUsername(username, 20);
+        const tweets = await fetchUserTimelineByUsername(username, 30);
         const scored = tweets
           .map((t) => ({ ...t, score: calcScore(t) }))
           .filter((t) => t.score >= 3);

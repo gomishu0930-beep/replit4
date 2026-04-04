@@ -71,16 +71,33 @@ async function postItems(items: any[], type: string, label: string) {
   }
 }
 
-export function startScheduler() {
-  // 06:00 JST — 外部パターン収集
-  cron.schedule('0 6 * * *', async () => {
-    console.log(`\n[${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}] 外部パターン収集開始`);
+// ─── 常時監視ループ（3時間ごとに繰り返し）──────────────────────────────────
+const MONITOR_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3時間
+
+async function monitoringLoop() {
+  const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  while (true) {
     try {
-      await refreshExternalPatterns();
+      // 投稿中はスキップして次のサイクルまで待機
+      if (isPosting) {
+        console.log(`\n[${jst()}] 📡 監視スキップ（投稿処理中）`);
+      } else {
+        console.log(`\n[${jst()}] 📡 外部パターン監視サイクル開始`);
+        await refreshExternalPatterns();
+        console.log(`[${jst()}] 📡 監視サイクル完了 → 次回は3時間後`);
+      }
     } catch (e: any) {
-      console.error(`  ❌ 外部パターン収集エラー: ${e.message}`);
+      console.error(`  ❌ 監視サイクルエラー: ${e.message}`);
     }
-  }, { timezone: 'Asia/Tokyo' });
+    await sleep(MONITOR_INTERVAL_MS);
+  }
+}
+
+export function startScheduler() {
+  // ── 常時監視ループを起動（5分後に初回実行、以降3時間ごと）──────────────
+  sleep(5 * 60 * 1000).then(() => monitoringLoop());
+
+  // ── 投稿スケジュール ─────────────────────────────────────────────────────
 
   // 09:00 JST — 素人 2件
   cron.schedule('0 9 * * *', async () => {
@@ -88,7 +105,7 @@ export function startScheduler() {
     await postItems(items, 'amateur', '09:00 素人');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 12:00 JST — おすすめ度高（評価4.7以上・ジャンルローテーション）2件
+  // 12:00 JST — 高評価 2件
   cron.schedule('0 12 * * *', async () => {
     const items = await getHighRatedItems(2);
     await postItems(items, 'buzz', '12:00 高評価');
@@ -117,8 +134,8 @@ export function startScheduler() {
   console.log('╔══════════════════════════════════════════╗');
   console.log('║    FANZA X Bot スケジューラー起動        ║');
   console.log('╠══════════════════════════════════════════╣');
-  console.log('║  06:00 JST  外部パターン収集             ║');
-  console.log('║  09:00 JST  素人系  2件（キーワードRand）║');
+  console.log('║  📡 外部監視  常時ループ（3時間ごと）    ║');
+  console.log('║  09:00 JST  素人系  2件                 ║');
   console.log('║  12:00 JST  高評価  2件（4.7点以上）    ║');
   console.log('║  18:00 JST  バズ    2件 + 指標更新      ║');
   console.log('║  21:00 JST  ランダム 2件               ║');
