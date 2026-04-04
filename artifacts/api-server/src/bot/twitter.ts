@@ -13,15 +13,32 @@ let _cachedUsername: string | null = null;
 
 export async function getMyUsername(): Promise<string> {
   if (_cachedUsername) return _cachedUsername;
-  try {
-    const userId = process.env.TWITTER_USER_ID;
-    if (!userId) return process.env.TWITTER_USERNAME ?? '不明';
-    const res = await client.v2.user(userId, { 'user.fields': ['username'] });
-    _cachedUsername = `@${res.data.username}`;
+
+  // TWITTER_USER_ID がユーザー名（@xxx）で設定されている場合はそのまま使用
+  const userId = process.env.TWITTER_USER_ID ?? '';
+  if (userId.startsWith('@')) {
+    _cachedUsername = userId;
     return _cachedUsername;
-  } catch {
-    return process.env.TWITTER_USERNAME ? `@${process.env.TWITTER_USERNAME.replace(/^@/, '')}` : '不明';
   }
+
+  // TWITTER_USERNAME が設定されている場合はそちらを優先
+  if (process.env.TWITTER_USERNAME) {
+    _cachedUsername = `@${process.env.TWITTER_USERNAME.replace(/^@/, '')}`;
+    return _cachedUsername;
+  }
+
+  // 数値IDの場合はTwitter APIで名前解決
+  if (userId && /^\d+$/.test(userId)) {
+    try {
+      const res = await client.v2.user(userId, { 'user.fields': ['username'] });
+      _cachedUsername = `@${res.data.username}`;
+      return _cachedUsername;
+    } catch {
+      // 取得失敗時はIDをそのまま表示
+    }
+  }
+
+  return userId ? `ID:${userId}` : '不明';
 }
 
 async function downloadImageBuffer(url: string): Promise<Buffer> {
