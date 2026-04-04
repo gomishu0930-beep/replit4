@@ -130,14 +130,9 @@ export async function getItemById(cid: string): Promise<any | null> {
   return items[0] ?? null;
 }
 
-// サンプル画像取得（女優の顔がはっきり映る表紙1枚を選択）
+// サンプル画像取得（サンプル1枚目：女優の顔が映るプロモーションカット）
 export function getSampleImages(item: any): string[] {
-  // imageURL.large = パッケージ表紙（女優の顔が最も明確）
-  const cover: string | null = item.imageURL?.large ?? null;
-
-  // 表紙がなければ最初のサンプル画像にフォールバック
   const samples: string[] = item.sampleImageURL?.sample_l?.image ?? [];
-  const selected = cover ?? samples[0] ?? null;
-
+  const selected = samples[0] ?? null;
   return selected ? [selected] : [];
 }
