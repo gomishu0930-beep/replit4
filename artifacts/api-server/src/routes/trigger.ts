@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages } from '../bot/fanza.js';
+import { getRankingItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
@@ -86,6 +86,17 @@ router.post('/trigger/random', auth, async (_req, res) => {
 // 08:30 JST 素人
 router.post('/trigger/amateur', auth, async (_req, res) => {
   const result = await runJob('amateur', '08:30 素人', () => getAmateurItems(3));
+  res.json(result);
+});
+
+// キーワード指定投稿（特定作品を1件投稿）
+router.post('/trigger/keyword', auth, async (req, res) => {
+  const keyword = (req.query.q as string) || (req.body?.keyword as string);
+  if (!keyword) {
+    res.status(400).json({ ok: false, error: 'クエリ ?q=キーワード を指定してください' });
+    return;
+  }
+  const result = await runJob('amateur', `キーワード指定[${keyword}]`, () => getKeywordItems(keyword, 1));
   res.json(result);
 });
 

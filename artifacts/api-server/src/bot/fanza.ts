@@ -65,6 +65,11 @@ export async function getAmateurItems(count = 3) {
   return pickN(items, count);
 }
 
+export async function getKeywordItems(keyword: string, count = 1) {
+  const items = await fetchItems({ keyword, sort: 'rank', hits: '20' });
+  return pickN(items, count);
+}
+
 export function getSampleImages(item: any): string[] {
   const samples: string[] = item.sampleImageURL?.sample_l?.image ?? [];
   const main: string | null = item.imageURL?.large ?? item.imageURL?.list ?? null;
