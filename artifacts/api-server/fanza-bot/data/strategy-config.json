@@ -10,16 +10,16 @@
   "cycleStats": {
     "lastNewPatterns": 0,
     "avgNewPatterns": 0,
-    "totalCycles": 21
+    "totalCycles": 22
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 6h）は最適か？",
       "status": "confirmed",
-      "finding": "21サイクル実績 / 平均新規パターン 0.0件/サイクル",
+      "finding": "22サイクル実績 / 平均新規パターン 0.0件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-05T04:26:46.440Z"
+      "testedAt": "2026-04-05T04:33:26.875Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "pending",
       "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-05T04:26:46.440Z"
+      "testedAt": "2026-04-05T04:33:26.875Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-05T04:26:46.441Z"
+      "testedAt": "2026-04-05T04:33:26.875Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,17 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-05T04:26:46.441Z"
+      "testedAt": "2026-04-05T04:33:26.875Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-05T04:33:26.875Z",
+      "cycle": 22,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-05T04:26:46.441Z",
       "cycle": 21,
@@ -195,6 +202,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-05T04:26:46.441Z",
-  "version": 22
+  "lastEvaluatedAt": "2026-04-05T04:33:26.875Z",
+  "version": 23
 }
