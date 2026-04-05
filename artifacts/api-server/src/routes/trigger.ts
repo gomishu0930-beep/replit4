@@ -127,6 +127,17 @@ router.post('/trigger/keyword', auth, async (req, res) => {
   res.json(result);
 });
 
+// 指標更新のみ（投稿なし）
+router.post('/trigger/metrics', auth, async (_req, res) => {
+  try {
+    console.log('\n[指標更新] 手動トリガー');
+    await refreshRecentMetrics();
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // 外部パターン収集 (06:00 JST / 手動)
 router.post('/trigger/external-patterns', auth, async (_req, res) => {
   if (isPosting) {
