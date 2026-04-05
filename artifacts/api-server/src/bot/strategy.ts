@@ -331,6 +331,117 @@ function evaluatePostingHours(): string | null {
   return null;
 }
 
+// ─── 仮説⑤：5型コンテンツ（レビュー/比較/ランキング/失敗回避/共感）どれが最もエンゲージメントを稼ぐか？ ──
+
+function evaluateContentTypes(): string | null {
+  const posts = getAllPosts().filter((p) => p.metrics && (p as any).contentType);
+  if (posts.length < 5) {
+    addHypothesis({
+      id: 'content-5types',
+      question: '5型コンテンツ（レビュー/比較/ランキング/失敗回避/共感）どれが最もエンゲージメントを稼ぐか？',
+      status: 'pending',
+      finding: `データ不足 (${posts.length}件)。各型に1件以上、合計5件以上で評価開始。`,
+      adjustment: null,
+      testedAt: new Date().toISOString(),
+    });
+    return null;
+  }
+
+  const byContentType: Record<string, { total: number; count: number }> = {};
+  for (const p of posts) {
+    const ct = (p as any).contentType as string;
+    if (!ct) continue;
+    if (!byContentType[ct]) byContentType[ct] = { total: 0, count: 0 };
+    byContentType[ct].total += score(p.metrics!);
+    byContentType[ct].count++;
+  }
+
+  const ranked = Object.entries(byContentType)
+    .filter(([, v]) => v.count >= 1)
+    .map(([ct, v]) => ({ ct, avg: v.total / v.count, count: v.count }))
+    .sort((a, b) => b.avg - a.avg);
+
+  if (ranked.length < 2) return null;
+
+  const best = ranked[0];
+  const worst = ranked[ranked.length - 1];
+  const rankSummary = ranked.map((r) => `${r.ct}(avg:${r.avg.toFixed(1)}, n=${r.count})`).join(' > ');
+
+  const finding = `エンゲージメント順: ${rankSummary}`;
+  const adjustment = `最高型: ${best.ct} / 最低型: ${worst.ct}（差: ${(best.avg - worst.avg).toFixed(1)}pt）`;
+
+  addHypothesis({
+    id: 'content-5types',
+    question: '5型コンテンツ（レビュー/比較/ランキング/失敗回避/共感）どれが最もエンゲージメントを稼ぐか？',
+    status: 'adjusted',
+    finding,
+    adjustment,
+    testedAt: new Date().toISOString(),
+  });
+
+  console.log(`  🔬 [5型比較] ${finding}`);
+  return null; // 重み変更は自動では行わず、知見として記録のみ
+}
+
+// ─── 仮説⑥：インプ狙い投稿はアカウントのリーチを改善しているか？ ──────────────
+
+function evaluateImpressionEffect(): string | null {
+  const allPosts = getAllPosts().filter((p) => p.metrics);
+  if (allPosts.length < 10) {
+    addHypothesis({
+      id: 'impression-effect',
+      question: 'インプ狙い投稿（10:30/17:00）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
+      status: 'pending',
+      finding: `データ不足 (${allPosts.length}件)。10件以上で評価開始。`,
+      adjustment: null,
+      testedAt: new Date().toISOString(),
+    });
+    return null;
+  }
+
+  // インプ投稿と宣伝投稿を分離してそれぞれの平均スコアを比較
+  const impressionPosts = allPosts.filter((p) => (p as any).type === 'impression');
+  const affiliatePosts  = allPosts.filter((p) => (p as any).type !== 'impression');
+
+  const impAvg = impressionPosts.length > 0
+    ? impressionPosts.reduce((s, p) => s + score(p.metrics!), 0) / impressionPosts.length
+    : null;
+  const affAvg = affiliatePosts.length > 0
+    ? affiliatePosts.reduce((s, p) => s + score(p.metrics!), 0) / affiliatePosts.length
+    : 0;
+
+  // インプ投稿が始まった時点を境に、宣伝投稿の平均スコアが改善しているか
+  const sorted = [...affiliatePosts].sort((a, b) =>
+    new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime(),
+  );
+  const half = Math.floor(sorted.length / 2);
+  const beforeAvg = half > 0
+    ? sorted.slice(0, half).reduce((s, p) => s + score(p.metrics!), 0) / half
+    : null;
+  const afterAvg = half > 0
+    ? sorted.slice(half).reduce((s, p) => s + score(p.metrics!), 0) / (sorted.length - half)
+    : null;
+
+  const trendText = (beforeAvg !== null && afterAvg !== null)
+    ? `宣伝投稿スコア推移: 前半avg ${beforeAvg.toFixed(1)} → 後半avg ${afterAvg.toFixed(1)} (${afterAvg >= beforeAvg ? '📈改善' : '📉悪化'})`
+    : 'トレンド計算中';
+
+  const impText = impAvg !== null
+    ? `インプ投稿avg ${impAvg.toFixed(1)} / 宣伝投稿avg ${affAvg.toFixed(1)}`
+    : `インプ投稿データなし / 宣伝投稿avg ${affAvg.toFixed(1)}`;
+
+  addHypothesis({
+    id: 'impression-effect',
+    question: 'インプ狙い投稿（10:30/17:00）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
+    status: (beforeAvg !== null && afterAvg !== null && afterAvg > beforeAvg) ? 'confirmed' : 'pending',
+    finding: `${impText} / ${trendText}`,
+    adjustment: null,
+    testedAt: new Date().toISOString(),
+  });
+
+  return null;
+}
+
 // ─── メイン評価関数（監視サイクル後に呼ぶ）────────────────────────────────────
 
 export async function evaluateAndAdapt(newPatternsThisCycle: number): Promise<void> {
@@ -339,7 +450,7 @@ export async function evaluateAndAdapt(newPatternsThisCycle: number): Promise<vo
 
   const decisions: string[] = [];
 
-  // 各仮説を並列検証
+  // 各仮説を検証（①〜④は外部監視と紐付くもの）
   const d1 = evaluateMonitorInterval(newPatternsThisCycle);
   const d2 = evaluateTypeWeights();
   const d3 = evaluateDynamicTemplates();
@@ -361,11 +472,46 @@ export async function evaluateAndAdapt(newPatternsThisCycle: number): Promise<vo
   await saveConfig();
 
   // 仮説一覧をコンソールに出力（デバッグ用）
+  _printHypotheses();
+}
+
+function _printHypotheses() {
   console.log('  📋 仮説状態:');
   for (const h of config.hypotheses) {
     const icon = h.status === 'confirmed' ? '✅' : h.status === 'rejected' ? '❌' : h.status === 'adjusted' ? '🔧' : '⏳';
     console.log(`    ${icon} [${h.id}] ${h.finding}`);
   }
+}
+
+// ─── 日次評価（毎日 03:00 JST に実行）──────────────────────────────────────
+//
+// 監視サイクルとは独立して毎日実行。
+// 仮説⑤⑥（コンテンツ型比較・インプ効果）を検証し、
+// 翌日の投稿戦略に知見を反映する。
+
+export async function runDailyEvaluation(): Promise<void> {
+  const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  console.log(`\n[${jst}] 🌙 日次戦略評価開始`);
+
+  const decisions: string[] = [];
+
+  // 既存仮説も再評価
+  const d2 = evaluateTypeWeights();
+  const d4 = evaluatePostingHours();
+  if (d2) { console.log(`  ⚖️  [投稿重み] ${d2}`); decisions.push(d2); }
+  if (d4) { console.log(`  🕐 [投稿時間] ${d4}`); decisions.push(d4); }
+
+  // 新仮説⑤⑥を評価
+  evaluateContentTypes();
+  evaluateImpressionEffect();
+
+  console.log(`  ✅ 日次評価完了 (変更: ${decisions.length}件)`);
+  config.lastEvaluatedAt = new Date().toISOString();
+  config.version++;
+  log(config.cycleStats.totalCycles, decisions.length > 0 ? decisions : ['日次評価完了 / 変更なし']);
+
+  await saveConfig();
+  _printHypotheses();
 }
 
 // ─── 重み付きランダム選択（コンテンツ種別の選択に使う）────────────────────────

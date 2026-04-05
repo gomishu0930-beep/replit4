@@ -80,6 +80,12 @@ export function generateImpressionTweet(): string {
   return IMPRESSION_TEMPLATES[Math.floor(Math.random() * IMPRESSION_TEMPLATES.length)];
 }
 
+// ─── 5型コンテンツトラッカー ─────────────────────────────────────────────────
+// Claude生成時に選択された型名を記録し、schedulerがrecordPostに渡せるようにする
+
+let _lastContentType = 'テンプレート型';
+export function getLastContentType(): string { return _lastContentType; }
+
 // ─── エンゲージメント誘導リプライ（3投目）────────────────────────────────
 
 const ENGAGEMENT_REPLIES: Record<string, string[]> = {
@@ -230,6 +236,7 @@ async function generateWithClaude(
     { name: '共感型', hook: '「あるある」「これわかる人いる？」「正直に言う」系のフック', style: 'ユーザーが共感する状況・感情から始め、自然に作品につなげる。問いかけで終わると反応率UP。' },
   ];
   const selectedType = contentTypes[Math.floor(Math.random() * contentTypes.length)];
+  _lastContentType = selectedType.name; // 型を記録（schedulerがrecordPostで使用）
 
   const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。動画配信サービスの紹介ツイートを1件作成してください。
 

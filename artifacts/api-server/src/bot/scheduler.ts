@@ -2,12 +2,12 @@ import cron from 'node-cron';
 
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
-import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet } from './ai.js';
+import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
-import { loadStrategyConfig, evaluateAndAdapt, getMonitorIntervalMs } from './strategy.js';
+import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 
 let isPosting = false;
@@ -38,6 +38,7 @@ async function postItem(item: any, type: string, label: string) {
   const topPatterns = getTopPatterns(10);
   const externalPatterns = getExternalTopPatterns(10);
   const text = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const contentType = getLastContentType(); // Claude が選んだ5型を取得
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -55,8 +56,8 @@ async function postItem(item: any, type: string, label: string) {
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
 
-  recordPost({ tweetId, replyId, item, text, type });
-  console.log(`  ✅ [${label}] 投稿完了 (${tweetId})`);
+  recordPost({ tweetId, replyId, item, text, type, contentType });
+  console.log(`  ✅ [${label}] 投稿完了 [${contentType}] (${tweetId})`);
 }
 
 async function postItems(items: any[], type: string, label: string) {
@@ -341,6 +342,17 @@ export function startScheduler() {
   cron.schedule('0 23 * * *', async () => {
     const items = await getSaleItems(1);
     await postItems(items, 'sale', '23:00 セール');
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 毎日 03:00 JST — 日次戦略評価（指標更新 → 仮説検証 → 自動調整）
+  cron.schedule('0 3 * * *', async () => {
+    console.log('\n  🌙 [日次評価] 夜間自律改善サイクル開始');
+    try {
+      await refreshRecentMetrics(); // まず最新指標を取得
+      await runDailyEvaluation();   // 仮説検証 + パラメータ自動調整
+    } catch (e: any) {
+      console.error(`  ❌ 日次評価エラー: ${e.message}`);
+    }
   }, { timezone: 'Asia/Tokyo' });
 
   // 月曜 08:00 JST — 週次パフォーマンスレポート（連絡チーム）

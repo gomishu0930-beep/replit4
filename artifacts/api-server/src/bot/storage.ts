@@ -21,6 +21,7 @@ interface PostRecord {
   tweetId: string;
   replyId: string;
   type: string;
+  contentType?: string;  // 5型分類: レビュー型/比較型/ランキング型/失敗回避型/共感型
   text: string;
   item: { id: string; title: string; affiliateURL: string };
   postedAt: string;
@@ -100,11 +101,11 @@ function savePostsAsync() {
   );
 }
 
-export function recordPost({ tweetId, replyId, item, text, type }: {
-  tweetId: string; replyId: string; item: any; text: string; type: string;
+export function recordPost({ tweetId, replyId, item, text, type, contentType }: {
+  tweetId: string; replyId: string; item: any; text: string; type: string; contentType?: string;
 }) {
   postsCache.posts.push({
-    tweetId, replyId, type, text,
+    tweetId, replyId, type, contentType, text,
     item: { id: item.content_id, title: item.title, affiliateURL: item.affiliateURL },
     postedAt: new Date().toISOString(),
     metrics: null,
