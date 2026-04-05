@@ -170,7 +170,8 @@ export async function discoverCampaignIds(opts: { force?: boolean; maxProbe?: nu
   }
 }
 
-// 有効なキャンペーンIDでアイテムを取得（ランダムに選ぶ）
+// 有効なキャンペーンIDでアイテムを取得（品質スコア順で選ぶ）
+// 複数IDを試し、良い作品（高レビュー×高評価×セール）を返す
 async function fetchByCampaignId(count: number): Promise<any[]> {
   const cache = await loadCampaignCache();
   if (cache.ids.length === 0) return [];
@@ -178,23 +179,39 @@ async function fetchByCampaignId(count: number): Promise<any[]> {
   const cacheAge = Date.now() - new Date(cache.discoveredAt).getTime();
   if (cacheAge > CAMPAIGN_CACHE_TTL_MS) return []; // 期限切れ
 
-  const picked = pickRandom(cache.ids);
-  console.log(`  🛒 キャンペーンID ${picked.id} を使用 (${picked.total}件)`);
+  // 上位3件のキャンペーンIDを試し、全結果を品質スコアでソート
+  const topIds = cache.ids.slice(0, 3);
+  const allItems: any[] = [];
 
-  try {
-    const offset = randomOffset(Math.min(picked.total, 200));
-    const items = await fetchItems({ article: 'campaign', article_id: String(picked.id), offset });
-    return pickNUnique(items, count);
-  } catch (e: any) {
-    console.warn(`  ⚠ campaign_id=${picked.id} 失敗: ${e.message}`);
-    return [];
+  for (const campaign of topIds) {
+    try {
+      const offset = randomOffset(Math.min(campaign.total, 200));
+      const items = await fetchItems({ article: 'campaign', article_id: String(campaign.id), offset });
+      console.log(`  🛒 campaign_id=${campaign.id}: ${items.length}件取得`);
+      allItems.push(...items);
+    } catch (e: any) {
+      console.warn(`  ⚠ campaign_id=${campaign.id} 失敗: ${e.message}`);
+    }
   }
+
+  if (allItems.length === 0) return [];
+
+  // 品質スコア順に並べ重複除外して返す（セール × 高評価 × 人気の三拍子）
+  const dedupMap = new Map<string, any>();
+  for (const item of allItems) dedupMap.set(item.content_id, item);
+  const deduped = [...dedupMap.values()];
+
+  const scored = topByScore(deduped, count, 10, 4.0); // レビュー10件以上・4.0点以上を優先
+  console.log(`  🏆 セール品スコアトップ: ★${scored[0]?.review?.average} × ${scored[0]?.review?.count}件 「${scored[0]?.title?.slice(0, 25)}」`);
+  return pickNUnique(scored, count);
 }
 
 // ─── 包括的スコア計算（ベイズ平均 × 人気度ウェイト）─────────────────────────
 //
-// 単純な星評価だけでなく、レビュー数・ランキングを加味した
-// 信頼度の高い総合評価を算出する。
+// 「良い作品」= 有名女優 × 人気（レビュー数多い）× 高評価 × セール中
+//
+// ベイズ平均で「レビュー数が少ない高評価」を割り引き、
+// 「多くの人が購入して高く評価した = 有名女優の作品」を自然に優先する。
 //
 // 例:
 //   星4.9 × レビュー3件   → composite ≈ 3.3  ← 過大評価を抑制
@@ -206,15 +223,34 @@ function compositeScore(item: any): number {
   if (avg === 0 || count === 0) return 0;
 
   // ベイズ平均: 事前平均 m=4.0、基準レビュー数 C=50
-  // 少ないレビュー数の高評価を割り引き、多いレビュー数の評価を信頼する
   const C = 50;
   const m = 4.0;
   const bayesianAvg = (C * m + count * avg) / (C + count);
 
-  // 人気度ウェイト: レビュー数の対数スケール（購入数・閲覧数の代理指標）
+  // 人気度ウェイト: レビュー数の対数スケール
   const popularityWeight = Math.log10(count + 1);
 
   return bayesianAvg * popularityWeight;
+}
+
+// ─── 最低品質フィルター ──────────────────────────────────────────────────────
+// レビュー数・平均評価の最低ラインを設定し、低品質作品を除外する
+
+function qualityFilter(item: any, opts: { minReviews?: number; minAvg?: number } = {}): boolean {
+  const count = item.review?.count ?? 0;
+  const avg = parseFloat(item.review?.average ?? '0');
+  return count >= (opts.minReviews ?? 5) && avg >= (opts.minAvg ?? 4.0);
+}
+
+// スコアでソートし上位N件を返す共通ユーティリティ
+function topByScore(items: any[], n: number, minReviews = 5, minAvg = 4.0): any[] {
+  const filtered = items.filter((i) => qualityFilter(i, { minReviews, minAvg }));
+  const pool = filtered.length >= n ? filtered : items; // フィルター後が足りなければ全体使用
+  return pool
+    .map((item) => ({ item, score: compositeScore(item) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Math.max(n * 3, 10)) // 上位3倍を候補として渡す
+    .map((s) => s.item);
 }
 
 // ─── FANZA素人フロア専用APIリクエスト ────────────────────────────────────────
@@ -272,31 +308,37 @@ const SALE_KEYWORDS = [
 
 // ─── 公開API関数 ──────────────────────────────────────────────────────────────
 
-// 素人系 — FANZA素人フロア（floor=ama）を優先取得
-// 「ひかりさん」等のFANZA素人コンテンツに特化
+// 素人系 — FANZA素人フロア（floor=videoc）を優先取得、品質スコア順で返す
 export async function getAmateurItems(count = 2) {
-  const sorts = ['rank', 'review', 'date'];
-  const sort = pickRandom(sorts);
-  const offset = randomOffset(100);
+  const sorts = ['rank', 'review'] as const;
+  const allItems: any[] = [];
 
-  // ① FANZA素人専用フロアから取得（最優先）
-  try {
-    console.log(`  🔍 FANZA素人フロア検索: floor=videoc sort=${sort} offset=${offset}`);
-    const amaItems = await fetchAmaItems({ sort, offset });
-    if (amaItems.length >= count) {
-      console.log(`  ✅ FANZA素人フロアから ${amaItems.length}件取得`);
-      return pickNUnique(amaItems, count);
+  // ① FANZA素人専用フロアから rank・review 両方取得してプール
+  for (const sort of sorts) {
+    try {
+      const offset = randomOffset(100);
+      console.log(`  🔍 FANZA素人フロア: sort=${sort} offset=${offset}`);
+      const items = await fetchAmaItems({ sort, offset });
+      allItems.push(...items);
+    } catch (e: any) {
+      console.warn(`  ⚠ FANZA素人フロア(${sort})失敗: ${e.message}`);
     }
-    console.warn(`  ⚠ FANZA素人フロア: 件数不足 (${amaItems.length}件) → キーワード補完`);
-  } catch (e: any) {
-    console.warn(`  ⚠ FANZA素人フロア失敗: ${e.message} → キーワードフォールバック`);
+  }
+
+  if (allItems.length >= count) {
+    const dedupMap = new Map<string, any>();
+    for (const item of allItems) dedupMap.set(item.content_id, item);
+    const scored = topByScore([...dedupMap.values()], count, 5, 4.0);
+    console.log(`  ✅ 素人: スコアトップ ★${scored[0]?.review?.average} × ${scored[0]?.review?.count}件`);
+    return pickNUnique(scored, count);
   }
 
   // ② キーワード検索フォールバック（videoa フロア）
   const keyword = pickRandom(AMATEUR_KEYWORDS);
-  console.log(`  🔀 素人フォールバック: keyword="${keyword}" sort=${sort}`);
-  const items = await fetchItems({ keyword, sort, offset: randomOffset(150) });
-  return pickNUnique(items, count);
+  console.log(`  🔀 素人フォールバック: keyword="${keyword}"`);
+  const fallback = await fetchItems({ keyword, sort: 'review', offset: randomOffset(100) });
+  const scored = topByScore(fallback, count, 3, 3.8);
+  return pickNUnique(scored.length >= count ? scored : fallback, count);
 }
 
 // バズ作品 — 急上昇・高反応作品を包括スコアで選出
@@ -378,30 +420,39 @@ export async function getSaleItems(count = 2) {
     return campaignItems;
   }
 
-  // ② キーワードフォールバック
+  // ② キーワードフォールバック（品質スコア優先）
   const keyword = pickRandom(SALE_KEYWORDS);
   const offset = randomOffset(50);
   console.log(`  🔍 セール検索（キーワード）: keyword="${keyword}" offset=${offset}`);
   try {
-    const items = await fetchItems({ sort: 'rank', keyword, offset });
-    if (items.length > 0) return pickNUnique(items, count);
+    const items = await fetchItems({ sort: 'review', keyword, offset });
+    if (items.length > 0) {
+      const scored = topByScore(items, count, 10, 4.0);
+      return pickNUnique(scored.length >= count ? scored : items, count);
+    }
   } catch (e: any) {
     console.warn(`  ⚠ セールキーワード検索失敗: ${e.message}`);
   }
 
-  // ③ 最終フォールバック：ランダム上位
-  console.log('  🔀 セール: ランダムランキングにフォールバック');
-  const fallback = await fetchItems({ sort: 'rank', offset: randomOffset(200) });
-  return pickNUnique(fallback, count);
+  // ③ 最終フォールバック：ランキング上位 × 品質フィルター
+  console.log('  🔀 セール: ランキングフォールバック（品質フィルター付き）');
+  const fallback = await fetchItems({ sort: 'rank', offset: randomOffset(100) });
+  const scored = topByScore(fallback, count, 5, 4.0);
+  return pickNUnique(scored.length >= count ? scored : fallback, count);
 }
 
-// ランダム
+// ランダム — ランダム性を残しつつ品質フィルターを適用
 export async function getRandomItems(count = 2) {
-  const sorts = ['rank', 'date', 'review'];
-  const sort = pickRandom(sorts);
+  const sorts = ['rank', 'review'] as const;
+  const sort = pickRandom([...sorts]);
   const offset = randomOffset(200);
+  console.log(`  🔍 ランダム検索: sort=${sort} offset=${offset}`);
   const items = await fetchItems({ sort, offset });
-  return pickNUnique(items, count);
+
+  // 品質フィルター通過後にランダム選択（低品質作品を自然に除外）
+  const quality = items.filter((i) => qualityFilter(i, { minReviews: 5, minAvg: 4.0 }));
+  const pool = quality.length >= count ? quality : items;
+  return pickNUnique(pool, count);
 }
 
 // キーワード検索（手動トリガー用）
