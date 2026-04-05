@@ -1,10 +1,10 @@
 import cron from 'node-cron';
 
-import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages, discoverCampaignIds } from './fanza.js';
+import { getBuzzItems, getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
-import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
+import { refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
@@ -201,6 +201,8 @@ async function monitoringLoop() {
 }
 
 // ─── 取りこぼしスロット補完（起動時チェック）────────────────────────────────
+// 1日2件体制: 芸能人アフィリ(20:00) のみ補完対象
+// インプ狙い(10:30)は補完しない（時間帯を外れた宣伝色のない投稿は逆効果）
 interface Slot {
   hour: number;
   minute: number;
@@ -211,15 +213,8 @@ interface Slot {
 }
 
 const SLOTS: Slot[] = [
-  { hour:  9, minute:  0, type: 'amateur', label: '09:00 素人（補完）',  fetchFn: (n) => getAmateurItems(n) },
-  { hour: 12, minute:  0, type: 'buzz',   label: '12:00 高評価（補完）', fetchFn: (n) => getHighRatedItems(n) },
-  { hour: 18, minute:  0, type: 'buzz',   label: '18:00 バズ（補完）',   fetchFn: (n) => getBuzzItems(n),
-    extra: async () => { await refreshRecentMetrics(); } },
-  { hour: 21, minute:  0, type: 'random', label: '21:00 ランダム（補完）', fetchFn: (n) => getRandomItems(n) },
-  { hour: 23, minute:  0, type: 'sale',   label: '23:00 セール（補完）',  fetchFn: (n) => getSaleItems(n) },
+  { hour: 20, minute: 0, type: 'celebrity', label: '20:00 芸能人（補完）', fetchFn: (n) => getBuzzItems(n) },
 ];
-// ※ インプ狙い投稿スロット（10:30 / 17:00）は catchUp 対象外
-//   （アフィリ投稿の取りこぼし補完のみ行う）
 
 async function catchUpMissedSlots() {
   const nowUtc = Date.now();
@@ -297,65 +292,29 @@ export function startScheduler() {
     );
   }, { timezone: 'Asia/Tokyo' });
 
-  // ── 投稿スケジュール ─────────────────────────────────────────────────────
-  // 設計方針（有益6：共感2：宣伝2）:
-  //   宣伝投稿（アフィリリンク付き）: 09:00 / 12:00 / 18:00 / 20:00(芸能人) / 21:00 / 23:00 → 6本
-  //   インプ狙い投稿（リンクなし）  : 10:30 / 17:00 → 2本
-  //   合計: 8本/日、宣伝比率 = 6/8 = 75% → 段階的に比率改善
+  // ── 投稿スケジュール（シャドウバン回復モード）──────────────────────────────
+  // 設計方針: 1日2件に絞りアカウント信頼スコアを回復させる
+  //   インプ狙い（リンクなし）: 10:30 → 1本
+  //   芸能人アフィリ           : 動的時間帯 → 1本
+  //   合計: 2本/日
+  // ※ 回復が確認できたら段階的に増やす
 
-  // 09:00 JST — 素人 1件
-  cron.schedule('0 9 * * *', async () => {
-    const items = await getAmateurItems(1);
-    await postItems(items, 'amateur', '09:00 素人');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 10:30 JST — インプ狙い投稿①（比較/あるある/Q&A 等）
+  // 10:30 JST — インプ狙い（人間的な会話・共感ツイート）
   cron.schedule('30 10 * * *', async () => {
     await postImpressionSlot('10:30 インプ');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 12:00 JST — 高評価 1件
-  cron.schedule('0 12 * * *', async () => {
-    const items = await getHighRatedItems(1);
-    await postItems(items, 'buzz', '12:00 高評価');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 17:00 JST — インプ狙い投稿②（ランキング/注意喚起/共感 等）
-  cron.schedule('0 17 * * *', async () => {
-    await postImpressionSlot('17:00 インプ');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 18:00 JST — バズ 1件 + 指標更新
-  cron.schedule('0 18 * * *', async () => {
-    await refreshRecentMetrics();
-    const items = await getBuzzItems(1);
-    await postItems(items, 'buzz', '18:00 バズ');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 21:00 JST — ランダム 1件
-  cron.schedule('0 21 * * *', async () => {
-    const items = await getRandomItems(1);
-    await postItems(items, 'random', '21:00 ランダム');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 23:00 JST — セール品 1件
-  cron.schedule('0 23 * * *', async () => {
-    const items = await getSaleItems(1);
-    await postItems(items, 'sale', '23:00 セール');
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 毎日 03:00 JST — 日次戦略評価（指標更新 → 仮説検証 → 自動調整）
+  // 毎日 03:00 JST — 日次戦略評価
   cron.schedule('0 3 * * *', async () => {
     console.log('\n  🌙 [日次評価] 夜間自律改善サイクル開始');
     try {
-      await refreshRecentMetrics(); // まず最新指標を取得
-      await runDailyEvaluation();   // 仮説検証 + パラメータ自動調整
+      await runDailyEvaluation();
     } catch (e: any) {
       console.error(`  ❌ 日次評価エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 
-  // 月曜 08:00 JST — 週次パフォーマンスレポート（連絡チーム）
+  // 月曜 08:00 JST — 週次パフォーマンスレポート
   cron.schedule('0 8 * * 1', async () => {
     const stats = getStats();
     const extInfo = getExternalPatternsInfo();
@@ -367,26 +326,22 @@ export function startScheduler() {
     });
   }, { timezone: 'Asia/Tokyo' });
 
-  // 芸能人スロット — エンゲージメント最高時間帯（動的）
+  // 芸能人アフィリスロット — エンゲージメント最高時間帯（動的）
   const bestHour = getBestPostingHour();
   cron.schedule(`0 ${bestHour} * * *`, async () => {
-    await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人似`);
+    await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
   }, { timezone: 'Asia/Tokyo' });
 
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
-  console.log('║    FANZA X Bot スケジューラー起動        ║');
+  console.log('║  FANZA X Bot【シャドウバン回復モード】   ║');
   console.log('╠══════════════════════════════════════════╣');
-  console.log(`║  🎭 芸能人スロット: ${String(bestHour).padStart(2, '0')}:00 JST              ║`);
-  console.log('║  📡 外部監視  常時ループ（3時間ごと）    ║');
-  console.log('║  09:00 JST  素人系  1件                 ║');
-  console.log('║  10:30 JST  💬インプ狙い①              ║');
-  console.log('║  12:00 JST  高評価  1件（4.7点以上）    ║');
-  console.log('║  17:00 JST  💬インプ狙い②              ║');
-  console.log('║  18:00 JST  バズ    1件 + 指標更新      ║');
-  console.log('║  21:00 JST  ランダム 1件               ║');
-  console.log('║  23:00 JST  セール   1件               ║');
-  console.log('║  計: 宣伝6本 + インプ2本 = 8本/日       ║');
+  console.log('║  ⚠️  1日2件に削減（回復優先）             ║');
+  console.log(`║  🎭 芸能人アフィリ: ${String(bestHour).padStart(2, '0')}:00 JST          ║`);
+  console.log('║  💬 インプ狙い  : 10:30 JST              ║');
+  console.log('║  📡 外部監視    : 常時ループ              ║');
+  console.log('║  🌙 日次評価    : 03:00 JST              ║');
+  console.log('║  計: アフィリ1本 + インプ1本 = 2本/日    ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 }

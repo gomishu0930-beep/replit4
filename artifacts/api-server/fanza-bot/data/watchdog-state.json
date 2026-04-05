@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-05T05:31:34.271Z",
+  "lastCheckAt": "2026-04-05T06:18:05.770Z",
   "lastIssueAt": null,
   "lastRecoveryAt": null,
   "status": "healthy",
@@ -7,16 +7,6 @@
   "recoveryCount": 0,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-04T21:08:45.981Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-04T21:08:46.180Z",
-      "level": "info",
-      "detail": "最終投稿から 1h — 正常範囲"
-    },
     {
       "at": "2026-04-04T21:31:40.961Z",
       "level": "info",
@@ -256,6 +246,16 @@
       "at": "2026-04-05T05:31:34.272Z",
       "level": "info",
       "detail": "最終投稿から 2.3h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T06:18:05.771Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T06:18:05.771Z",
+      "level": "info",
+      "detail": "最終投稿から 3.1h — 正常範囲"
     }
   ]
 }
