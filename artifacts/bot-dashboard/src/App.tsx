@@ -756,12 +756,13 @@ function Dashboard() {
               {/* 型説明 */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mt-3">
                 {[
-                  { name: "レビュー型", desc: "「正直に言う」「確かめた」", color: "text-indigo-400" },
-                  { name: "比較型",     desc: "「〜よりも」「比較した結果」", color: "text-emerald-400" },
-                  { name: "ランキング型", desc: "「今一番」「個人的1位」", color: "text-yellow-400" },
-                  { name: "失敗回避型", desc: "「知らないと損」「注意して」", color: "text-pink-400" },
-                  { name: "共感型",     desc: "「あるある」「これわかる?」", color: "text-purple-400" },
-                  { name: "テンプレート型", desc: "静的テンプレート使用", color: "text-gray-400" },
+                  { name: "レビュー型",    desc: "「正直に言う」「確かめた」",         color: "text-indigo-400" },
+                  { name: "比較型",        desc: "「〜よりも」「比較した結果」",       color: "text-emerald-400" },
+                  { name: "ランキング型",  desc: "「今一番」「個人的1位」",            color: "text-yellow-400" },
+                  { name: "失敗回避型",    desc: "「知らないと損」「注意して」",       color: "text-pink-400" },
+                  { name: "共感型",        desc: "「あるある」「これわかる?」",        color: "text-purple-400" },
+                  { name: "シナリオ型",    desc: "背徳ミニストーリー / 女優名明記",    color: "text-orange-400" },
+                  { name: "テンプレート型", desc: "静的テンプレート使用",              color: "text-gray-400" },
                 ].map((t) => (
                   <div key={t.name} className="flex items-start gap-1.5 bg-white/5 rounded p-1.5">
                     <span className={`text-[10px] font-medium ${t.color} shrink-0`}>{t.name}</span>
