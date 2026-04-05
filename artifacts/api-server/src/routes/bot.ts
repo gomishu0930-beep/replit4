@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo } from '../bot/storage.js';
-import { getMyUsername } from '../bot/twitter.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation } from '../bot/storage.js';
+import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
@@ -15,14 +15,10 @@ router.get('/bot/status', async (_req, res) => {
     status: 'running',
     uptime: Math.floor(process.uptime()),
     account,
+    mode: 'recovery',
     schedule: [
-      { time: '09:00 JST', type: 'amateur',    label: '素人（1件）' },
-      { time: '10:30 JST', type: 'impression', label: '💬インプ狙い①' },
-      { time: '12:00 JST', type: 'buzz',       label: '高評価（1件・4.7点以上）' },
-      { time: '17:00 JST', type: 'impression', label: '💬インプ狙い②' },
-      { time: '18:00 JST', type: 'buzz',       label: 'バズ（1件）+ 指標更新' },
-      { time: '21:00 JST', type: 'random',     label: 'ランダム（1件）' },
-      { time: '23:00 JST', type: 'sale',       label: 'セール（1件）' },
+      { time: '10:30 JST', type: 'impression', label: '💬 インプ狙い（リンクなし）' },
+      { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（動的時間帯）' },
     ],
     stats,
   });
@@ -87,6 +83,69 @@ router.get('/bot/campaign-ids', async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ─── 回復研究: アカウントスナップショット ─────────────────────────────────────
+
+// フォロワー推移一覧
+router.get('/bot/snapshots', (_req, res) => {
+  res.json({ snapshots: getAccountSnapshots() });
+});
+
+// 手動でスナップショットを今すぐ取得
+router.post('/bot/snapshots/capture', async (_req, res) => {
+  try {
+    const info = await getAccountInfo();
+    if (!info) {
+      res.status(503).json({ ok: false, error: 'Twitter API からアカウント情報を取得できませんでした' });
+      return;
+    }
+    const note = (_req.body?.note as string) ?? '手動記録';
+    recordAccountSnapshot({ ...info, note });
+    res.json({ ok: true, snapshot: { ...info, note } });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── 回復研究: 手動観察ログ ────────────────────────────────────────────────────
+
+// 観察ログ一覧（?category=engagement|product|safe-post|other）
+router.get('/bot/observations', (req, res) => {
+  const cat = req.query.category as ManualObservation['category'] | undefined;
+  res.json({ observations: getObservations(cat) });
+});
+
+// 観察を追加
+router.post('/bot/observations', (req, res) => {
+  const { category, observation, source, hypothesis, priority } = req.body ?? {};
+  if (!category || !observation) {
+    res.status(400).json({ ok: false, error: 'category と observation は必須です' });
+    return;
+  }
+  const validCategories = ['engagement', 'product', 'safe-post', 'other'];
+  if (!validCategories.includes(category)) {
+    res.status(400).json({ ok: false, error: `category は ${validCategories.join('|')} のいずれかです` });
+    return;
+  }
+  const obs = addObservation({
+    category,
+    observation,
+    source: source ?? undefined,
+    hypothesis: hypothesis ?? undefined,
+    priority: priority ?? 'medium',
+  });
+  res.json({ ok: true, observation: obs });
+});
+
+// 観察を削除
+router.delete('/bot/observations/:id', (req, res) => {
+  const deleted = deleteObservation(req.params.id);
+  if (!deleted) {
+    res.status(404).json({ ok: false, error: '該当する観察ログが見つかりません' });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 // キャンペーンID手動再探索（POST）

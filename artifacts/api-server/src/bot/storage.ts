@@ -52,6 +52,39 @@ interface ExternalPatternsData {
   queries: string[];
 }
 
+// ─── アカウントスナップショット型（週次フォロワー推移）───────────────────────
+
+export interface AccountSnapshot {
+  recordedAt: string;
+  followersCount: number;
+  followingCount: number;
+  tweetCount: number;
+  note?: string;           // 手動メモ（例: "シャドウバン解除確認"）
+}
+
+interface SnapshotData {
+  snapshots: AccountSnapshot[];
+}
+
+// ─── 手動観察ログ型（他アカウント・他投稿の観察記録）────────────────────────
+
+export interface ManualObservation {
+  id: string;
+  recordedAt: string;
+  category: 'engagement' | 'product' | 'safe-post' | 'other';
+  // engagement: いいね・RTが取れた投稿パターン
+  // product:    良かった作品の特徴
+  // safe-post:  凍結回避できた投稿スタイル
+  source?: string;          // 参照アカウント (@xxx) や作品名
+  observation: string;      // 観察内容（自由記述）
+  hypothesis?: string;      // 「〜ではないか」という仮説
+  priority: 'high' | 'medium' | 'low';
+}
+
+interface ObservationsData {
+  observations: ManualObservation[];
+}
+
 // ─── 動的テンプレート型 ───────────────────────────────────────────────────────
 
 export interface DynamicTemplate {
@@ -73,6 +106,8 @@ interface DynamicTemplatesData {
 let postsCache: PostsData = { posts: [] };
 let extCache: ExternalPatternsData = { patterns: [], lastRefreshedAt: null, queries: [] };
 let dynTemplatesCache: DynamicTemplatesData = { templates: [], lastEvolvedAt: null, evolutionCount: 0 };
+let snapshotCache: SnapshotData = { snapshots: [] };
+let observationsCache: ObservationsData = { observations: [] };
 let initialized = false;
 
 // ─── 初期化（起動時に1回だけ呼ぶ）───────────────────────────────────────────
@@ -87,9 +122,11 @@ export async function initStorage(): Promise<void> {
   dynTemplatesCache = await readJson<DynamicTemplatesData>('dynamic-templates.json', {
     templates: [], lastEvolvedAt: null, evolutionCount: 0,
   });
+  snapshotCache     = await readJson<SnapshotData>('account-snapshots.json', { snapshots: [] });
+  observationsCache = await readJson<ObservationsData>('observations.json', { observations: [] });
   initialized = true;
   console.log(
-    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件)`,
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件)`,
   );
 }
 
@@ -269,6 +306,71 @@ export function getDynamicTemplatesInfo() {
       sourceScore: t.sourceScore,
     })),
   };
+}
+
+// ─── Account Snapshots ─────────────────────────────────────────────────────────
+
+function saveSnapshotsAsync() {
+  writeJson('account-snapshots.json', snapshotCache).catch((e: any) =>
+    console.warn('  ⚠ account-snapshots.json 保存失敗:', e.message),
+  );
+}
+
+export function recordAccountSnapshot(snap: Omit<AccountSnapshot, 'recordedAt'> & { note?: string }) {
+  snapshotCache.snapshots.push({
+    ...snap,
+    recordedAt: new Date().toISOString(),
+  });
+  // 最新52件（約1年分）を保持
+  snapshotCache.snapshots = snapshotCache.snapshots.slice(-52);
+  saveSnapshotsAsync();
+  console.log(`  📊 アカウントスナップショット記録: フォロワー ${snap.followersCount}人`);
+}
+
+export function getAccountSnapshots(): AccountSnapshot[] {
+  return snapshotCache.snapshots;
+}
+
+export function getLatestSnapshot(): AccountSnapshot | null {
+  return snapshotCache.snapshots.at(-1) ?? null;
+}
+
+// ─── Manual Observations ────────────────────────────────────────────────────────
+
+function saveObservationsAsync() {
+  writeJson('observations.json', observationsCache).catch((e: any) =>
+    console.warn('  ⚠ observations.json 保存失敗:', e.message),
+  );
+}
+
+export function addObservation(obs: Omit<ManualObservation, 'id' | 'recordedAt'>): ManualObservation {
+  const newObs: ManualObservation = {
+    ...obs,
+    id: `obs-${Date.now()}`,
+    recordedAt: new Date().toISOString(),
+  };
+  observationsCache.observations.unshift(newObs);
+  // 最新200件を保持
+  observationsCache.observations = observationsCache.observations.slice(0, 200);
+  saveObservationsAsync();
+  return newObs;
+}
+
+export function getObservations(category?: ManualObservation['category']): ManualObservation[] {
+  if (category) {
+    return observationsCache.observations.filter((o) => o.category === category);
+  }
+  return observationsCache.observations;
+}
+
+export function deleteObservation(id: string): boolean {
+  const before = observationsCache.observations.length;
+  observationsCache.observations = observationsCache.observations.filter((o) => o.id !== id);
+  if (observationsCache.observations.length < before) {
+    saveObservationsAsync();
+    return true;
+  }
+  return false;
 }
 
 export function getExternalPatternsInfo() {

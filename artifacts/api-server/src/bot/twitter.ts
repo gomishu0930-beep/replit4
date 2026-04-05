@@ -145,6 +145,37 @@ export async function searchTweetsByHashtag(
   return tweets;
 }
 
+// ─── アカウント情報取得（無料プランで動作可能）──────────────────────────────
+
+export interface AccountInfo {
+  followersCount: number;
+  followingCount: number;
+  tweetCount: number;
+  username: string;
+}
+
+export async function getAccountInfo(): Promise<AccountInfo | null> {
+  try {
+    const userId = process.env.TWITTER_USER_ID ?? '';
+    if (!userId) throw new Error('TWITTER_USER_ID が設定されていません');
+
+    const res = await client.v2.user(userId, {
+      'user.fields': ['public_metrics', 'username'],
+    });
+
+    const m = res.data.public_metrics;
+    return {
+      followersCount: m?.followers_count ?? 0,
+      followingCount: m?.following_count ?? 0,
+      tweetCount:     m?.tweet_count ?? 0,
+      username:       res.data.username ?? '',
+    };
+  } catch (e: any) {
+    console.error(`  ⚠ アカウント情報取得失敗: ${e.message}`);
+    return null;
+  }
+}
+
 export async function fetchUserTimelineByUsername(
   username: string,
   count = 20,

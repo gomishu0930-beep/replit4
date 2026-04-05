@@ -483,11 +483,68 @@ function _printHypotheses() {
   }
 }
 
+// ─── 回復期研究仮説（シャドウバン解除後の政策決定のための知見蓄積）──────────
+
+// R1: エンゲージメント型研究（どのインプ型が最もいいね・RTを得るか）
+function evaluateResearchEngagement(): void {
+  // インプ投稿は metrics 取得不可のため、内容タイプの多様性を確認
+  const posts = getAllPosts();
+  const impPosts = posts.filter((p) => (p as any).type === 'impression');
+
+  addHypothesis({
+    id: 'research-engagement',
+    question: '【回復期研究①】どのインプ投稿スタイルが最もエンゲージメント（いいね・RT・リプ）を得やすいか？',
+    status: 'pending',
+    finding: impPosts.length > 0
+      ? `インプ投稿実績 ${impPosts.length}件 蓄積中。指標は無料プランで取得不可のため手動観察が必要。観察ログ(/bot/observations)に記録してください。`
+      : 'インプ投稿データなし。10:30スロットで蓄積開始。',
+    adjustment: '回復後に採用予定: 最もエンゲージメントを得たスタイルを主力にする',
+    testedAt: new Date().toISOString(),
+  });
+}
+
+// R2: 良い作品研究（どの品質条件の作品が伸びるか）
+function evaluateResearchProduct(): void {
+  const posts = getAllPosts();
+  const celPosts = posts.filter((p) => (p as any).type === 'celebrity');
+  const titleKeywords = celPosts.map((p) => (p.item?.title ?? '').slice(0, 20));
+
+  addHypothesis({
+    id: 'research-product',
+    question: '【回復期研究②】高評価×レビュー数×セール中のどの条件が「伸びる作品」を最もよく予測するか？',
+    status: 'pending',
+    finding: celPosts.length > 0
+      ? `芸能人スロット投稿 ${celPosts.length}件 蓄積中。代表タイトル: ${titleKeywords.slice(-3).join(' / ')} 。観察ログに個別メモを記録してください。`
+      : '芸能人スロットのデータ蓄積開始待ち。',
+    adjustment: '回復後に採用予定: 品質スコア算式（レビュー数×評価×セール係数）を調整する',
+    testedAt: new Date().toISOString(),
+  });
+}
+
+// R3: 安全投稿研究（シャドウバン・凍結を回避するパターン）
+function evaluateResearchSafePost(): void {
+  const posts = getAllPosts();
+  const recentPosts = posts.slice(-14); // 直近14件
+  const hasImages = recentPosts.filter((p) => (p as any).text?.includes('🔞')).length;
+
+  addHypothesis({
+    id: 'research-safe-post',
+    question: '【回復期研究③】どのコンテンツパターン（文体・絵文字・画像有無・リンクの有無）がシャドウバンを回避できるか？',
+    status: 'pending',
+    finding: recentPosts.length > 0
+      ? `直近14件のうち🔞マーク含む投稿: ${hasImages}件。現状: 投稿1本/日(インプ) + 芸能人1本/日 = 2件体制継続中。観察ログにBAN回避ノウハウを記録してください。`
+      : 'データ蓄積開始待ち。',
+    adjustment: '回復後に採用予定: BANリスクが低いと判明したパターンを標準テンプレートに採用',
+    testedAt: new Date().toISOString(),
+  });
+}
+
 // ─── 日次評価（毎日 03:00 JST に実行）──────────────────────────────────────
 //
 // 監視サイクルとは独立して毎日実行。
 // 仮説⑤⑥（コンテンツ型比較・インプ効果）を検証し、
 // 翌日の投稿戦略に知見を反映する。
+// 回復期研究仮説R1〜R3も記録・更新。
 
 export async function runDailyEvaluation(): Promise<void> {
   const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
@@ -504,6 +561,11 @@ export async function runDailyEvaluation(): Promise<void> {
   // 新仮説⑤⑥を評価
   evaluateContentTypes();
   evaluateImpressionEffect();
+
+  // 回復期研究仮説 R1〜R3（知見蓄積・状態更新）
+  evaluateResearchEngagement();
+  evaluateResearchProduct();
+  evaluateResearchSafePost();
 
   console.log(`  ✅ 日次評価完了 (変更: ${decisions.length}件)`);
   config.lastEvaluatedAt = new Date().toISOString();

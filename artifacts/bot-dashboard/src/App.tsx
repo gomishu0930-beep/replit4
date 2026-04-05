@@ -91,6 +91,22 @@ interface WatchdogData {
   consecutiveFailures: number;
   events: WatchdogEvent[];
 }
+interface AccountSnapshot {
+  recordedAt: string;
+  followersCount: number;
+  followingCount: number;
+  tweetCount: number;
+  note?: string;
+}
+interface ManualObservation {
+  id: string;
+  recordedAt: string;
+  category: "engagement" | "product" | "safe-post" | "other";
+  source?: string;
+  observation: string;
+  hypothesis?: string;
+  priority: "high" | "medium" | "low";
+}
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
 
@@ -510,7 +526,9 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns">("overview");
+  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research">("overview");
+  const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
+  const [obsSubmitting, setObsSubmitting] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -542,6 +560,16 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/watchdog`).then((r) => r.json()),
     refetchInterval: 60000,
   });
+  const { data: snapshotsData, refetch: refetchSnapshots } = useQuery<{ snapshots: AccountSnapshot[] }>({
+    queryKey: ["snapshots"],
+    queryFn: () => fetch(`${API}/api/bot/snapshots`).then((r) => r.json()),
+    refetchInterval: 3600000,
+  });
+  const { data: obsData, refetch: refetchObs } = useQuery<{ observations: ManualObservation[] }>({
+    queryKey: ["observations"],
+    queryFn: () => fetch(`${API}/api/bot/observations`).then((r) => r.json()),
+    refetchInterval: 60000,
+  });
 
   const posts = postsData?.posts ?? [];
   const stats = status?.stats;
@@ -560,6 +588,7 @@ function Dashboard() {
     { id: "strategy",  label: "🧠 戦略エンジン" },
     { id: "posts",     label: "投稿履歴" },
     { id: "patterns",  label: "外部データ" },
+    { id: "research",  label: "🔬 回復研究" },
   ] as const;
 
   // スケジュール（APIから取得、またはデフォルト）
@@ -636,26 +665,22 @@ function Dashboard() {
 
             {/* スケジュール + 最新投稿 */}
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">投稿スケジュール</h2>
-                  <span className="text-[10px] text-white/30">8本/日</span>
+                  <h2 className="text-xs font-semibold text-amber-400/70 uppercase tracking-wider">投稿スケジュール【回復モード】</h2>
+                  <span className="text-[10px] text-amber-400/60">⚠️ 2本/日</span>
                 </div>
                 <div className="space-y-1">
                   {schedule.map((s) => (
-                    <div key={s.time} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                    <div key={`${s.time}-${s.type}`} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                       <span className="text-xs font-mono text-indigo-300">{s.time}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${typeBadge(s.type)}`}>
                         {s.label}
                       </span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between py-1.5 border-b border-white/5">
-                    <span className="text-xs font-mono text-orange-300">20:00 JST</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${typeBadge("celebrity")}`}>芸能人似（動的）</span>
-                  </div>
                 </div>
-                <p className="text-[10px] text-white/20 mt-2">💬 = リンクなし・共感型 / 🔗 = アフィリリンク付き</p>
+                <p className="text-[10px] text-white/20 mt-2">💬 = リンクなし・共感型 / 🎭 = アフィリリンク付き</p>
               </div>
 
               <div className="space-y-4">
@@ -1029,6 +1054,266 @@ function Dashboard() {
             </div>
           </>
         )}
+        {/* ════════════════════ 回復研究タブ ════════════════════ */}
+        {tab === "research" && (() => {
+          const snapshots = snapshotsData?.snapshots ?? [];
+          const observations = obsData?.observations ?? [];
+          const catLabel: Record<string, string> = {
+            engagement: "💬 エンゲージメント研究",
+            product: "🎬 良作品研究",
+            "safe-post": "🛡 安全投稿研究",
+            other: "📝 その他",
+          };
+          const prioStyle: Record<string, string> = {
+            high: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+            medium: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+            low: "bg-white/10 text-white/40 border-white/20",
+          };
+
+          async function captureSnapshot() {
+            const r = await fetch(`${API}/api/bot/snapshots/capture`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "手動記録" }) });
+            if (r.ok) refetchSnapshots();
+          }
+          async function submitObservation(e: React.FormEvent) {
+            e.preventDefault();
+            if (!obsForm.observation.trim()) return;
+            setObsSubmitting(true);
+            try {
+              const r = await fetch(`${API}/api/bot/observations`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(obsForm),
+              });
+              if (r.ok) {
+                setObsForm({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
+                refetchObs();
+              }
+            } finally {
+              setObsSubmitting(false);
+            }
+          }
+          async function deleteObs(id: string) {
+            await fetch(`${API}/api/bot/observations/${id}`, { method: "DELETE" });
+            refetchObs();
+          }
+
+          // フォロワー推移チャートデータ
+          const snapChartData = snapshots.slice(-12).map((s) => ({
+            date: new Date(s.recordedAt).toLocaleDateString("ja-JP", { month: "2-digit", day: "2-digit" }),
+            followers: s.followersCount,
+          }));
+          const latestSnap = snapshots.at(-1);
+          const firstSnap = snapshots.at(0);
+          const followerDelta = (latestSnap && firstSnap && latestSnap !== firstSnap)
+            ? latestSnap.followersCount - firstSnap.followersCount
+            : null;
+
+          return (
+            <>
+              {/* 回復モードバナー */}
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">⚠️</span>
+                  <div>
+                    <h2 className="text-sm font-bold text-amber-300 mb-1">シャドウバン回復モード</h2>
+                    <p className="text-xs text-amber-200/70">
+                      1日2件体制で信頼スコア回復中。この期間を活用して「回復後の政策」を研究・蓄積します。
+                    </p>
+                    <div className="mt-2 flex gap-4 text-xs text-amber-200/60">
+                      <span>📅 Phase 1: 手動観察 + 2件/日 (〜4週間)</span>
+                      <span>📈 目標: インプ 10以上で回復確認</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* フォロワー数推移 */}
+              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">フォロワー数推移（週次）</h2>
+                  <button
+                    onClick={captureSnapshot}
+                    className="text-[11px] px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors"
+                  >
+                    今すぐ記録
+                  </button>
+                </div>
+                {latestSnap ? (
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <StatCard label="現在のフォロワー" value={latestSnap.followersCount.toLocaleString()} accent="text-emerald-400" />
+                    <StatCard label="フォロー中" value={latestSnap.followingCount.toLocaleString()} />
+                    <StatCard
+                      label="総ツイート数"
+                      value={latestSnap.tweetCount.toLocaleString()}
+                      sub={followerDelta !== null ? `追跡開始から ${followerDelta >= 0 ? "+" : ""}${followerDelta}人` : undefined}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/30 text-center py-4 mb-4">「今すぐ記録」でスナップショットを取得してください</p>
+                )}
+                {snapChartData.length >= 2 && (
+                  <ResponsiveContainer width="100%" height={120}>
+                    <LineChart data={snapChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }} />
+                      <YAxis tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }} domain={["dataMin - 5", "dataMax + 5"]} />
+                      <RechartTooltip
+                        contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }}
+                        formatter={(v: number) => [v, "フォロワー"]}
+                      />
+                      <Line type="monotone" dataKey="followers" stroke="#34d399" strokeWidth={2} dot={{ r: 3, fill: "#34d399" }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+                {snapshots.length > 0 && (
+                  <div className="mt-3 space-y-1 max-h-32 overflow-y-auto">
+                    {[...snapshots].reverse().slice(0, 10).map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-[10px] text-white/40 px-1">
+                        <span>{fmtDate(s.recordedAt)}</span>
+                        <span className="text-emerald-400">👥 {s.followersCount}</span>
+                        {s.note && <span className="text-white/25">{s.note}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 研究ログ入力フォーム */}
+              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">観察ログを追加</h2>
+                <form onSubmit={submitObservation} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-white/40 block mb-1">カテゴリー</label>
+                      <select
+                        value={obsForm.category}
+                        onChange={(e) => setObsForm((f) => ({ ...f, category: e.target.value }))}
+                        className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-indigo-500/50"
+                      >
+                        <option value="engagement">💬 エンゲージメント研究</option>
+                        <option value="product">🎬 良作品研究</option>
+                        <option value="safe-post">🛡 安全投稿研究</option>
+                        <option value="other">📝 その他</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-white/40 block mb-1">優先度</label>
+                      <select
+                        value={obsForm.priority}
+                        onChange={(e) => setObsForm((f) => ({ ...f, priority: e.target.value }))}
+                        className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-indigo-500/50"
+                      >
+                        <option value="high">🔴 高（必ず採用を検討）</option>
+                        <option value="medium">🟡 中（参考情報）</option>
+                        <option value="low">⚪ 低（メモ）</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/40 block mb-1">参照元 (任意: @アカウント名 or 作品名)</label>
+                    <input
+                      value={obsForm.source}
+                      onChange={(e) => setObsForm((f) => ({ ...f, source: e.target.value }))}
+                      placeholder="例: @xxx_adult, 君のことが好き"
+                      className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/40 block mb-1">観察内容 *</label>
+                    <textarea
+                      value={obsForm.observation}
+                      onChange={(e) => setObsForm((f) => ({ ...f, observation: e.target.value }))}
+                      placeholder="例: 「〜系のつぶやきが500いいね取れた」「🔞マーク抜きの投稿の方がリーチが広い」など"
+                      rows={3}
+                      className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/40 block mb-1">仮説 (任意: 「〜ではないか」)</label>
+                    <input
+                      value={obsForm.hypothesis}
+                      onChange={(e) => setObsForm((f) => ({ ...f, hypothesis: e.target.value }))}
+                      placeholder="例: 共感型ツイートはエロ系アカウントでもリーチしやすいのではないか"
+                      className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={obsSubmitting || !obsForm.observation.trim()}
+                    className="w-full py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-colors disabled:opacity-40"
+                  >
+                    {obsSubmitting ? "保存中..." : "観察を記録する"}
+                  </button>
+                </form>
+              </div>
+
+              {/* 観察ログ一覧 */}
+              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">蓄積観察ログ</h2>
+                  <span className="text-[10px] text-white/30">{observations.length}件</span>
+                </div>
+                {observations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-xs text-white/30">まだ観察ログがありません</p>
+                    <p className="text-[10px] text-white/20 mt-1">Twitterを見て気づいたことを上のフォームから記録してください</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {["high", "medium", "low"].map((prio) => {
+                      const group = observations.filter((o) => o.priority === prio);
+                      if (group.length === 0) return null;
+                      return (
+                        <div key={prio}>
+                          <p className="text-[10px] text-white/30 mb-1.5">{prio === "high" ? "🔴 高優先" : prio === "medium" ? "🟡 中優先" : "⚪ 低優先"}</p>
+                          {group.map((obs) => (
+                            <div key={obs.id} className="p-3 rounded-lg bg-white/5 border border-white/8 mb-2">
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${prioStyle[obs.priority]}`}>
+                                    {catLabel[obs.category] ?? obs.category}
+                                  </span>
+                                  {obs.source && (
+                                    <span className="text-[10px] text-blue-400">{obs.source}</span>
+                                  )}
+                                  <span className="text-[10px] text-white/25">{fmtDate(obs.recordedAt)}</span>
+                                </div>
+                                <button
+                                  onClick={() => deleteObs(obs.id)}
+                                  className="text-[10px] text-white/20 hover:text-red-400 transition-colors shrink-0"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              <p className="text-xs text-white/70">{obs.observation}</p>
+                              {obs.hypothesis && (
+                                <p className="text-[10px] text-indigo-300 mt-1">→ 仮説: {obs.hypothesis}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 戦略エンジンの回復期仮説 */}
+              {strategy && (() => {
+                const researchHyps = strategy.hypotheses.filter((h) => h.id.startsWith("research-"));
+                if (researchHyps.length === 0) return null;
+                return (
+                  <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                    <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">回復後の政策仮説（自動追跡）</h2>
+                    <div className="space-y-2">
+                      {researchHyps.map((h) => <HypothesisCard key={h.id} h={h} />)}
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          );
+        })()}
       </main>
 
       <footer className="border-t border-white/8 mt-8 py-3 text-center text-[10px] text-white/20">

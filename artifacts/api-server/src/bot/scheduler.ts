@@ -1,9 +1,9 @@
 import cron from 'node-cron';
 
 import { getBuzzItems, getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
-import { uploadImages, postTweet, replyToTweet } from './twitter.js';
+import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot } from './storage.js';
 import { refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -314,11 +314,27 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
-  // 月曜 08:00 JST — 週次パフォーマンスレポート
+  // 月曜 08:00 JST — 週次パフォーマンスレポート + アカウントスナップショット
   cron.schedule('0 8 * * 1', async () => {
     const stats = getStats();
     const extInfo = getExternalPatternsInfo();
     const dynInfo = getDynamicTemplatesInfo();
+
+    // フォロワー数スナップショット（回復進捗を追跡）
+    try {
+      const info = await getAccountInfo();
+      if (info) {
+        recordAccountSnapshot({
+          followersCount: info.followersCount,
+          followingCount: info.followingCount,
+          tweetCount:     info.tweetCount,
+          note: '週次自動記録',
+        });
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ フォロワースナップショット失敗:', e.message);
+    }
+
     await contact.weeklyReport({
       投稿統計: stats,
       外部パターン: { 総数: extInfo.count, 最終更新: extInfo.lastRefreshedAt },
