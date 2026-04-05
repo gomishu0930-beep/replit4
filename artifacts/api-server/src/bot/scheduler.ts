@@ -271,8 +271,19 @@ export function startScheduler() {
   });
   sleep(3 * 60 * 1000).then(() => startWatchdog()); // 3分後に初回チェック
 
-  // ── 常時監視ループを起動（5分後に初回実行）───────────────────────────────
-  sleep(5 * 60 * 1000).then(() => monitoringLoop());
+  // ── 常時監視ループを起動（5分後に初回実行）── クラッシュ時は5分後に自動再起動
+  async function startMonitoringLoop() {
+    await sleep(5 * 60 * 1000);
+    while (true) {
+      try {
+        await monitoringLoop();
+      } catch (e: any) {
+        console.error(`  ❌ 監視ループが異常終了: ${e.message} — 5分後に再起動します`);
+        await sleep(5 * 60 * 1000);
+      }
+    }
+  }
+  startMonitoringLoop();
 
   // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────
   sleep(2 * 60 * 1000).then(() => catchUpMissedSlots());
@@ -342,18 +353,32 @@ export function startScheduler() {
     });
   }, { timezone: 'Asia/Tokyo' });
 
-  // 芸能人アフィリスロット — エンゲージメント最高時間帯（動的）
-  const bestHour = getBestPostingHour();
-  cron.schedule(`0 ${bestHour} * * *`, async () => {
+  // 芸能人アフィリスロット — 18〜22時を毎時チェックし最適時間帯に投稿（毎日再計算）
+  // ※ cron は毎日固定時間にしか設定できないため、毎時チェック方式で動的対応
+  let _celebPostedDate = '';  // 今日すでに投稿済みかを管理
+  cron.schedule('0 18,19,20,21,22 * * *', async () => {
+    const nowJst = new Date(Date.now() + 9 * 3600000);
+    const todayKey = nowJst.toISOString().slice(0, 10); // "2026-04-05"
+    if (_celebPostedDate === todayKey) return; // 今日すでに投稿済み
+
+    // 18〜22時以外の値はデフォルト20時に丸める（データ不足時の5時等を防止）
+    const rawBest = getBestPostingHour();
+    const bestHour = (rawBest >= 18 && rawBest <= 22) ? rawBest : 20;
+    const currentHour = nowJst.getUTCHours(); // JST = UTC+9 → すでに+9済み
+    if (currentHour !== bestHour) return; // 最適時間帯でなければスキップ
+
+    _celebPostedDate = todayKey;
     await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
   }, { timezone: 'Asia/Tokyo' });
 
+  const rawBest2 = getBestPostingHour();
+  const effectiveHour = (rawBest2 >= 18 && rawBest2 <= 22) ? rawBest2 : 20;
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  FANZA X Bot【シャドウバン回復モード】   ║');
   console.log('╠══════════════════════════════════════════╣');
   console.log('║  ⚠️  1日2件に削減（回復優先）             ║');
-  console.log(`║  🎭 芸能人アフィリ: ${String(bestHour).padStart(2, '0')}:00 JST          ║`);
+  console.log(`║  🎭 芸能人アフィリ: ${String(effectiveHour).padStart(2, '0')}:00 JST (動的)    ║`);
   console.log('║  💬 インプ狙い  : 10:30 JST              ║');
   console.log('║  📡 外部監視    : 常時ループ              ║');
   console.log('║  🌙 日次評価    : 03:00 JST              ║');

@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 5,
+  "monitorIntervalHours": 4,
   "typeWeights": {
     "amateur": 1,
     "buzz": 1,
@@ -8,18 +8,18 @@
     "random": 0.8
   },
   "cycleStats": {
-    "lastNewPatterns": 81,
-    "avgNewPatterns": 24.3,
-    "totalCycles": 29
+    "lastNewPatterns": 82,
+    "avgNewPatterns": 41.61,
+    "totalCycles": 30
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 6h）は最適か？",
+      "question": "外部情報の収集間隔（現在 5h）は最適か？",
       "status": "adjusted",
-      "finding": "29サイクル実績 / 平均新規パターン 24.3件/サイクル",
-      "adjustment": "監視間隔を 6h → 5h に短縮（平均新規パターン 24.3件/サイクル）",
-      "testedAt": "2026-04-05T07:05:43.579Z"
+      "finding": "30サイクル実績 / 平均新規パターン 41.6件/サイクル",
+      "adjustment": "監視間隔を 5h → 4h に短縮（平均新規パターン 41.6件/サイクル）",
+      "testedAt": "2026-04-05T07:11:23.332Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:05:43.579Z"
+      "testedAt": "2026-04-05T07:11:23.432Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:05:43.579Z"
+      "testedAt": "2026-04-05T07:11:23.433Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,17 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:05:43.580Z"
+      "testedAt": "2026-04-05T07:11:23.532Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-05T07:11:23.532Z",
+      "cycle": 30,
+      "decisions": [
+        "監視間隔を 5h → 4h に短縮（平均新規パターン 41.6件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-05T07:05:43.580Z",
       "cycle": 29,
@@ -251,6 +258,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-05T07:05:43.580Z",
-  "version": 30
+  "lastEvaluatedAt": "2026-04-05T07:11:23.532Z",
+  "version": 31
 }

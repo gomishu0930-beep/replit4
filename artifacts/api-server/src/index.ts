@@ -46,3 +46,11 @@ function gracefulShutdown(signal: string) {
 
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
+
+// 未処理のPromise拒否をキャッチ → クラッシュ防止
+process.on("unhandledRejection", (reason: any) => {
+  logger.error({ reason }, "unhandledRejection — 継続運転します");
+});
+process.on("uncaughtException", (err: Error) => {
+  logger.error({ err }, "uncaughtException — 継続運転します");
+});
