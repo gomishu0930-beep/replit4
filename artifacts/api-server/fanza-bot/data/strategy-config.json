@@ -10,16 +10,16 @@
   "cycleStats": {
     "lastNewPatterns": 0,
     "avgNewPatterns": 0,
-    "totalCycles": 10
+    "totalCycles": 16
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 6h）は最適か？",
       "status": "confirmed",
-      "finding": "10サイクル実績 / 平均新規パターン 0.0件/サイクル",
+      "finding": "16サイクル実績 / 平均新規パターン 0.0件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-04T20:14:32.091Z"
+      "testedAt": "2026-04-05T00:45:18.263Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "pending",
       "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-04T20:14:32.091Z"
+      "testedAt": "2026-04-05T00:45:18.264Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T20:14:32.091Z"
+      "testedAt": "2026-04-05T00:45:18.264Z"
     },
     {
       "id": "posting-hours",
@@ -43,12 +43,54 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-04T20:14:32.091Z"
+      "testedAt": "2026-04-05T00:45:18.264Z"
     }
   ],
   "decisionLog": [
     {
-      "at": "2026-04-04T20:14:32.091Z",
+      "at": "2026-04-05T00:45:18.264Z",
+      "cycle": 16,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-05T00:21:55.596Z",
+      "cycle": 15,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T23:20:03.915Z",
+      "cycle": 14,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T21:33:47.364Z",
+      "cycle": 13,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T21:10:52.584Z",
+      "cycle": 12,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T20:53:17.313Z",
+      "cycle": 11,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-04T20:15:48.826Z",
       "cycle": 10,
       "decisions": [
         "評価完了 / 変更なし"
@@ -118,6 +160,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-04T20:14:32.091Z",
-  "version": 11
+  "lastEvaluatedAt": "2026-04-05T00:45:18.264Z",
+  "version": 17
 }

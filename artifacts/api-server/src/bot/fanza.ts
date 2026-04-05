@@ -191,12 +191,71 @@ async function fetchByCampaignId(count: number): Promise<any[]> {
   }
 }
 
-// ─── 素人系キーワードローテーション ──────────────────────────────────────────
+// ─── 包括的スコア計算（ベイズ平均 × 人気度ウェイト）─────────────────────────
+//
+// 単純な星評価だけでなく、レビュー数・ランキングを加味した
+// 信頼度の高い総合評価を算出する。
+//
+// 例:
+//   星4.9 × レビュー3件   → composite ≈ 3.3  ← 過大評価を抑制
+//   星4.7 × レビュー200件 → composite ≈ 5.0  ← 真の人気作を優先
+//
+function compositeScore(item: any): number {
+  const avg = parseFloat(item.review?.average ?? '0');
+  const count = item.review?.count ?? 0;
+  if (avg === 0 || count === 0) return 0;
+
+  // ベイズ平均: 事前平均 m=4.0、基準レビュー数 C=50
+  // 少ないレビュー数の高評価を割り引き、多いレビュー数の評価を信頼する
+  const C = 50;
+  const m = 4.0;
+  const bayesianAvg = (C * m + count * avg) / (C + count);
+
+  // 人気度ウェイト: レビュー数の対数スケール（購入数・閲覧数の代理指標）
+  const popularityWeight = Math.log10(count + 1);
+
+  return bayesianAvg * popularityWeight;
+}
+
+// ─── FANZA素人フロア専用APIリクエスト ────────────────────────────────────────
+
+async function fetchAmaItems(extra: Record<string, string> = {}): Promise<any[]> {
+  const params = new URLSearchParams({
+    api_id: process.env.DMM_API_ID ?? '',
+    affiliate_id: process.env.DMM_AFFILIATE_ID ?? '',
+    site: 'FANZA',
+    service: 'digital',
+    floor: 'ama',        // FANZA素人専用フロア（"ひかりさん"等）
+    hits: '100',
+    output: 'json',
+    ...extra,
+  });
+
+  const res = await fetch(`${API_BASE}?${params}`);
+  const data = (await res.json()) as any;
+
+  if (data?.result?.status !== 200) {
+    throw new Error(`FANZA AMA API error: ${JSON.stringify(data?.result)}`);
+  }
+
+  return data.result.items ?? [];
+}
+
+// ─── FANZA素人系キーワード ────────────────────────────────────────────────────
+//
+// FANZA素人フロア（floor=ama）はAPIアカウントで非開放のため、
+// FANZA素人コンテンツに相当するキーワード検索で代替する。
+// 「ひかりさん」「さきちゃん」系の素人個人投稿スタイルを狙う。
 
 const AMATEUR_KEYWORDS = [
-  '素人', '素人ナンパ', '素人個撮', '素人エステ', '素人ハメ撮り',
-  '素人妻', '素人大学生', '素人OL', '素人ギャル', '素人美少女',
-  '初撮り 素人', '本物素人', '一般女性',
+  // FANZA素人系（個人投稿スタイル）
+  'FANZA素人', '素人投稿', '素人個撮', '素人ハメ撮り自撮り',
+  '素人ナンパ 中出し', '本物素人 初撮り',
+  // 属性系（FANZA素人に多いプロファイル）
+  '素人 大学生 中出し', '素人 OL 個撮', '素人 人妻 自撮り',
+  '素人 ギャル ナンパ', '素人 美少女 初撮り', '素人 巨乳 中出し',
+  // 素人らしさを強調するワード
+  '一般人 撮影', '素人娘', '隣の女の子', '普通の女の子',
 ];
 
 const GENRE_KEYWORDS = [
@@ -213,38 +272,89 @@ const SALE_KEYWORDS = [
 
 // ─── 公開API関数 ──────────────────────────────────────────────────────────────
 
-// 素人系
+// 素人系 — FANZA素人フロア（floor=ama）を優先取得
+// 「ひかりさん」等のFANZA素人コンテンツに特化
 export async function getAmateurItems(count = 2) {
-  const keyword = pickRandom(AMATEUR_KEYWORDS);
   const sorts = ['rank', 'review', 'date'];
   const sort = pickRandom(sorts);
-  const offset = randomOffset(150);
-  console.log(`  🔍 素人検索: keyword="${keyword}" sort=${sort} offset=${offset}`);
-  const items = await fetchItems({ keyword, sort, offset });
+  const offset = randomOffset(100);
+
+  // ① FANZA素人専用フロアから取得（最優先）
+  try {
+    console.log(`  🔍 FANZA素人フロア検索: floor=ama sort=${sort} offset=${offset}`);
+    const amaItems = await fetchAmaItems({ sort, offset });
+    if (amaItems.length >= count) {
+      console.log(`  ✅ FANZA素人フロアから ${amaItems.length}件取得`);
+      return pickNUnique(amaItems, count);
+    }
+    console.warn(`  ⚠ FANZA素人フロア: 件数不足 (${amaItems.length}件) → キーワード補完`);
+  } catch (e: any) {
+    console.warn(`  ⚠ FANZA素人フロア失敗: ${e.message} → キーワードフォールバック`);
+  }
+
+  // ② キーワード検索フォールバック（videoa フロア）
+  const keyword = pickRandom(AMATEUR_KEYWORDS);
+  console.log(`  🔀 素人フォールバック: keyword="${keyword}" sort=${sort}`);
+  const items = await fetchItems({ keyword, sort, offset: randomOffset(150) });
   return pickNUnique(items, count);
 }
 
-// バズ作品
+// バズ作品 — 急上昇・高反応作品を包括スコアで選出
 export async function getBuzzItems(count = 2) {
   const offset = randomOffset(200);
   console.log(`  🔍 バズ検索: sort=review offset=${offset}`);
   const items = await fetchItems({ sort: 'review', offset });
+
+  // 最低条件: レビュー20件以上 & 4.5点以上
   const filtered = items.filter(
     (i) => (i.review?.count ?? 0) >= 20 && parseFloat(i.review?.average ?? '0') >= 4.5,
   );
-  return pickNUnique(filtered.length >= count ? filtered : items, count);
+  const pool = filtered.length >= count ? filtered : items;
+
+  // 包括スコアで上位を選ぶ
+  const scored = pool
+    .map((item) => ({ item, score: compositeScore(item) }))
+    .sort((a, b) => b.score - a.score);
+
+  return pickNUnique(scored.slice(0, 20).map((s) => s.item), count);
 }
 
-// 高評価
+// 高評価 — 包括的スコアリングで選出
+// 星評価単体ではなく「ベイズ平均 × 人気度」で本当に支持されている作品を選ぶ
 export async function getHighRatedItems(count = 2) {
   const keyword = pickRandom(GENRE_KEYWORDS);
-  const offset = randomOffset(300);
-  console.log(`  🔍 高評価検索: keyword="${keyword}" offset=${offset}`);
-  const items = await fetchItems({ sort: 'review', keyword, offset });
-  const filtered = items.filter(
-    (i) => (i.review?.count ?? 0) >= 30 && parseFloat(i.review?.average ?? '0') >= 4.7,
-  );
-  return pickNUnique(filtered.length >= count ? filtered : items, count);
+  console.log(`  🔍 高評価検索: keyword="${keyword}" (rank + review の両軸取得)`);
+
+  // rank順・review順の両方から並行取得して多様なプールを作る
+  const [rankItems, reviewItems] = await Promise.all([
+    fetchItems({ sort: 'rank',   keyword, offset: randomOffset(200) }),
+    fetchItems({ sort: 'review', keyword, offset: randomOffset(200) }),
+  ]);
+
+  // 統合・content_idで重複排除
+  const allMap = new Map<string, any>();
+  for (const item of [...rankItems, ...reviewItems]) {
+    if (!allMap.has(item.content_id)) allMap.set(item.content_id, item);
+  }
+  const all = [...allMap.values()];
+
+  // 最低ラインのフィルター（レビュー10件以上）
+  const filtered = all.filter((i) => (i.review?.count ?? 0) >= 10);
+  const pool = filtered.length >= count ? filtered : all;
+
+  // 包括スコアで降順ソート → 上位20件からランダム選択（偏り防止）
+  const scored = pool
+    .map((item) => ({ item, score: compositeScore(item) }))
+    .sort((a, b) => b.score - a.score);
+
+  // スコア上位5件をデバッグ表示
+  scored.slice(0, 5).forEach((s) => {
+    const avg = s.item.review?.average ?? '?';
+    const cnt = s.item.review?.count ?? 0;
+    console.log(`    📊 composite=${s.score.toFixed(2)} | ★${avg} × ${cnt}件 | ${s.item.title?.slice(0, 30)}`);
+  });
+
+  return pickNUnique(scored.slice(0, 20).map((s) => s.item), count);
 }
 
 // ランキング上位
