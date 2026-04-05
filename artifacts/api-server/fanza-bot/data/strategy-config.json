@@ -8,18 +8,18 @@
     "random": 0.8
   },
   "cycleStats": {
-    "lastNewPatterns": 122,
-    "avgNewPatterns": 93.91616099999999,
-    "totalCycles": 34
+    "lastNewPatterns": 128,
+    "avgNewPatterns": 104.14131269999999,
+    "totalCycles": 35
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "34サイクル実績 / 平均新規パターン 93.9件/サイクル",
+      "finding": "35サイクル実績 / 平均新規パターン 104.1件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-05T08:38:42.893Z"
+      "testedAt": "2026-04-05T08:52:31.933Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T08:38:42.893Z"
+      "testedAt": "2026-04-05T08:52:31.934Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-05T08:38:42.893Z"
+      "testedAt": "2026-04-05T08:52:31.934Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,17 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T08:38:42.894Z"
+      "testedAt": "2026-04-05T08:52:31.934Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-05T08:52:31.934Z",
+      "cycle": 35,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-05T08:38:42.894Z",
       "cycle": 34,
@@ -286,6 +293,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-05T08:38:42.894Z",
-  "version": 35
+  "lastEvaluatedAt": "2026-04-05T08:52:31.934Z",
+  "version": 36
 }
