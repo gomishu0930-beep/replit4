@@ -390,7 +390,7 @@ function evaluateImpressionEffect(): string | null {
   if (allPosts.length < 10) {
     addHypothesis({
       id: 'impression-effect',
-      question: 'インプ狙い投稿（10:30/17:00）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
+      question: 'インプ狙い投稿（10:30）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
       status: 'pending',
       finding: `データ不足 (${allPosts.length}件)。10件以上で評価開始。`,
       adjustment: null,
@@ -432,7 +432,7 @@ function evaluateImpressionEffect(): string | null {
 
   addHypothesis({
     id: 'impression-effect',
-    question: 'インプ狙い投稿（10:30/17:00）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
+    question: 'インプ狙い投稿（10:30）の追加はアフィリ投稿のエンゲージメントを向上させているか？',
     status: (beforeAvg !== null && afterAvg !== null && afterAvg > beforeAvg) ? 'confirmed' : 'pending',
     finding: `${impText} / ${trendText}`,
     adjustment: null,

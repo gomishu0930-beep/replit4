@@ -218,6 +218,14 @@ export function getBestPostingHour(): number {
     }
   }
 
+  // バグA修正: ボット自身のリプライ（reply_count=1）だけで決まった場合はデフォルトに戻す
+  // 自己リプライが 1件あると score=1 になるため、全ポストのスコアが均等に 1.0 になり
+  // 投稿件数が多い時間帯（≥2件）が誤って「最良」と判定されてしまう問題を防ぐ
+  if (bestAvg <= 1.0) {
+    console.log(`  📊 有意なエンゲージメントデータなし (bestAvg=${bestAvg.toFixed(1)}) → デフォルト ${DEFAULT_BEST_HOUR}:00 JST を使用`);
+    return DEFAULT_BEST_HOUR;
+  }
+
   console.log(`  📊 最高エンゲージメント時間帯: ${bestHour}:00 JST (avg score: ${bestAvg.toFixed(1)})`);
   return bestHour;
 }

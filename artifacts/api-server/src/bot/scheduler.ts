@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 
-import { getBuzzItems, getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
+import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate } from './storage.js';
@@ -205,18 +205,10 @@ async function monitoringLoop() {
 // ─── 取りこぼしスロット補完（起動時チェック）────────────────────────────────
 // 1日2件体制: 芸能人アフィリ(20:00) のみ補完対象
 // インプ狙い(10:30)は補完しない（時間帯を外れた宣伝色のない投稿は逆効果）
-interface Slot {
-  hour: number;
-  minute: number;
-  type: string;
-  label: string;
-  fetchFn: (n: number) => Promise<any[]>;
-  extra?: () => Promise<void>;
-}
-
-const SLOTS: Slot[] = [
-  { hour: 20, minute: 0, type: 'celebrity', label: '20:00 芸能人（補完）', fetchFn: (n) => getBuzzItems(n) },
-];
+//
+// バグB修正: postItems(buzzフォーマット) → postCelebritySlot(芸能人フォーマット)に変更
+// バグC修正: getPostsAfter()は全タイプ確認 → 'celebrity'タイプ限定に変更
+//           （impression投稿があっても芸能人スロット欠落と正しく判定できるように）
 
 async function catchUpMissedSlots() {
   const nowUtc = Date.now();
@@ -229,32 +221,34 @@ async function catchUpMissedSlots() {
 
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
 
-  for (const slot of SLOTS) {
-    const slotTime = new Date(todayMidnightJst.getTime() + (slot.hour * 60 + slot.minute) * 60 * 1000);
-    const slotPastMs = nowUtc - slotTime.getTime();
+  // 芸能人スロット（20:00 JST）の取りこぼしチェック
+  const celebSlotHour = 20;
+  const slotTime = new Date(todayMidnightJst.getTime() + celebSlotHour * 60 * 60 * 1000);
+  const slotPastMs = nowUtc - slotTime.getTime();
 
-    // スロット未到達、または6時間以上前のものはスキップ
-    if (slotPastMs < 0 || slotPastMs > 6 * 60 * 60 * 1000) continue;
+  // スロット未到達（未来）または6時間以上前はスキップ
+  if (slotPastMs < 0) {
+    console.log(`  ℹ️  [補完チェック] 20:00 芸能人スロットはまだ先 → スキップ`);
+    return;
+  }
+  if (slotPastMs > 6 * 60 * 60 * 1000) {
+    console.log(`  ℹ️  [補完チェック] 20:00 芸能人スロットから6時間超過 → スキップ`);
+    return;
+  }
 
-    // スロット時刻以降に投稿があればスキップ
-    const postsAfter = getPostsAfter(slotTime);
-    if (postsAfter.length > 0) {
-      console.log(`  ✅ [${slot.label}] 投稿済み確認 → スキップ`);
-      continue;
-    }
+  // バグC修正: 'celebrity'タイプの投稿のみチェック（impressionなど他タイプは無視）
+  const celebPostsAfter = getPostsAfter(slotTime).filter((p: any) => p.type === 'celebrity');
+  if (celebPostsAfter.length > 0) {
+    console.log(`  ✅ [補完チェック] 芸能人スロット投稿済み確認 → スキップ`);
+    return;
+  }
 
-    // 取りこぼし検出 → 補完投稿
-    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${slot.label} → 補完投稿開始`);
-    try {
-      if (slot.extra) await slot.extra();
-      const items = await slot.fetchFn(1);
-      await postItems(items, slot.type, slot.label);
-    } catch (e: any) {
-      console.error(`  ❌ 補完投稿失敗 [${slot.label}]: ${e.message}`);
-    }
-
-    // 補完は1スロットのみ（複数取りこぼしの場合は次の起動で対応）
-    break;
+  // 取りこぼし検出 → バグB修正: postCelebritySlot（正しい芸能人フォーマット）で補完
+  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 20:00 芸能人スロット → 補完投稿開始`);
+  try {
+    await postCelebritySlot('20:00 芸能人（補完）');
+  } catch (e: any) {
+    console.error(`  ❌ 補完投稿失敗 [芸能人スロット]: ${e.message}`);
   }
 }
 
