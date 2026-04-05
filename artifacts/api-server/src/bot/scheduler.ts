@@ -3,7 +3,7 @@ import cron from 'node-cron';
 import { getBuzzItems, getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot } from './storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate } from './storage.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -163,6 +163,8 @@ async function postImpressionSlot(label: string) {
     console.log(`\n[${jst}] ${label} インプ狙い投稿開始`);
     const text = generateImpressionTweet();
     const tweetId = await postTweet(text, []);
+    // ① 投稿記録（item なし: アフィリリンクなしの純粋な会話投稿）
+    recordPost({ tweetId, replyId: '', text, type: 'impression' });
     console.log(`  ✅ [${label}] インプ狙い投稿完了 (${tweetId})`);
   } catch (e: any) {
     console.error(`  ❌ [${label}] エラー: ${e.message}`);
@@ -364,21 +366,34 @@ export function startScheduler() {
 
   // 芸能人アフィリスロット — 18〜22時を毎時チェックし最適時間帯に投稿（毎日再計算）
   // ※ cron は毎日固定時間にしか設定できないため、毎時チェック方式で動的対応
-  let _celebPostedDate = '';  // 今日すでに投稿済みかを管理
+  // ② _celebPostedDate をメモリ変数→GCS永続化に変更（再起動しても状態が引き継がれる）
   cron.schedule('0 18,19,20,21,22 * * *', async () => {
     const nowJst = new Date(Date.now() + 9 * 3600000);
     const todayKey = nowJst.toISOString().slice(0, 10); // "2026-04-05"
-    if (_celebPostedDate === todayKey) return; // 今日すでに投稿済み
+    if (getCelebPostedDate() === todayKey) {
+      console.log(`  ℹ️  [芸能人スロット] 本日投稿済み (${todayKey}) → スキップ`);
+      return;
+    }
 
     // 18〜22時以外の値はデフォルト20時に丸める（データ不足時の5時等を防止）
     const rawBest = getBestPostingHour();
     const bestHour = (rawBest >= 18 && rawBest <= 22) ? rawBest : 20;
     const currentHour = nowJst.getUTCHours(); // JST = UTC+9 → すでに+9済み
-    if (currentHour !== bestHour) return; // 最適時間帯でなければスキップ
+    if (currentHour !== bestHour) {
+      console.log(`  ℹ️  [芸能人スロット] 現在${currentHour}時 / 最適${bestHour}時 → スキップ`);
+      return;
+    }
 
-    _celebPostedDate = todayKey;
+    // 投稿済みフラグを先にセット（GCS保存）→ 二重投稿を防止
+    setCelebPostedDate(todayKey);
     await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
   }, { timezone: 'Asia/Tokyo' });
+
+  // 起動時に永続化された投稿済み日付を表示（確認用）
+  const loadedCelebDate = getCelebPostedDate();
+  if (loadedCelebDate) {
+    console.log(`  ℹ️  [起動] 芸能人スロット投稿済み日付を読み込み: ${loadedCelebDate}`);
+  }
 
   const rawBest2 = getBestPostingHour();
   const effectiveHour = (rawBest2 >= 18 && rawBest2 <= 22) ? rawBest2 : 20;

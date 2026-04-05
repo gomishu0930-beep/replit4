@@ -139,6 +139,7 @@ export async function initStorage(): Promise<void> {
   snapshotCache          = await readJson<SnapshotData>('account-snapshots.json', { snapshots: [] });
   observationsCache      = await readJson<ObservationsData>('observations.json', { observations: [] });
   recoverySnapshotsCache = await readJson<RecoverySnapshotsData>('recovery-snapshots.json', { snapshots: [] });
+  schedulerStateCache    = await readJson<SchedulerStateData>('scheduler-state.json', { celebPostedDate: '' });
   initialized = true;
   console.log(
     `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件)`,
@@ -154,11 +155,13 @@ function savePostsAsync() {
 }
 
 export function recordPost({ tweetId, replyId, item, text, type, contentType }: {
-  tweetId: string; replyId: string; item: any; text: string; type: string; contentType?: string;
+  tweetId: string; replyId: string; item?: any; text: string; type: string; contentType?: string;
 }) {
   postsCache.posts.push({
     tweetId, replyId, type, contentType, text,
-    item: { id: item.content_id, title: item.title, affiliateURL: item.affiliateURL },
+    item: item
+      ? { id: item.content_id, title: item.title, affiliateURL: item.affiliateURL }
+      : { id: '', title: '', affiliateURL: '' },
     postedAt: new Date().toISOString(),
     metrics: null,
   });
@@ -426,5 +429,30 @@ export function recordDailyImpressionAvg(avgImpressions: number, postsChecked: n
 
 export function getDailyImpressionSnapshots(days = 7): DailyImpressionSnapshot[] {
   return recoverySnapshotsCache.snapshots.slice(-days);
+}
+
+// ─── Scheduler State（再起動を跨いで状態を保持）────────────────────────────────
+// celebPostedDate: 今日すでに芸能人スロットを投稿済みかを管理
+// サーバー再起動後もリセットされないようにGCSに永続化する
+
+interface SchedulerStateData {
+  celebPostedDate: string;  // "YYYY-MM-DD" in JST
+}
+
+let schedulerStateCache: SchedulerStateData = { celebPostedDate: '' };
+
+function saveSchedulerStateAsync() {
+  writeJson('scheduler-state.json', schedulerStateCache).catch((e: any) =>
+    console.warn('  ⚠ scheduler-state.json 保存失敗:', e.message),
+  );
+}
+
+export function getCelebPostedDate(): string {
+  return schedulerStateCache.celebPostedDate;
+}
+
+export function setCelebPostedDate(date: string): void {
+  schedulerStateCache.celebPostedDate = date;
+  saveSchedulerStateAsync();
 }
 
