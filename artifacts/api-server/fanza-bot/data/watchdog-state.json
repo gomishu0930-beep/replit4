@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-05T04:48:14.061Z",
+  "lastCheckAt": "2026-04-05T04:52:46.516Z",
   "lastIssueAt": null,
   "lastRecoveryAt": null,
   "status": "healthy",
@@ -244,6 +244,16 @@
     },
     {
       "at": "2026-04-05T04:48:14.062Z",
+      "level": "info",
+      "detail": "最終投稿から 1.6h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T04:52:46.516Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T04:52:46.517Z",
       "level": "info",
       "detail": "最終投稿から 1.6h — 正常範囲"
     }
