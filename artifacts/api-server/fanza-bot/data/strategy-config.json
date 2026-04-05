@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 6,
+  "monitorIntervalHours": 5,
   "typeWeights": {
     "amateur": 1,
     "buzz": 1,
@@ -8,45 +8,52 @@
     "random": 0.8
   },
   "cycleStats": {
-    "lastNewPatterns": 0,
-    "avgNewPatterns": 0,
-    "totalCycles": 28
+    "lastNewPatterns": 81,
+    "avgNewPatterns": 24.3,
+    "totalCycles": 29
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 6h）は最適か？",
-      "status": "confirmed",
-      "finding": "28サイクル実績 / 平均新規パターン 0.0件/サイクル",
-      "adjustment": null,
-      "testedAt": "2026-04-05T06:36:57.367Z"
+      "status": "adjusted",
+      "finding": "29サイクル実績 / 平均新規パターン 24.3件/サイクル",
+      "adjustment": "監視間隔を 6h → 5h に短縮（平均新規パターン 24.3件/サイクル）",
+      "testedAt": "2026-04-05T07:05:43.579Z"
     },
     {
       "id": "type-weights",
       "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
-      "status": "pending",
-      "finding": "投稿データ不足 (0件)。10件以上で評価開始。",
+      "status": "confirmed",
+      "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T06:36:57.367Z"
+      "testedAt": "2026-04-05T07:05:43.579Z"
     },
     {
       "id": "dynamic-templates",
       "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
       "status": "pending",
-      "finding": "データ不足で評価不可",
+      "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-05T06:36:57.367Z"
+      "testedAt": "2026-04-05T07:05:43.579Z"
     },
     {
       "id": "posting-hours",
       "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
-      "status": "pending",
-      "finding": "データ不足で評価不可",
+      "status": "confirmed",
+      "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T06:36:57.367Z"
+      "testedAt": "2026-04-05T07:05:43.580Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-05T07:05:43.580Z",
+      "cycle": 29,
+      "decisions": [
+        "監視間隔を 6h → 5h に短縮（平均新規パターン 24.3件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-05T06:36:57.367Z",
       "cycle": 28,
@@ -244,6 +251,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-05T06:36:57.367Z",
-  "version": 29
+  "lastEvaluatedAt": "2026-04-05T07:05:43.580Z",
+  "version": 30
 }

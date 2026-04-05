@@ -1,6 +1,48 @@
 {
   "templates": [
     {
+      "text": "🔞{actress}の最新作{shortTitle}が話題沸騰🔥 {reviewCount}件のレビュー⭐平均{reviewAvg}点！今すぐチェック👉 リプ欄へ👇",
+      "type": "amateur",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{shortTitle}で{actress}の新しい魅力発見✨ レビュー{reviewCount}件で高評価{reviewAvg}⭐ 詳細はリプ欄からどうぞ👇",
+      "type": "amateur",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞話題の{shortTitle}🎬{actress}出演・レビュー{reviewCount}件・評価{reviewAvg}⭐ 今が見頃です💫 リプ欄へ👇",
+      "type": "buzz",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞いま{reviewCount}人が視聴中！{actress}×{shortTitle}が神回🔥 評価{reviewAvg}⭐で独占配信中 リプ欄からどうぞ👇",
+      "type": "buzz",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{shortTitle}|{actress}主演🌟 レビュー{reviewCount}件平均{reviewAvg}点 限定配信中📺 リプ欄へ👇",
+      "type": "any",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞必見🎬{actress}が輝く{shortTitle} {reviewCount}件⭐{reviewAvg}評価 詳しくはリプ欄からどうぞ👇",
+      "type": "any",
+      "sourceScore": 46,
+      "generatedAt": "2026-04-05T07:05:43.577Z",
+      "usedCount": 0
+    },
+    {
       "text": "🔞{actress}の最新作{shortTitle}がヤバい😍レビュー{reviewCount}件⭐{reviewAvg}🔥詳細はリプ欄へ👇",
       "type": "amateur",
       "sourceScore": 45,
@@ -43,6 +85,6 @@
       "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-05T07:00:52.618Z",
-  "evolutionCount": 1
+  "lastEvolvedAt": "2026-04-05T07:05:43.577Z",
+  "evolutionCount": 2
 }
