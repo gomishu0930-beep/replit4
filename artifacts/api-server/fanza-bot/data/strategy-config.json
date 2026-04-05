@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 3,
+  "monitorIntervalHours": 2,
   "typeWeights": {
     "amateur": 1,
     "buzz": 1,
@@ -8,18 +8,18 @@
     "random": 0.8
   },
   "cycleStats": {
-    "lastNewPatterns": 84,
-    "avgNewPatterns": 54.327,
-    "totalCycles": 31
+    "lastNewPatterns": 106,
+    "avgNewPatterns": 69.82889999999999,
+    "totalCycles": 32
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 4h）は最適か？",
+      "question": "外部情報の収集間隔（現在 3h）は最適か？",
       "status": "adjusted",
-      "finding": "31サイクル実績 / 平均新規パターン 54.3件/サイクル",
-      "adjustment": "監視間隔を 4h → 3h に短縮（平均新規パターン 54.3件/サイクル）",
-      "testedAt": "2026-04-05T07:16:54.796Z"
+      "finding": "32サイクル実績 / 平均新規パターン 69.8件/サイクル",
+      "adjustment": "監視間隔を 3h → 2h に短縮（平均新規パターン 69.8件/サイクル）",
+      "testedAt": "2026-04-05T08:00:49.024Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:16:54.796Z"
+      "testedAt": "2026-04-05T08:00:49.825Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:16:54.796Z"
+      "testedAt": "2026-04-05T08:00:50.125Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,17 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-05T07:16:54.797Z"
+      "testedAt": "2026-04-05T08:00:50.625Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-05T08:00:51.324Z",
+      "cycle": 32,
+      "decisions": [
+        "監視間隔を 3h → 2h に短縮（平均新規パターン 69.8件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-05T07:16:54.797Z",
       "cycle": 31,
@@ -265,6 +272,6 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-05T07:16:54.797Z",
-  "version": 32
+  "lastEvaluatedAt": "2026-04-05T08:00:51.324Z",
+  "version": 33
 }

@@ -4,7 +4,7 @@ import { getBuzzItems, getRandomItems, getSampleImages, discoverCampaignIds } fr
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot } from './storage.js';
-import { refreshExternalPatterns } from './analytics.js';
+import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
@@ -315,6 +315,15 @@ export function startScheduler() {
     await postImpressionSlot('10:30 インプ');
   }, { timezone: 'Asia/Tokyo' });
 
+  // 毎日 23:00 JST — シャドウバン回復自動チェック（③）
+  cron.schedule('0 23 * * *', async () => {
+    try {
+      await checkShadowbanRecovery();
+    } catch (e: any) {
+      console.error(`  ❌ 回復チェックエラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
   // 毎日 03:00 JST — 日次戦略評価
   cron.schedule('0 3 * * *', async () => {
     console.log('\n  🌙 [日次評価] 夜間自律改善サイクル開始');
@@ -381,6 +390,7 @@ export function startScheduler() {
   console.log(`║  🎭 芸能人アフィリ: ${String(effectiveHour).padStart(2, '0')}:00 JST (動的)    ║`);
   console.log('║  💬 インプ狙い  : 10:30 JST              ║');
   console.log('║  📡 外部監視    : 常時ループ              ║');
+  console.log('║  📊 回復チェック: 23:00 JST              ║');
   console.log('║  🌙 日次評価    : 03:00 JST              ║');
   console.log('║  計: アフィリ1本 + インプ1本 = 2本/日    ║');
   console.log('╚══════════════════════════════════════════╝');

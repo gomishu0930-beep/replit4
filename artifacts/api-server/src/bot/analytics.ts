@@ -1,4 +1,4 @@
-import { getRecentPostIds, updateMetrics, upsertExternalPatterns, getExternalTopPatterns, upsertDynamicTemplates } from './storage.js';
+import { getRecentPostIds, updateMetrics, upsertExternalPatterns, getExternalTopPatterns, upsertDynamicTemplates, getAllPosts, recordDailyImpressionAvg, getDailyImpressionSnapshots } from './storage.js';
 import { getTweetMetrics, searchTweetsByHashtag, fetchUserTimelineByUsername } from './twitter.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { contact } from './contact.js';
@@ -241,4 +241,71 @@ ${PLACEHOLDER_EXPLANATION}
   upsertDynamicTemplates(toSave);
   console.log(`  ✅ テンプレート進化完了: ${valid.length}件 保存 (元データ平均スコア: ${Math.round(avgScore)})`);
   await contact.templateEvolved(valid.length, Math.round(avgScore));
+}
+
+// ─── シャドウバン回復自動検出（③ 日次 23:00 JST チェック）──────────────────────
+//
+// 直近7日間の投稿メトリクスから平均インプレッション数を算出し、
+// 閾値（30）との比較で回復状況を判定・通知する。
+//
+// 閾値設計:
+//   < 30  → シャドウバン継続中
+//   ≥ 30  × 7日連続 → 回復検知 → 2本/日→4本/日 への移行を通知
+
+const RECOVERY_THRESHOLD = 30;
+
+export async function checkShadowbanRecovery(): Promise<void> {
+  const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  console.log(`\n[${jst}] 📊 シャドウバン回復チェック開始`);
+
+  // 過去7日間のメトリクスありポストを取得
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentWithMetrics = getAllPosts().filter(
+    (p: any) => p.metrics && new Date(p.postedAt).getTime() > sevenDaysAgo,
+  );
+
+  if (recentWithMetrics.length === 0) {
+    console.log('  📊 [回復チェック] メトリクスのある投稿なし → スキップ');
+    return;
+  }
+
+  // 平均インプレッション数を計算
+  const totalImpressions = recentWithMetrics.reduce(
+    (sum: number, p: any) => sum + (p.metrics?.impression_count ?? 0),
+    0,
+  );
+  const avgImpressions = Math.round(totalImpressions / recentWithMetrics.length);
+
+  console.log(`  📊 直近${recentWithMetrics.length}件の平均インプ: ${avgImpressions} (閾値: ${RECOVERY_THRESHOLD})`);
+
+  // 今日の結果を記録
+  recordDailyImpressionAvg(avgImpressions, recentWithMetrics.length);
+
+  // 過去7日間のスナップショットを取得
+  const snapshots = getDailyImpressionSnapshots(7);
+  const daysAboveThreshold = snapshots.filter((s) => s.avgImpressions >= RECOVERY_THRESHOLD).length;
+
+  // トレンド計算（最初と最後の比較）
+  let trend = '→ データ蓄積中';
+  if (snapshots.length >= 2) {
+    const oldest = snapshots[0].avgImpressions;
+    const latest = snapshots[snapshots.length - 1].avgImpressions;
+    const diff = latest - oldest;
+    trend = diff > 5
+      ? `📈 +${diff} (増加傾向)`
+      : diff < -5
+        ? `📉 ${diff} (減少傾向)`
+        : '→ 横ばい';
+  }
+
+  console.log(`  📊 閾値超え継続日数: ${daysAboveThreshold}日 / トレンド: ${trend}`);
+
+  // 7日連続で閾値超え → 回復検知通知
+  if (daysAboveThreshold >= 7) {
+    console.log('  🎉 7日連続で閾値超え → 回復検知！');
+    await contact.recoveryDetected(avgImpressions);
+  } else {
+    // 通常の進捗レポート
+    await contact.recoveryProgress(avgImpressions, trend, daysAboveThreshold);
+  }
 }

@@ -14,7 +14,20 @@ interface PostMetrics {
   retweet_count: number;
   reply_count?: number;
   bookmark_count?: number;
+  impression_count?: number;
   checkedAt: string;
+}
+
+// ─── 日次インプレッション記録型（回復チェック用）──────────────────────────────
+
+interface DailyImpressionSnapshot {
+  date: string;           // YYYY-MM-DD in JST
+  avgImpressions: number; // その日の全投稿の平均インプレッション数
+  postsChecked: number;   // 計算に使用した投稿数
+}
+
+interface RecoverySnapshotsData {
+  snapshots: DailyImpressionSnapshot[];
 }
 
 interface PostRecord {
@@ -108,6 +121,7 @@ let extCache: ExternalPatternsData = { patterns: [], lastRefreshedAt: null, quer
 let dynTemplatesCache: DynamicTemplatesData = { templates: [], lastEvolvedAt: null, evolutionCount: 0 };
 let snapshotCache: SnapshotData = { snapshots: [] };
 let observationsCache: ObservationsData = { observations: [] };
+let recoverySnapshotsCache: RecoverySnapshotsData = { snapshots: [] };
 let initialized = false;
 
 // ─── 初期化（起動時に1回だけ呼ぶ）───────────────────────────────────────────
@@ -122,8 +136,9 @@ export async function initStorage(): Promise<void> {
   dynTemplatesCache = await readJson<DynamicTemplatesData>('dynamic-templates.json', {
     templates: [], lastEvolvedAt: null, evolutionCount: 0,
   });
-  snapshotCache     = await readJson<SnapshotData>('account-snapshots.json', { snapshots: [] });
-  observationsCache = await readJson<ObservationsData>('observations.json', { observations: [] });
+  snapshotCache          = await readJson<SnapshotData>('account-snapshots.json', { snapshots: [] });
+  observationsCache      = await readJson<ObservationsData>('observations.json', { observations: [] });
+  recoverySnapshotsCache = await readJson<RecoverySnapshotsData>('recovery-snapshots.json', { snapshots: [] });
   initialized = true;
   console.log(
     `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件)`,
@@ -381,3 +396,35 @@ export function getExternalPatternsInfo() {
     topPatterns: extCache.patterns.slice(0, 10),
   };
 }
+
+// ─── Recovery Snapshots（日次インプレッション回復追跡）──────────────────────────
+
+function saveRecoverySnapshotsAsync() {
+  writeJson('recovery-snapshots.json', recoverySnapshotsCache).catch((e: any) =>
+    console.warn('  ⚠ recovery-snapshots.json 保存失敗:', e.message),
+  );
+}
+
+export function recordDailyImpressionAvg(avgImpressions: number, postsChecked: number): void {
+  // JST 日付（YYYY-MM-DD）
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const date = nowJst.toISOString().slice(0, 10);
+
+  // 同日エントリーがあれば更新、なければ追加
+  const existing = recoverySnapshotsCache.snapshots.find((s) => s.date === date);
+  if (existing) {
+    existing.avgImpressions = avgImpressions;
+    existing.postsChecked   = postsChecked;
+  } else {
+    recoverySnapshotsCache.snapshots.push({ date, avgImpressions, postsChecked });
+  }
+
+  // 最新90日分を保持
+  recoverySnapshotsCache.snapshots = recoverySnapshotsCache.snapshots.slice(-90);
+  saveRecoverySnapshotsAsync();
+}
+
+export function getDailyImpressionSnapshots(days = 7): DailyImpressionSnapshot[] {
+  return recoverySnapshotsCache.snapshots.slice(-days);
+}
+

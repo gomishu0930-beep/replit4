@@ -144,4 +144,36 @@ export const contact = {
       body: `直近1週間の運用成果をお知らせします。`,
       data: stats,
     }),
+
+  /** シャドウバン回復進捗レポート（23:00 日次） */
+  recoveryProgress: (avgImpressions: number, trend: string, daysAboveThreshold: number) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `📊 回復チェック: 平均インプ ${avgImpressions}`,
+      body: [
+        `直近7日間の平均インプレッション: ${avgImpressions}`,
+        `トレンド: ${trend}`,
+        `閾値(30)以上の継続日数: ${daysAboveThreshold}日`,
+        '',
+        daysAboveThreshold >= 7
+          ? '✅ 7日連続で閾値超え → 投稿数増加を検討してください'
+          : `あと ${7 - daysAboveThreshold} 日継続で回復モード解除の目安です`,
+      ].join('\n'),
+    }),
+
+  /** 回復検知（閾値を7日連続で超えた） */
+  recoveryDetected: (avgImpressions: number) =>
+    notifyAlert({
+      level: 'WARN',
+      title: '🎉 シャドウバン回復を検知！',
+      body: [
+        `平均インプレッションが 30 を7日連続で超えました。`,
+        `現在の平均: ${avgImpressions}`,
+        '',
+        '【推奨アクション】',
+        '① ダッシュボードでトレンドを確認',
+        '② 問題なければ投稿数を 2本/日 → 4本/日 に増やす',
+        '③ さらに2週間様子を見て 8本/日 へ段階的に移行',
+      ].join('\n'),
+    }),
 };
