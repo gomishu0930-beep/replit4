@@ -16,11 +16,13 @@ router.get('/bot/status', async (_req, res) => {
     uptime: Math.floor(process.uptime()),
     account,
     schedule: [
-      { time: '09:00 JST', type: 'amateur', label: '素人' },
-      { time: '12:00 JST', type: 'buzz',   label: '高評価（4.7点以上）' },
-      { time: '18:00 JST', type: 'buzz',   label: 'バズ + 指標更新' },
-      { time: '21:00 JST', type: 'random', label: 'ランダム' },
-      { time: '23:00 JST', type: 'sale',   label: 'セール' },
+      { time: '09:00 JST', type: 'amateur',    label: '素人（1件）' },
+      { time: '10:30 JST', type: 'impression', label: '💬インプ狙い①' },
+      { time: '12:00 JST', type: 'buzz',       label: '高評価（1件・4.7点以上）' },
+      { time: '17:00 JST', type: 'impression', label: '💬インプ狙い②' },
+      { time: '18:00 JST', type: 'buzz',       label: 'バズ（1件）+ 指標更新' },
+      { time: '21:00 JST', type: 'random',     label: 'ランダム（1件）' },
+      { time: '23:00 JST', type: 'sale',       label: 'セール（1件）' },
     ],
     stats,
   });

@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-05T00:52:40.131Z",
+  "lastCheckAt": "2026-04-05T04:19:14.800Z",
   "lastIssueAt": null,
   "lastRecoveryAt": null,
   "status": "healthy",
@@ -128,24 +128,74 @@
       "detail": "最終投稿から 0.7h — 正常範囲"
     },
     {
-      "at": "2026-04-05T00:43:11.458Z",
+      "at": "2026-04-05T01:13:09.048Z",
       "level": "info",
       "detail": "isPosting=false (正常)"
     },
     {
-      "at": "2026-04-05T00:43:11.458Z",
+      "at": "2026-04-05T01:13:09.049Z",
+      "level": "info",
+      "detail": "最終投稿から 1.2h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T01:28:28.838Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T01:28:28.838Z",
       "level": "info",
       "detail": "最終投稿から 0.7h — 正常範囲"
     },
     {
-      "at": "2026-04-05T00:52:40.131Z",
+      "at": "2026-04-05T02:43:38.908Z",
       "level": "info",
       "detail": "isPosting=false (正常)"
     },
     {
-      "at": "2026-04-05T00:52:40.131Z",
+      "at": "2026-04-05T02:43:38.908Z",
       "level": "info",
-      "detail": "最終投稿から 0.1h — 正常範囲"
+      "detail": "最終投稿から 1.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T03:00:40.859Z",
+      "level": "info",
+      "detail": "isPosting=true (投稿処理中, 1分)"
+    },
+    {
+      "at": "2026-04-05T03:00:40.860Z",
+      "level": "info",
+      "detail": "最終投稿から 0h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T04:10:29.298Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T04:10:29.299Z",
+      "level": "info",
+      "detail": "最終投稿から 0.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T04:10:32.812Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T04:10:32.813Z",
+      "level": "info",
+      "detail": "最終投稿から 0.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-05T04:19:14.800Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-05T04:19:14.800Z",
+      "level": "info",
+      "detail": "最終投稿から 1.1h — 正常範囲"
     }
   ]
 }

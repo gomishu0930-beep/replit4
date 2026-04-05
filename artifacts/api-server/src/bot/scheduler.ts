@@ -2,7 +2,7 @@ import cron from 'node-cron';
 
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
-import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply } from './ai.js';
+import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo } from './storage.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
@@ -144,6 +144,34 @@ async function postCelebritySlot(label: string) {
   }
 }
 
+// ─── インプ狙い投稿スロット（アフィリリンクなし）────────────────────────────
+//
+// 有益6：共感2：宣伝2 の比率を実現するため、
+// 1日2本の「非宣伝ツイート」を追加する。
+// 内容はランダム選択されたテンプレートを使用（人間的な会話感を演出）。
+
+async function postImpressionSlot(label: string) {
+  if (isPosting) {
+    console.log(`  ⚠ [${label}] 前の投稿処理が進行中 — スキップ`);
+    return;
+  }
+  isPosting = true;
+  _postingStartedAt = Date.now();
+  try {
+    const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    console.log(`\n[${jst}] ${label} インプ狙い投稿開始`);
+    const text = generateImpressionTweet();
+    const tweetId = await postTweet(text, []);
+    console.log(`  ✅ [${label}] インプ狙い投稿完了 (${tweetId})`);
+  } catch (e: any) {
+    console.error(`  ❌ [${label}] エラー: ${e.message}`);
+    await contact.postingFailed(label, e.message);
+  } finally {
+    isPosting = false;
+    _postingStartedAt = null;
+  }
+}
+
 // ─── 常時監視ループ（間隔は戦略エンジンが動的に調整）────────────────────────
 
 async function monitoringLoop() {
@@ -182,13 +210,15 @@ interface Slot {
 }
 
 const SLOTS: Slot[] = [
-  { hour:  9, minute: 0, type: 'amateur', label: '09:00 素人（補完）',  fetchFn: (n) => getAmateurItems(n) },
-  { hour: 12, minute: 0, type: 'buzz',   label: '12:00 高評価（補完）', fetchFn: (n) => getHighRatedItems(n) },
-  { hour: 18, minute: 0, type: 'buzz',   label: '18:00 バズ（補完）',   fetchFn: (n) => getBuzzItems(n),
+  { hour:  9, minute:  0, type: 'amateur', label: '09:00 素人（補完）',  fetchFn: (n) => getAmateurItems(n) },
+  { hour: 12, minute:  0, type: 'buzz',   label: '12:00 高評価（補完）', fetchFn: (n) => getHighRatedItems(n) },
+  { hour: 18, minute:  0, type: 'buzz',   label: '18:00 バズ（補完）',   fetchFn: (n) => getBuzzItems(n),
     extra: async () => { await refreshRecentMetrics(); } },
-  { hour: 21, minute: 0, type: 'random', label: '21:00 ランダム（補完）', fetchFn: (n) => getRandomItems(n) },
-  { hour: 23, minute: 0, type: 'sale',   label: '23:00 セール（補完）',  fetchFn: (n) => getSaleItems(n) },
+  { hour: 21, minute:  0, type: 'random', label: '21:00 ランダム（補完）', fetchFn: (n) => getRandomItems(n) },
+  { hour: 23, minute:  0, type: 'sale',   label: '23:00 セール（補完）',  fetchFn: (n) => getSaleItems(n) },
 ];
+// ※ インプ狙い投稿スロット（10:30 / 17:00）は catchUp 対象外
+//   （アフィリ投稿の取りこぼし補完のみ行う）
 
 async function catchUpMissedSlots() {
   const nowUtc = Date.now();
@@ -219,7 +249,7 @@ async function catchUpMissedSlots() {
     console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${slot.label} → 補完投稿開始`);
     try {
       if (slot.extra) await slot.extra();
-      const items = await slot.fetchFn(2);
+      const items = await slot.fetchFn(1);
       await postItems(items, slot.type, slot.label);
     } catch (e: any) {
       console.error(`  ❌ 補完投稿失敗 [${slot.label}]: ${e.message}`);
@@ -267,35 +297,49 @@ export function startScheduler() {
   }, { timezone: 'Asia/Tokyo' });
 
   // ── 投稿スケジュール ─────────────────────────────────────────────────────
+  // 設計方針（有益6：共感2：宣伝2）:
+  //   宣伝投稿（アフィリリンク付き）: 09:00 / 12:00 / 18:00 / 20:00(芸能人) / 21:00 / 23:00 → 6本
+  //   インプ狙い投稿（リンクなし）  : 10:30 / 17:00 → 2本
+  //   合計: 8本/日、宣伝比率 = 6/8 = 75% → 段階的に比率改善
 
-  // 09:00 JST — 素人 2件
+  // 09:00 JST — 素人 1件
   cron.schedule('0 9 * * *', async () => {
-    const items = await getAmateurItems(2);
+    const items = await getAmateurItems(1);
     await postItems(items, 'amateur', '09:00 素人');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 12:00 JST — 高評価 2件
+  // 10:30 JST — インプ狙い投稿①（比較/あるある/Q&A 等）
+  cron.schedule('30 10 * * *', async () => {
+    await postImpressionSlot('10:30 インプ');
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 12:00 JST — 高評価 1件
   cron.schedule('0 12 * * *', async () => {
-    const items = await getHighRatedItems(2);
+    const items = await getHighRatedItems(1);
     await postItems(items, 'buzz', '12:00 高評価');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 18:00 JST — バズ 2件 + 指標更新
+  // 17:00 JST — インプ狙い投稿②（ランキング/注意喚起/共感 等）
+  cron.schedule('0 17 * * *', async () => {
+    await postImpressionSlot('17:00 インプ');
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 18:00 JST — バズ 1件 + 指標更新
   cron.schedule('0 18 * * *', async () => {
     await refreshRecentMetrics();
-    const items = await getBuzzItems(2);
+    const items = await getBuzzItems(1);
     await postItems(items, 'buzz', '18:00 バズ');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 21:00 JST — ランダム 2件
+  // 21:00 JST — ランダム 1件
   cron.schedule('0 21 * * *', async () => {
-    const items = await getRandomItems(2);
+    const items = await getRandomItems(1);
     await postItems(items, 'random', '21:00 ランダム');
   }, { timezone: 'Asia/Tokyo' });
 
-  // 23:00 JST — セール品 2件
+  // 23:00 JST — セール品 1件
   cron.schedule('0 23 * * *', async () => {
-    const items = await getSaleItems(2);
+    const items = await getSaleItems(1);
     await postItems(items, 'sale', '23:00 セール');
   }, { timezone: 'Asia/Tokyo' });
 
@@ -323,11 +367,14 @@ export function startScheduler() {
   console.log('╠══════════════════════════════════════════╣');
   console.log(`║  🎭 芸能人スロット: ${String(bestHour).padStart(2, '0')}:00 JST              ║`);
   console.log('║  📡 外部監視  常時ループ（3時間ごと）    ║');
-  console.log('║  09:00 JST  素人系  2件                 ║');
-  console.log('║  12:00 JST  高評価  2件（4.7点以上）    ║');
-  console.log('║  18:00 JST  バズ    2件 + 指標更新      ║');
-  console.log('║  21:00 JST  ランダム 2件               ║');
-  console.log('║  23:00 JST  セール   2件               ║');
+  console.log('║  09:00 JST  素人系  1件                 ║');
+  console.log('║  10:30 JST  💬インプ狙い①              ║');
+  console.log('║  12:00 JST  高評価  1件（4.7点以上）    ║');
+  console.log('║  17:00 JST  💬インプ狙い②              ║');
+  console.log('║  18:00 JST  バズ    1件 + 指標更新      ║');
+  console.log('║  21:00 JST  ランダム 1件               ║');
+  console.log('║  23:00 JST  セール   1件               ║');
+  console.log('║  計: 宣伝6本 + インプ2本 = 8本/日       ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 }
