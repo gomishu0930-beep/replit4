@@ -218,14 +218,14 @@ function compositeScore(item: any): number {
 }
 
 // ─── FANZA素人フロア専用APIリクエスト ────────────────────────────────────────
-
+// フロアAPI確認済み: floor=videoc / floorId=44 / floorName=素人（"ひかりさん"等）
 async function fetchAmaItems(extra: Record<string, string> = {}): Promise<any[]> {
   const params = new URLSearchParams({
     api_id: process.env.DMM_API_ID ?? '',
     affiliate_id: process.env.DMM_AFFILIATE_ID ?? '',
     site: 'FANZA',
     service: 'digital',
-    floor: 'ama',        // FANZA素人専用フロア（"ひかりさん"等）
+    floor: 'videoc',     // FANZA素人フロア（"ひかりさん"等）正式コード
     hits: '100',
     output: 'json',
     ...extra,
@@ -235,17 +235,17 @@ async function fetchAmaItems(extra: Record<string, string> = {}): Promise<any[]>
   const data = (await res.json()) as any;
 
   if (data?.result?.status !== 200) {
-    throw new Error(`FANZA AMA API error: ${JSON.stringify(data?.result)}`);
+    throw new Error(`FANZA 素人API error: ${JSON.stringify(data?.result)}`);
   }
 
   return data.result.items ?? [];
 }
 
-// ─── FANZA素人系キーワード ────────────────────────────────────────────────────
+// ─── FANZA素人系キーワード（floor=videoc フォールバック用）────────────────────
 //
-// FANZA素人フロア（floor=ama）はAPIアカウントで非開放のため、
-// FANZA素人コンテンツに相当するキーワード検索で代替する。
-// 「ひかりさん」「さきちゃん」系の素人個人投稿スタイルを狙う。
+// 主取得は floor=videoc（FANZA素人フロア）から直接取得。
+// API障害・件数不足時のフォールバックとして、videoa フロアで
+// 素人系キーワード検索を行う。
 
 const AMATEUR_KEYWORDS = [
   // FANZA素人系（個人投稿スタイル）
@@ -281,7 +281,7 @@ export async function getAmateurItems(count = 2) {
 
   // ① FANZA素人専用フロアから取得（最優先）
   try {
-    console.log(`  🔍 FANZA素人フロア検索: floor=ama sort=${sort} offset=${offset}`);
+    console.log(`  🔍 FANZA素人フロア検索: floor=videoc sort=${sort} offset=${offset}`);
     const amaItems = await fetchAmaItems({ sort, offset });
     if (amaItems.length >= count) {
       console.log(`  ✅ FANZA素人フロアから ${amaItems.length}件取得`);

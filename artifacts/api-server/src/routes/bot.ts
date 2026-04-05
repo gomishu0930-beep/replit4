@@ -47,6 +47,36 @@ router.get('/bot/watchdog', (_req, res) => {
   res.json(getWatchdogState());
 });
 
+// DMM フロア一覧（利用可能なフロアの確認用）
+router.get('/bot/floors', async (_req, res) => {
+  try {
+    const params = new URLSearchParams({
+      api_id: process.env.DMM_API_ID ?? '',
+      affiliate_id: process.env.DMM_AFFILIATE_ID ?? '',
+      output: 'json',
+    });
+    const r = await fetch(`https://api.dmm.com/affiliate/v3/FloorList?${params}`);
+    const data = await r.json() as any;
+    const floors: { site: string; service: string; floorName: string; floorCode: string; floorId: string }[] = [];
+    for (const site of data?.result?.site ?? []) {
+      for (const svc of site.service ?? []) {
+        for (const floor of svc.floor ?? []) {
+          floors.push({
+            site: site.name,
+            service: svc.name,
+            floorName: floor.name,
+            floorCode: floor.code,
+            floorId: floor.id,
+          });
+        }
+      }
+    }
+    res.json({ total: floors.length, floors });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // キャンペーンID情報
 router.get('/bot/campaign-ids', async (_req, res) => {
   try {
