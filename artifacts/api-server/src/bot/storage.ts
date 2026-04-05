@@ -273,7 +273,7 @@ export function upsertDynamicTemplates(newTemplates: Omit<DynamicTemplate, 'used
   // 最新100件に絞る（使用回数が多いものを優先残留）
   dynTemplatesCache.templates.sort((a, b) => b.sourceScore - a.sourceScore);
   dynTemplatesCache.templates = dynTemplatesCache.templates.slice(0, 100);
-  dynTemplatesCache.lastEvolvedAt = now;
+  dynTemplatesCache.lastEvolvedAt = new Date().toISOString();
   dynTemplatesCache.evolutionCount++;
   saveDynTemplatesAsync();
 }

@@ -85,6 +85,47 @@ router.get('/bot/campaign-ids', async (_req, res) => {
   }
 });
 
+// ─── Twitter API 疎通診断 ────────────────────────────────────────────────────
+// どのエンドポイントが現在のプランで動くかを確認する
+
+router.get('/bot/api-check', async (_req, res) => {
+  const results: Record<string, { ok: boolean; detail: string }> = {};
+
+  // ① /v2/users/me（認証ユーザー情報 — 通常 Basic+ で動作）
+  try {
+    const info = await getAccountInfo();
+    results['GET /v2/users/me'] = info
+      ? { ok: true, detail: `@${info.username} / フォロワー ${info.followersCount}人` }
+      : { ok: false, detail: '取得失敗' };
+  } catch (e: any) {
+    results['GET /v2/users/me'] = { ok: false, detail: e.message };
+  }
+
+  // ② 自ツイート取得（フリープランでは 402）
+  try {
+    const { getOwnRecentTweets } = await import('../bot/twitter.js');
+    const tweets = await getOwnRecentTweets(5);
+    results['GET /v2/users/:id/tweets'] = { ok: true, detail: `${tweets.length}件取得成功` };
+  } catch (e: any) {
+    results['GET /v2/users/:id/tweets'] = { ok: false, detail: e.message.slice(0, 80) };
+  }
+
+  // ③ ツイート検索（フリープランでは 402）
+  try {
+    const { searchTweetsByHashtag } = await import('../bot/twitter.js');
+    const tweets = await searchTweetsByHashtag('FANZA', 10);
+    results['GET /v2/tweets/search/recent'] = { ok: true, detail: `${tweets.length}件取得成功` };
+  } catch (e: any) {
+    results['GET /v2/tweets/search/recent'] = { ok: false, detail: e.message.slice(0, 80) };
+  }
+
+  const allOk = Object.values(results).every((r) => r.ok);
+  res.json({
+    summary: allOk ? '✅ 全エンドポイント動作中' : '⚠️ 一部エンドポイントが利用不可',
+    results,
+  });
+});
+
 // ─── 回復研究: アカウントスナップショット ─────────────────────────────────────
 
 // フォロワー推移一覧

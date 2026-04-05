@@ -10,6 +10,14 @@ const client = new TwitterApi({
 const rw = client.readWrite;
 
 let _cachedUsername: string | null = null;
+let _cachedNumericId: string | null = null;
+
+async function getMyNumericId(): Promise<string> {
+  if (_cachedNumericId) return _cachedNumericId;
+  const res = await rw.v2.me({});
+  _cachedNumericId = res.data.id;
+  return _cachedNumericId;
+}
 
 export async function getMyUsername(): Promise<string> {
   if (_cachedUsername) return _cachedUsername;
@@ -84,7 +92,7 @@ export async function getTweetMetrics(tweetId: string) {
     const res = await rw.v2.singleTweet(tweetId, {
       'tweet.fields': ['public_metrics'],
     });
-    return res.data.public_metrics ?? null;
+    return res.data?.public_metrics ?? null;
   } catch (e: any) {
     console.error(`  ⚠ 指標取得失敗 (${tweetId}): ${e.message}`);
     return null;
@@ -92,10 +100,10 @@ export async function getTweetMetrics(tweetId: string) {
 }
 
 export async function getOwnRecentTweets(count = 20) {
-  const userId = process.env.TWITTER_USER_ID;
-  if (!userId) throw new Error('TWITTER_USER_ID が設定されていません');
+  // TWITTER_USER_ID が @username 形式の場合は /v2/users/me で数値IDを解決する
+  const numericId = await getMyNumericId();
 
-  const res = await rw.v2.userTimeline(userId, {
+  const res = await rw.v2.userTimeline(numericId, {
     max_results: Math.min(count, 100),
     'tweet.fields': ['public_metrics', 'created_at'],
   });
@@ -125,10 +133,11 @@ export async function searchTweetsByHashtag(
     'tweet.fields': ['public_metrics', 'created_at', 'author_id'],
   });
 
-  const myUserId = process.env.TWITTER_USER_ID ?? '';
+  // TWITTER_USER_ID が @username 形式でも正しく比較できるよう数値IDを使う
+  const myNumericId = _cachedNumericId ?? '';
   const tweets: SearchedTweet[] = [];
   for (const t of res.data?.data ?? []) {
-    if (myUserId && t.author_id === myUserId) continue;
+    if (myNumericId && t.author_id === myNumericId) continue;
     const m = t.public_metrics ?? ({} as any);
     tweets.push({
       id: t.id,
@@ -156,10 +165,8 @@ export interface AccountInfo {
 
 export async function getAccountInfo(): Promise<AccountInfo | null> {
   try {
-    const userId = process.env.TWITTER_USER_ID ?? '';
-    if (!userId) throw new Error('TWITTER_USER_ID が設定されていません');
-
-    const res = await client.v2.user(userId, {
+    // rw.v2.me() は OAuth認証済みユーザーの情報を取得（ユーザーID不要）
+    const res = await rw.v2.me({
       'user.fields': ['public_metrics', 'username'],
     });
 

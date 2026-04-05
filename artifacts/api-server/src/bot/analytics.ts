@@ -28,9 +28,12 @@ export async function refreshRecentMetrics() {
   console.log('  指標更新完了');
 }
 
+// ※ min_faves: はEnterprise専用。Basicプランでは使えないため単純クエリのみ
 const SEARCH_QUERIES = [
   '#FANZA',
   '#DMM',
+  'FANZA 女優',
+  'FANZA おすすめ',
 ];
 
 // 参照するアカウント一覧（環境変数 TRACK_ACCOUNTS でカンマ区切りで追加可能）
@@ -46,7 +49,9 @@ function calcScore(t: { like_count: number; retweet_count: number; reply_count: 
 function isSearchTierError(e: any): boolean {
   const code = e?.code ?? e?.status ?? 0;
   const msg: string = e?.message ?? '';
-  return code === 403 || code === 401 || msg.includes('403') || msg.includes('401') || msg.includes('not permitted');
+  return code === 403 || code === 401 || code === 402
+    || msg.includes('403') || msg.includes('401') || msg.includes('402')
+    || msg.includes('not permitted') || msg.includes('Payment Required');
 }
 
 export async function refreshExternalPatterns() {
@@ -60,8 +65,8 @@ export async function refreshExternalPatterns() {
       try {
         const tweets = await searchTweetsByHashtag(query, 50);
         const scored = tweets
-          .map((t) => ({ ...t, score: calcScore(t) }))
-          .filter((t) => t.score >= 3);
+          .map((t) => ({ ...t, tweetId: t.id, score: calcScore(t) }));
+        // スコア0でも収集（エンゲージメントがなくても文章パターンを学習）
 
         const added = upsertExternalPatterns(scored, query);
         console.log(`    "${query}" → ${tweets.length} 件取得 / ${added} 件新規保存`);
@@ -86,8 +91,7 @@ export async function refreshExternalPatterns() {
       try {
         const tweets = await fetchUserTimelineByUsername(username, 30);
         const scored = tweets
-          .map((t) => ({ ...t, score: calcScore(t) }))
-          .filter((t) => t.score >= 3);
+          .map((t) => ({ ...t, tweetId: t.id, score: calcScore(t) }));
 
         const added = upsertExternalPatterns(scored, `@${username}`);
         console.log(`    @${username} → ${tweets.length} 件取得 / ${added} 件新規保存`);
@@ -139,22 +143,29 @@ export async function evolveTemplates(externalPatterns: any[]): Promise<void> {
 
   const client = new Anthropic({ baseURL: baseUrl, apiKey });
 
-  // スコアの高い外部パターン上位10件を例として渡す
-  const topExamples = externalPatterns
-    .slice(0, 10)
-    .map((p, i) => `【例${i + 1}】(スコア: ${p.score})\n${p.text}`)
-    .join('\n\n');
+  const top = externalPatterns.slice(0, 20);
+  const avgScore = top.reduce((s, p) => s + p.score, 0) / Math.max(top.length, 1);
 
-  const avgScore = externalPatterns.slice(0, 10).reduce((s, p) => s + p.score, 0) / Math.min(10, externalPatterns.length);
+  // 絵文字・CTA・文字数などの構造特徴だけを要約（直接テキストは渡さない）
+  const extractStructure = (text: string): string => {
+    const hasCta = text.includes('リプ') || text.includes('→') || text.includes('👇');
+    const hasNum = /\d+/.test(text);
+    const charLen = text.length;
+    const emojiCount = [...text].filter((c) => c.codePointAt(0)! > 0x2000).length;
+    return `絵文字${emojiCount}個 CTA:${hasCta ? 'あり' : 'なし'} 数字:${hasNum ? 'あり' : 'なし'} 文字数:${charLen}`;
+  };
 
-  const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。
+  const structureSummary = top.slice(0, 10)
+    .map((p, i) => `パターン${i + 1}(スコア${p.score}): ${extractStructure(p.text)}`)
+    .join('\n');
 
-以下は実際にX(Twitter)で高エンゲージメントを獲得したアダルトコンテンツ紹介ツイートの実例です：
+  const prompt = `あなたはSNS販促テキストの専門家です。
 
-${topExamples}
+以下は高エンゲージメントを獲得した投稿の構造分析データです：
 
-これらの投稿を深く分析し、「なぜバズったか」の共通パターン・フック・感情トリガー・CTA構造を抽出してください。
-その分析を踏まえて、FANZAアフィリエイト用の新テンプレートを6件生成してください。
+${structureSummary}
+
+このデータを参考に、動画配信サービスのアフィリエイト告知用ツイートテンプレートを6件生成してください。
 
 ${PLACEHOLDER_EXPLANATION}
 
