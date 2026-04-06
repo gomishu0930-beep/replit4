@@ -224,18 +224,18 @@ function getResearchContext(session: MeetingSession): string {
 
 function buildHistory(messages: MeetingMessage[]): string {
   return messages.slice(-20).map((m) => {
-    const label = m.speaker === 'gpt' ? 'o4-mini(GPT)' : m.speaker === 'claude' ? 'Claude Sonnet' : m.speaker === 'user' ? 'ユーザー' : 'システム';
+    const label = m.speaker === 'gpt' ? 'o3 Thinking(GPT)' : m.speaker === 'claude' ? 'Claude Sonnet' : m.speaker === 'user' ? 'ユーザー' : 'システム';
     return `[${label}] ${m.content}`;
   }).join('\n\n---\n\n');
 }
 
-// o4-mini に発言させる（推論モデル）
+// o3 Thinking に発言させる（推論モデル）
 async function speakAsGPT(session: MeetingSession, prompt: string, extraInstruction = ''): Promise<string> {
   const botContext = buildBotContext();
   const researchCtx = getResearchContext(session);
   const history = session.messages.length > 0 ? `\n\n## これまでの議論\n${buildHistory(session.messages)}` : '';
 
-  const systemContent = `あなたはFANZA XボットのAI戦略アドバイザー（o4-mini）として3者会議に参加しています。
+  const systemContent = `あなたはFANZA XボットのAI戦略アドバイザー（o3 Thinking）として3者会議に参加しています。
 役割：リサーチ・データ分析・外部トレンドの視点から論理的かつ具体的に意見を述べる。
 Claudeとは対等な議論パートナーとして、相手の意見に合意・反論・修正を明確に示してください。
 ${botContext}${researchCtx}${history}
@@ -243,7 +243,7 @@ ${extraInstruction}
 重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答してください。`;
 
   const response = await openai.chat.completions.create({
-    model: 'o4-mini',
+    model: 'o3',
     messages: [
       { role: 'system', content: systemContent },
       { role: 'user', content: prompt },
@@ -325,35 +325,58 @@ export async function sendToClaude(sessionId: string, userMessage: string): Prom
   return msg;
 }
 
-// ─── 3者会議モード（トリアローグ）──────────────────────────────────────────
+// ─── 3者会議モード（2ラウンドディベート）────────────────────────────────
+
+export type TrialogueResult = {
+  gptMsg1: MeetingMessage;
+  claudeMsg1: MeetingMessage;
+  gptMsg2: MeetingMessage;
+  claudeMsg2: MeetingMessage;
+};
 
 export async function runTrialogue(
   sessionId: string,
   userMessage: string,
-): Promise<{ gptMsg: MeetingMessage; claudeMsg: MeetingMessage }> {
+): Promise<TrialogueResult> {
   const session = cache.meetings.find((m) => m.id === sessionId);
   if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
 
   pushMsg(session, 'user', userMessage);
 
-  // GPT が先に調査・分析の視点で発言
-  const gptReply = await speakAsGPT(
+  // ── ラウンド1: GPT が調査・データ観点で先手を打つ ──
+  const gptReply1 = await speakAsGPT(
     session,
-    `【3者会議の議題】${userMessage}\n\nリサーチ・データの観点から意見を述べてください。Claudeがその後に実装観点で補足します。`,
-    'あなたが先に発言します。まず調査・データ・外部トレンドの観点で整理してください。',
+    `【議題】${userMessage}\n\nリサーチ・データ・外部トレンドの観点から先に意見を述べてください。論点を明確に整理し、Claudeが反論・補足しやすいよう構造化してください。`,
+    `【ラウンド1 - GPT先手】あなたが最初に発言します。データと外部事例を根拠に、具体的な立場を取ってください。曖昧な表現は避け、賛否・強弱・優先度を明示してください。`,
   );
-  const gptMsg = pushMsg(session, 'gpt', gptReply);
+  const gptMsg1 = pushMsg(session, 'gpt', gptReply1);
 
-  // Claude が GPTの発言を受けて実装・リスク観点で発言
-  const claudeReply = await speakAsClaude(
+  // ── ラウンド1: Claude が GPT の意見に反論・補完 ──
+  const claudeReply1 = await speakAsClaude(
     session,
-    `GPT-4oが以下のように述べました：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの意見を踏まえた上で、実装可能性・リスク・具体的な実行プランの観点から補足・修正・強化してください。`,
-    'GPTの意見の後に続けて発言します。実装・リスク・アクション観点で補完してください。',
+    `GPTが以下のように述べました：\n\n${gptReply1}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討してください。同意できる点・反論すべき点・見落としている点を明確に示してください。`,
+    `【ラウンド1 - Claude反論/補完】GPTの主張に対して積極的に議論してください。単なる補完ではなく、実装リスク・現実的制約の観点からGPTの意見に挑戦してください。重要な対立点があれば明示してください。`,
   );
-  const claudeMsg = pushMsg(session, 'claude', claudeReply);
+  const claudeMsg1 = pushMsg(session, 'claude', claudeReply1);
+
+  // ── ラウンド2: GPT が Claude の反論を受けて立場を再表明・修正 ──
+  const gptReply2 = await speakAsGPT(
+    session,
+    `Claudeが以下のように反論・補完しました：\n\n${claudeReply1}\n\n---\n元の議題：${userMessage}\n\nClaudeの指摘を受けて、自分の立場を再検討してください。同意できる点は認め、譲れない点は根拠を補強して主張してください。`,
+    `【ラウンド2 - GPT再反論/修正】Claudeの指摘を受けた上で、あなたの最終的な立場を示してください。部分的に修正した場合はその理由を述べ、合意できた点と対立点を整理してください。ユーザーが判断しやすいよう論点を絞ってください。`,
+  );
+  const gptMsg2 = pushMsg(session, 'gpt', gptReply2);
+
+  // ── ラウンド2: Claude が最終統合・決定候補を提示 ──
+  const claudeReply2 = await speakAsClaude(
+    session,
+    `2ラウンドの議論を経て、GPTが以下のように再発言しました：\n\n${gptReply2}\n\n---\n元の議題：${userMessage}\n\n議論全体を踏まえ、最終的な統合見解と、ユーザーが決断すべき選択肢を整理してください。`,
+    `【ラウンド2 - Claude最終統合】2ラウンドの議論を総括してください。①合意できた点、②残る対立点、③ユーザーへの決断を求める選択肢（A案/B案など）、④推奨案とその根拠 を必ず含めてください。「📌 決定候補:」を使って具体的な実行項目を3〜5件提案してください。`,
+  );
+  const claudeMsg2 = pushMsg(session, 'claude', claudeReply2);
 
   await saveData();
-  return { gptMsg, claudeMsg };
+  return { gptMsg1, claudeMsg1, gptMsg2, claudeMsg2 };
 }
 
 // ─── 決定事項自動抽出 ────────────────────────────────────────────────────────

@@ -1,45 +1,45 @@
 {
   "templates": [
     {
-      "text": "🔞{actress}出演の{shortTitle}が話題沸騰中🔥 レビュー{reviewCount}件、評価{reviewAvg}⭐ リプ欄からどうぞ👇",
+      "text": "🔞{actress}の最新作｜{shortTitle}が熱い🔥 平均評価{reviewAvg}★ レビュー{reviewCount}件突破💯 今すぐチェック👉 リプ欄へ👇",
       "type": "amateur",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}で{actress}の新作解禁🎬 {reviewCount}人が絶賛、平均評価{reviewAvg}✨ リプ欄へ👇",
+      "text": "🔞{shortTitle}｜{actress}出演作品 {reviewCount}人が高評価⭐ {reviewAvg}点の傑作✨ 詳細はリプ欄からどうぞ👇",
       "type": "amateur",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
-      "text": "🔞今すぐ見るべき作品🚀 {actress}×{shortTitle}が{reviewCount}件のレビューで{reviewAvg}達成💯 リプ欄からどうぞ👇",
+      "text": "🔞話題沸騰｜{actress}主演{shortTitle}🔥 {reviewCount}件のレビュー・平均{reviewAvg}★ 見逃し厳禁📺 リプ欄へ👇",
       "type": "buzz",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{reviewCount}人が選んだ{shortTitle}😍 {actress}の最高傑作、評価{reviewAvg}⭐ リプ欄へ👇",
+      "text": "🔞{reviewCount}人が絶賛🌟 {actress}の最新作{shortTitle} 平均評価{reviewAvg}点✨ 詳しくはリプ欄からどうぞ👇",
       "type": "buzz",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}|{actress}出演作が配信中🎥 {reviewCount}件評価{reviewAvg}⭐ リプ欄からどうぞ👇",
+      "text": "🔞今旬の作品｜{shortTitle}×{actress}💥 {reviewCount}件評価・{reviewAvg}★獲得🏆 リプ欄へ👇",
       "type": "any",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
-      "text": "🔞見逃せない🔥 {actress}最新作{shortTitle}、評価{reviewAvg}点({reviewCount}件)✨ リプ欄へ👇",
+      "text": "🔞{shortTitle}特集🎬 {actress}出演・{reviewAvg}点・{reviewCount}件突破📈 興味あればリプ欄からどうぞ👇",
       "type": "any",
       "sourceScore": 109,
-      "generatedAt": "2026-04-06T09:33:54.983Z",
+      "generatedAt": "2026-04-06T09:37:53.298Z",
       "usedCount": 0
     },
     {
@@ -701,6 +701,6 @@
       "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-06T09:33:54.983Z",
+  "lastEvolvedAt": "2026-04-06T09:37:53.298Z",
   "evolutionCount": 34
 }

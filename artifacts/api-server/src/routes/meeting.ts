@@ -92,12 +92,13 @@ router.post('/bot/meeting/sessions/:id/chat/claude', async (req, res) => {
   }
 });
 
-// 3者会議モード（GPT→Claude の順で発言）
+// 3者会議モード（2ラウンドディベート: GPT→Claude→GPT→Claude）
 router.post('/bot/meeting/sessions/:id/trialogue', async (req, res) => {
   const { message } = req.body ?? {};
   if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
   try {
-    res.json(await runTrialogue(req.params.id, message.trim()));
+    const result = await runTrialogue(req.params.id, message.trim());
+    res.json(result);
   } catch (e: any) {
     console.error('  ❌ 3者会議エラー:', e.message);
     res.status(500).json({ error: e.message });

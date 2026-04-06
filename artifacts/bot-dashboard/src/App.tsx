@@ -1505,7 +1505,7 @@ function Dashboard() {
 
             try {
               if (sendMode === "trialogue") {
-                // 3者会議: GPT → Claude の順で返答
+                // 2ラウンドディベート: GPT先手→Claude反論→GPT再反論→Claude最終統合
                 const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -1513,7 +1513,10 @@ function Dashboard() {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error ?? "エラー");
-                setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data.gptMsg, data.claudeMsg] } : s);
+                setMeetingSession((s) => s ? {
+                  ...s,
+                  messages: [...s.messages, data.gptMsg1, data.claudeMsg1, data.gptMsg2, data.claudeMsg2],
+                } : s);
               } else {
                 // GPT のみ / Claude のみ
                 const endpoint = sendMode === "gpt" ? "chat/gpt" : "chat/claude";
@@ -1605,10 +1608,10 @@ function Dashboard() {
 
           // スピーカーごとのスタイル定義
           const speakerStyle: Record<Speaker, { bg: string; border: string; text: string; label: string; icon: string }> = {
-            user:   { bg: "bg-indigo-500/20",  border: "border-indigo-500/30",  text: "text-indigo-100",  label: "👤 あなた",     icon: "👤" },
-            gpt:    { bg: "bg-blue-500/15",     border: "border-blue-500/30",    text: "text-blue-100",    label: "🤖 GPT-4o",     icon: "🤖" },
-            claude: { bg: "bg-violet-500/15",   border: "border-violet-500/30",  text: "text-violet-100",  label: "🧠 Claude",     icon: "🧠" },
-            system: { bg: "bg-white/5",         border: "border-white/10",       text: "text-white/60",    label: "📋 システム",   icon: "📋" },
+            user:   { bg: "bg-indigo-500/20",  border: "border-indigo-500/30",  text: "text-indigo-100",  label: "👤 あなた",            icon: "👤" },
+            gpt:    { bg: "bg-blue-500/15",     border: "border-blue-500/30",    text: "text-blue-100",    label: "🤖 o3 Thinking",       icon: "🤖" },
+            claude: { bg: "bg-violet-500/15",   border: "border-violet-500/30",  text: "text-violet-100",  label: "🧠 Claude Sonnet",     icon: "🧠" },
+            system: { bg: "bg-white/5",         border: "border-white/10",       text: "text-white/60",    label: "📋 システム",          icon: "📋" },
           };
 
           return (
@@ -1626,22 +1629,22 @@ function Dashboard() {
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <p className="text-lg mb-1">🤖</p>
-                    <p className="text-[11px] font-semibold text-blue-300">GPT-4o</p>
-                    <p className="text-[10px] text-blue-300/60 mt-0.5">調査・トレンド分析</p>
+                    <p className="text-[11px] font-semibold text-blue-300">o3 Thinking</p>
+                    <p className="text-[10px] text-blue-300/60 mt-0.5">調査・立論・再反論</p>
                   </div>
                   <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
                     <p className="text-lg mb-1">🧠</p>
                     <p className="text-[11px] font-semibold text-violet-300">Claude Sonnet</p>
-                    <p className="text-[10px] text-violet-300/60 mt-0.5">実装・リスク評価</p>
+                    <p className="text-[10px] text-violet-300/60 mt-0.5">反論・最終統合</p>
                   </div>
                   <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
                     <p className="text-lg mb-1">👤</p>
                     <p className="text-[11px] font-semibold text-indigo-300">あなた</p>
-                    <p className="text-[10px] text-indigo-300/60 mt-0.5">意思決定者</p>
+                    <p className="text-[10px] text-indigo-300/60 mt-0.5">フォロー・最終決定</p>
                   </div>
                 </div>
                 <p className="text-[10px] text-white/30 mt-2 text-center">
-                  GPT-4o-search-preview でリサーチ → 3者で議論 → Claudeが決定事項を自動抽出 → ボット全体に反映
+                  ディープリサーチ → 2ラウンドディベート（GPT先手→Claude反論→GPT再反論→Claude統合）→ あなたが最終決定
                 </p>
               </div>
 
@@ -1751,22 +1754,32 @@ function Dashboard() {
                       );
                     })}
                     {meetingLoading && (
-                      <div className="flex gap-2">
-                        {sendMode === "trialogue" || sendMode === "gpt" ? (
+                      <div className="space-y-2">
+                        {sendMode === "trialogue" ? (
+                          <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3">
+                            <p className="text-[10px] text-white/40 mb-2 font-medium">🎙 2ラウンドディベート進行中...</p>
+                            <div className="space-y-1.5">
+                              {[
+                                { icon: "🤖", label: "Round 1 — o3 Thinking が立論中", color: "text-blue-300/70" },
+                                { icon: "🧠", label: "Round 1 — Claude が反論中", color: "text-violet-300/50" },
+                                { icon: "🤖", label: "Round 2 — o3 Thinking が再反論中", color: "text-blue-300/30" },
+                                { icon: "🧠", label: "Round 2 — Claude が最終統合中", color: "text-violet-300/20" },
+                              ].map((step, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <span className="text-sm">{step.icon}</span>
+                                  <p className={`text-[10px] animate-pulse ${step.color}`}>{step.label}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : sendMode === "gpt" ? (
                           <div className="bg-blue-500/10 border border-blue-500/25 rounded-xl px-3 py-2.5">
-                            <p className="text-[10px] text-blue-400 mb-1">🤖 GPT-4o</p>
-                            <p className="text-xs text-blue-300/50 animate-pulse">リサーチ中...</p>
+                            <p className="text-[10px] text-blue-400 mb-1">🤖 o3 Thinking</p>
+                            <p className="text-xs text-blue-300/50 animate-pulse">推論中...</p>
                           </div>
-                        ) : null}
-                        {sendMode === "trialogue" && (
+                        ) : (
                           <div className="bg-violet-500/10 border border-violet-500/25 rounded-xl px-3 py-2.5">
-                            <p className="text-[10px] text-violet-400 mb-1">🧠 Claude</p>
-                            <p className="text-xs text-violet-300/50 animate-pulse">分析中...</p>
-                          </div>
-                        )}
-                        {sendMode === "claude" && (
-                          <div className="bg-violet-500/10 border border-violet-500/25 rounded-xl px-3 py-2.5">
-                            <p className="text-[10px] text-violet-400 mb-1">🧠 Claude</p>
+                            <p className="text-[10px] text-violet-400 mb-1">🧠 Claude Sonnet</p>
                             <p className="text-xs text-violet-300/50 animate-pulse">考え中...</p>
                           </div>
                         )}
@@ -1779,8 +1792,8 @@ function Dashboard() {
                     <p className="text-[10px] text-white/30 mb-1.5">送信先：</p>
                     <div className="flex gap-2">
                       {([
-                        { mode: "trialogue" as const, label: "🎙 3者会議", desc: "GPT→Claude順に発言", active: "bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-indigo-400/40 text-white" },
-                        { mode: "gpt"       as const, label: "🤖 GPTのみ", desc: "素早いリサーチ",     active: "bg-blue-500/20 border-blue-400/40 text-blue-200" },
+                        { mode: "trialogue" as const, label: "🎙 3者会議", desc: "2ラウンドディベート", active: "bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-indigo-400/40 text-white" },
+                        { mode: "gpt"       as const, label: "🤖 o3のみ",  desc: "推論・リサーチ",     active: "bg-blue-500/20 border-blue-400/40 text-blue-200" },
                         { mode: "claude"    as const, label: "🧠 Claudeのみ", desc: "実装観点の意見",  active: "bg-violet-500/20 border-violet-400/40 text-violet-200" },
                       ] as const).map(({ mode, label, desc, active }) => (
                         <button
