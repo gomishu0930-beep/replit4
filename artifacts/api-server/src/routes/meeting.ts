@@ -5,6 +5,7 @@ import {
   sendToGPT,
   sendToClaude,
   runTrialogue,
+  runQARound,
   extractDecisions,
   getResearches,
   getMeetings,
@@ -13,6 +14,7 @@ import {
   getDirectives,
   updateDirectiveStatus,
   type MeetingDirective,
+  type Assignee,
 } from '../bot/meeting.js';
 
 const router = Router();
@@ -116,6 +118,18 @@ router.post('/bot/meeting/sessions/:id/chat', async (req, res) => {
   }
 });
 
+// Q&Aラウンド（5ラウンドディベート後のユーザー質問）
+router.post('/bot/meeting/sessions/:id/qa', async (req, res) => {
+  const { message } = req.body ?? {};
+  if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
+  try {
+    res.json(await runQARound(req.params.id, message.trim()));
+  } catch (e: any) {
+    console.error('  ❌ Q&Aエラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── 決定事項自動抽出 ────────────────────────────────────────────────────────
 
 router.post('/bot/meeting/sessions/:id/extract-decisions', async (req, res) => {
@@ -135,15 +149,16 @@ router.get('/bot/meeting/directives', (_req, res) => {
 });
 
 router.post('/bot/meeting/directives', async (req, res) => {
-  const { text, category = 'other', priority = 'medium', source = '会議室' } = req.body ?? {};
+  const { text, category = 'other', priority = 'medium', source = '会議室', assignee = 'user' } = req.body ?? {};
   if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
   const validCats: MeetingDirective['category'][] = ['strategy', 'content', 'timing', 'recovery', 'other'];
   const validPris: MeetingDirective['priority'][] = ['high', 'medium', 'low'];
-  if (!validCats.includes(category) || !validPris.includes(priority)) {
-    res.status(400).json({ error: '無効な category または priority' }); return;
+  const validAssignees: Assignee[] = ['user', 'others', 'ai'];
+  if (!validCats.includes(category) || !validPris.includes(priority) || !validAssignees.includes(assignee)) {
+    res.status(400).json({ error: '無効な category、priority または assignee' }); return;
   }
   try {
-    res.json(await addDirective(text.trim(), category, priority, source));
+    res.json(await addDirective(text.trim(), category, priority, source, assignee));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

@@ -116,6 +116,7 @@ interface ResearchSession {
   completedAt: string;
 }
 type Speaker = "user" | "gpt" | "claude" | "system";
+type Assignee = "user" | "others" | "ai";
 interface MeetingMessage {
   role: "user" | "assistant";
   speaker: Speaker;
@@ -128,6 +129,7 @@ interface DecisionCandidate {
   category: MeetingDirective["category"];
   priority: MeetingDirective["priority"];
   rationale: string;
+  assignee: Assignee;
 }
 interface MeetingSession {
   id: string;
@@ -141,6 +143,7 @@ interface MeetingDirective {
   id: string;
   text: string;
   category: "strategy" | "content" | "timing" | "recovery" | "other";
+  assignee: Assignee;
   priority: "high" | "medium" | "low";
   status: "active" | "completed" | "cancelled";
   source: string;
@@ -582,13 +585,19 @@ function Dashboard() {
 
   // 決定事項ステート
   const [dirModal, setDirModal] = useState<{ text: string; source: string } | null>(null);
-  const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"] });
+  const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"], assignee: "user" as Assignee });
   const [dirSaving, setDirSaving] = useState(false);
 
   // 送信モード・決定抽出
   const [sendMode, setSendMode] = useState<"gpt" | "claude" | "trialogue">("trialogue");
   const [extractLoading, setExtractLoading] = useState(false);
   const [candidates, setCandidates] = useState<DecisionCandidate[]>([]);
+
+  // Q&Aラウンド管理（5ラウンドディベート後）
+  const [debateCompleted, setDebateCompleted] = useState(false);
+  const [qaRoundsLeft, setQaRoundsLeft] = useState(2);
+  const [qaInput, setQaInput] = useState("");
+  const [qaLoading, setQaLoading] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -1477,6 +1486,8 @@ function Dashboard() {
             if (!researchResult) return;
             setMeetingCreating(true);
             setCandidates([]);
+            setDebateCompleted(false);
+            setQaRoundsLeft(2);
             try {
               const res = await fetch(`${API}/api/bot/meeting/sessions`, {
                 method: "POST",
@@ -1517,6 +1528,9 @@ function Dashboard() {
                   ...s,
                   messages: [...s.messages, ...(data.messages ?? [])],
                 } : s);
+                // 5ラウンド完了 → Q&Aフェーズへ
+                setDebateCompleted(true);
+                setQaRoundsLeft(2);
               } else {
                 // GPT のみ / Claude のみ
                 const endpoint = sendMode === "gpt" ? "chat/gpt" : "chat/claude";
@@ -1565,6 +1579,7 @@ function Dashboard() {
                   text: c.text,
                   category: c.category,
                   priority: c.priority,
+                  assignee: c.assignee ?? "user",
                   source: meetingSession ? `会議: ${meetingSession.title}` : "会議室",
                 }),
               });
@@ -1575,14 +1590,42 @@ function Dashboard() {
             }
           }
 
+          // Q&Aラウンド送信（両者が回答）
+          async function sendQAMessage() {
+            if (!meetingSession || !qaInput.trim() || qaRoundsLeft <= 0) return;
+            const msg = qaInput.trim();
+            setQaInput("");
+            setQaLoading(true);
+            const userMsg: MeetingMessage = { role: "user", speaker: "user", content: msg, at: new Date().toISOString() };
+            setMeetingSession((s) => s ? { ...s, messages: [...s.messages, userMsg] } : s);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/qa`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error ?? "エラー");
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data.gptMsg, data.claudeMsg] } : s);
+              setQaRoundsLeft((n) => n - 1);
+            } catch (e: any) {
+              const errMsg: MeetingMessage = { role: "assistant", speaker: "system", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() };
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, errMsg] } : s);
+            } finally {
+              setQaLoading(false);
+            }
+          }
+
           async function saveDirective() {
             if (!dirModal) return;
             setDirSaving(true);
+            // assignee をリセット後のため変数にキャプチャ
+            const assignee = dirForm.assignee;
             try {
               const res = await fetch(`${API}/api/bot/meeting/directives`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: dirModal.text, category: dirForm.category, priority: dirForm.priority, source: dirModal.source }),
+                body: JSON.stringify({ text: dirModal.text, category: dirForm.category, priority: dirForm.priority, assignee: assignee, source: dirModal.source }),
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "エラー");
@@ -1893,6 +1936,63 @@ function Dashboard() {
                 </div>
               )}
 
+              {/* ── Q&Aラウンド（5ラウンド完了後）── */}
+              {debateCompleted && meetingSession && (
+                <div className={`rounded-xl border p-4 ${qaRoundsLeft > 0 ? "border-amber-500/25 bg-amber-500/5" : "border-white/8 bg-white/3"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h2 className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider">
+                        💬 Q&Aラウンド — あなたからの質問
+                      </h2>
+                      <p className="text-[10px] text-white/30 mt-0.5">
+                        o3とClaudeが両方あなたの質問に直接回答します
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {[0, 1].map((i) => (
+                        <span key={i} className={`w-2.5 h-2.5 rounded-full ${i < qaRoundsLeft ? "bg-amber-400" : "bg-white/15"}`} />
+                      ))}
+                      <span className="text-[10px] text-amber-400/70 ml-1">{qaRoundsLeft}回残り</span>
+                    </div>
+                  </div>
+
+                  {qaRoundsLeft > 0 ? (
+                    <>
+                      <div className="flex gap-2 mb-2">
+                        <textarea
+                          value={qaInput}
+                          onChange={(e) => setQaInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendQAMessage(); } }}
+                          placeholder="ディベートを受けて疑問点・確認したいことを入力... (Enter送信)"
+                          rows={2}
+                          disabled={qaLoading}
+                          className="flex-1 text-xs bg-white/5 border border-amber-500/20 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-amber-400/40 resize-none disabled:opacity-40"
+                        />
+                        <button
+                          onClick={sendQAMessage}
+                          disabled={qaLoading || !qaInput.trim()}
+                          className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold hover:bg-amber-500/30 transition-colors disabled:opacity-40 self-end shrink-0"
+                        >
+                          {qaLoading ? "⟳" : "質問"}
+                        </button>
+                      </div>
+                      {qaLoading && (
+                        <div className="flex gap-3 mt-2">
+                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+                            <p className="text-[10px] text-blue-400 animate-pulse">🤖 o3 回答中...</p>
+                          </div>
+                          <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-2">
+                            <p className="text-[10px] text-violet-400 animate-pulse">🧠 Claude 回答中...</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-white/30 text-center py-2">Q&Aラウンド終了。「💡 決定事項を自動抽出する」で内容を保存してください。</p>
+                  )}
+                </div>
+              )}
+
               {/* ── STEP 3: 決定候補の確認・採用 ── */}
               {candidates.length > 0 && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
@@ -1934,11 +2034,11 @@ function Dashboard() {
                 </div>
               )}
 
-              {/* ── STEP 4: 決定事項管理 ── */}
+              {/* ── STEP 4: 実施中のこと（役割別アクションボード）── */}
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xs font-semibold text-indigo-400/70 uppercase tracking-wider">
-                    STEP 4 — 📋 稼働中の決定事項
+                    STEP 4 — 📋 実施中のこと
                   </h2>
                   <button
                     onClick={() => setDirModal({ text: "", source: "手動入力" })}
@@ -1948,18 +2048,67 @@ function Dashboard() {
                   </button>
                 </div>
 
-                {allDirectives.length === 0 ? (
+                {allDirectives.filter((d) => d.status === "active").length === 0 ? (
                   <div className="text-center py-6">
-                    <p className="text-xs text-white/30">決定事項はまだありません</p>
-                    <p className="text-[10px] text-white/20 mt-1">会議チャットの回答にある「📌 決定事項に保存」ボタンで追加できます</p>
+                    <p className="text-xs text-white/30">実施中の決定事項はまだありません</p>
+                    <p className="text-[10px] text-white/20 mt-1">決定候補を採用すると、役割別にここに表示されます</p>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {["active", "completed", "cancelled"].map((statusGroup) => {
+                ) : (() => {
+                  const activeItems = allDirectives.filter((d) => d.status === "active");
+                  const groups: { key: Assignee; icon: string; label: string; color: string; border: string; bg: string }[] = [
+                    { key: "user",   icon: "👤", label: "私がやること",         color: "text-indigo-300", border: "border-indigo-500/25", bg: "bg-indigo-500/8" },
+                    { key: "ai",     icon: "🤖", label: "AIが自動でやること",   color: "text-blue-300",   border: "border-blue-500/25",   bg: "bg-blue-500/8"   },
+                    { key: "others", icon: "👥", label: "その他の人がやること", color: "text-emerald-300", border: "border-emerald-500/25", bg: "bg-emerald-500/8" },
+                  ];
+                  return (
+                    <div className="space-y-4">
+                      {groups.map(({ key, icon, label, color, border, bg }) => {
+                        const items = activeItems.filter((d) => (d.assignee ?? "user") === key);
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={key} className={`rounded-lg border ${border} ${bg} p-3`}>
+                            <p className={`text-[11px] font-semibold ${color} mb-2.5 flex items-center gap-1.5`}>
+                              <span>{icon}</span>{label}
+                              <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/40`}>{items.length}件</span>
+                            </p>
+                            <div className="space-y-2">
+                              {items.map((d) => (
+                                <div key={d.id} className="flex items-start gap-2 group">
+                                  <span className="shrink-0 mt-0.5">{priIcon[d.priority]}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] text-white/85 leading-snug">{d.text}</p>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/8 text-emerald-400">● 実施中</span>
+                                      <span className="text-[9px] text-white/25">{d.source}</span>
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => updateStatus(d.id, "completed")} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors">✓完了</button>
+                                    <button onClick={() => updateStatus(d.id, "cancelled")} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/15 text-red-400/70 hover:bg-red-500/20 transition-colors">✕</button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {/* 完了・取消済みアーカイブ */}
+                {allDirectives.filter((d) => d.status !== "active").length > 0 && (
+                  <details className="mt-4">
+                    <summary className="text-[10px] text-white/25 cursor-pointer hover:text-white/40 transition-colors">
+                      アーカイブ（完了・取消）{allDirectives.filter((d) => d.status !== "active").length}件
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                    {["completed", "cancelled"].map((statusGroup) => {
                       const items = allDirectives.filter((d) => d.status === statusGroup);
                       if (items.length === 0) return null;
-                      const groupLabel: Record<string, string> = { active: "✅ アクティブ", completed: "☑️ 完了", cancelled: "✖️ キャンセル" };
-                      const groupOpacity: Record<string, string> = { active: "", completed: "opacity-50", cancelled: "opacity-30" };
+                      const groupLabel: Record<string, string> = { completed: "☑️ 完了", cancelled: "✖️ キャンセル" };
+                      const groupOpacity: Record<string, string> = { completed: "opacity-50", cancelled: "opacity-30" };
                       return (
                         <div key={statusGroup}>
                           <p className="text-[10px] text-white/30 mb-1.5">{groupLabel[statusGroup]} ({items.length}件)</p>
@@ -2000,6 +2149,7 @@ function Dashboard() {
                       );
                     })}
                   </div>
+                  </details>
                 )}
               </div>
 
@@ -2051,6 +2201,28 @@ function Dashboard() {
                             </button>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <p className="text-[10px] text-white/40 mb-1.5">担当者</p>
+                      <div className="flex gap-2">
+                        {([
+                          { value: "user" as Assignee, icon: "👤", label: "私がやる" },
+                          { value: "ai" as Assignee, icon: "🤖", label: "AIが自動" },
+                          { value: "others" as Assignee, icon: "👥", label: "その他の人" },
+                        ]).map((a) => (
+                          <button
+                            key={a.value}
+                            onClick={() => setDirForm((f) => ({ ...f, assignee: a.value }))}
+                            className={`text-[10px] px-2.5 py-1 rounded border transition-colors flex items-center gap-1 ${
+                              dirForm.assignee === a.value
+                                ? "border-indigo-400/40 bg-indigo-500/20 text-indigo-300 font-medium"
+                                : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
+                            }`}
+                          >
+                            <span>{a.icon}</span>{a.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="flex gap-2 justify-end">

@@ -1,45 +1,45 @@
 {
   "templates": [
     {
-      "text": "🔞{actress}の{shortTitle}が話題🔥 レビュー{reviewCount}件・平均{reviewAvg}★の神作品😍 今すぐ視聴したい方はリプ欄へ👇",
+      "text": "🔞{actress}の最新作{shortTitle}が話題沸騰中！🎬 レビュー{reviewCount}件、平均{reviewAvg}点の高評価🌟 リプ欄からどうぞ👇",
       "type": "amateur",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}で{actress}が魅せる🎬 {reviewCount}件のレビュー★{reviewAvg}達成✨ 詳細はリプ欄からどうぞ👇",
+      "text": "🔞{shortTitle}で{actress}が大注目されてます😍 {reviewCount}人が{reviewAvg}点評価してる👏 詳細はリプ欄へ👇",
       "type": "amateur",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
-      "text": "🔞話題沸騰🌟{actress}×{shortTitle}が{reviewCount}件突破💥 平均評価{reviewAvg}★の傑作🎥 リプ欄へ👇",
+      "text": "🔞今話題の{shortTitle}🔥{actress}出演で視聴数急上昇📈 {reviewAvg}点評価{reviewCount}件✨ リプ欄からどうぞ👇",
       "type": "buzz",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}で{actress}の新境地✨ {reviewCount}件のレビュー・{reviewAvg}★獲得🔥 視聴はリプ欄からどうぞ👇",
+      "text": "🔞{actress}×{shortTitle}で{reviewCount}人が熱狂🎉 平均スコア{reviewAvg}点は本物💯 リプ欄へ👇",
       "type": "buzz",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{actress}出演{shortTitle}🎬 {reviewCount}件レビュー・{reviewAvg}★💯 見逃し厳禁😍 リプ欄へ👇",
+      "text": "🔞{shortTitle}で{actress}の新たな魅力発見🌈 {reviewCount}件のレビュー、{reviewAvg}点で話題！詳細はリプ欄からどうぞ👇",
       "type": "any",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}✨ {actress}×{reviewCount}件{reviewAvg}★🌟 今が熱い🔥 リプ欄からどうぞ👇",
+      "text": "🔞{actress}が出演する{shortTitle}👀 {reviewAvg}点評価の高クオリティ作品🎬{reviewCount}件レビュー📊 リプ欄へ👇",
       "type": "any",
       "sourceScore": 113,
-      "generatedAt": "2026-04-06T10:07:43.210Z",
+      "generatedAt": "2026-04-06T10:09:28.114Z",
       "usedCount": 0
     },
     {
@@ -701,6 +701,6 @@
       "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-06T10:07:43.210Z",
+  "lastEvolvedAt": "2026-04-06T10:09:28.115Z",
   "evolutionCount": 35
 }

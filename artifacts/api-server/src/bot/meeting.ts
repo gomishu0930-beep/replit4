@@ -45,12 +45,15 @@ export interface MeetingMessage {
   at: string;
 }
 
+export type Assignee = 'user' | 'others' | 'ai';
+
 export interface DecisionCandidate {
   id: string;
   text: string;
   category: MeetingDirective['category'];
   priority: MeetingDirective['priority'];
   rationale: string;
+  assignee: Assignee;
 }
 
 export interface MeetingSession {
@@ -68,6 +71,7 @@ export interface MeetingDirective {
   category: 'strategy' | 'content' | 'timing' | 'recovery' | 'other';
   priority: 'high' | 'medium' | 'low';
   status: 'active' | 'completed' | 'cancelled';
+  assignee: Assignee;
   source: string;
   createdAt: string;
   updatedAt: string;
@@ -397,7 +401,7 @@ export async function extractDecisions(sessionId: string): Promise<DecisionCandi
   const transcript = buildHistory(session.messages);
   const botContext = buildBotContext();
 
-  const prompt = `以下はFANZA Xボット運営に関する3者会議（GPT-4o・Claude・ユーザー）の議事録です。
+  const prompt = `以下はFANZA Xボット運営に関する3者会議（o3 Thinking・Claude・ユーザー）の議事録です。
 
 ${botContext}
 
@@ -408,12 +412,18 @@ ${transcript}
 この会議で合意・提案された「具体的な行動決定事項」を3〜6件抽出し、以下のJSON配列形式で返してください。
 必ず有効なJSONのみ返し、コードブロックやコメントは含めないでください。
 
+assignee の分類基準：
+- "user"   : ユーザー本人（アカウントオーナー）が手動で行うこと
+- "others" : 外部の人・サービス・パートナーが行うこと（または外部環境の変化に依存）
+- "ai"     : ボット（AI）が自動で実行・監視・生成すること
+
 [
   {
     "text": "決定事項の本文（具体的に・実行可能な形で）",
     "category": "strategy|content|timing|recovery|other のいずれか",
     "priority": "high|medium|low のいずれか",
-    "rationale": "この決定の根拠（1〜2文）"
+    "rationale": "この決定の根拠（1〜2文）",
+    "assignee": "user|others|ai のいずれか"
   }
 ]`;
 
@@ -440,6 +450,8 @@ ${transcript}
       priority: (['high', 'medium', 'low'].includes(item.priority)
         ? item.priority : 'medium') as MeetingDirective['priority'],
       rationale: String(item.rationale ?? ''),
+      assignee: (['user', 'others', 'ai'].includes(item.assignee)
+        ? item.assignee : 'user') as Assignee,
     })).filter((c) => c.text.length > 0);
 
     // セッションに保存
@@ -459,12 +471,14 @@ export async function addDirective(
   category: MeetingDirective['category'],
   priority: MeetingDirective['priority'],
   source: string,
+  assignee: Assignee = 'user',
 ): Promise<MeetingDirective> {
   const now = new Date().toISOString();
   const directive: MeetingDirective = {
     id: `dir-${Date.now()}`,
     text, category, priority,
     status: 'active',
+    assignee,
     source,
     createdAt: now,
     updatedAt: now,
@@ -490,6 +504,39 @@ export async function updateDirectiveStatus(id: string, status: MeetingDirective
   d.updatedAt = new Date().toISOString();
   await saveData();
   return d;
+}
+
+// ─── Q&Aラウンド（5ラウンドディベート後のユーザー質問）─────────────────
+
+export async function runQARound(
+  sessionId: string,
+  userMessage: string,
+): Promise<{ gptMsg: MeetingMessage; claudeMsg: MeetingMessage }> {
+  const session = cache.meetings.find((m) => m.id === sessionId);
+  if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
+
+  pushMsg(session, 'user', userMessage);
+
+  // o3 がユーザーの質問に直接回答
+  const gptReply = await speakAsGPT(
+    session,
+    userMessage,
+    `【Q&Aラウンド - o3】ユーザーからの質問に直接・具体的に答えてください。
+これまでのディベートの文脈を踏まえながら、データ・リサーチの観点で明確な回答を出してください。
+もし立場を変える場合はその理由も述べてください。`,
+  );
+  const gptMsg = pushMsg(session, 'gpt', gptReply);
+
+  // Claude がo3の回答も参照しつつユーザーの質問に回答
+  const claudeReply = await speakAsClaude(
+    session,
+    `ユーザーの質問：\n${userMessage}\n\no3の回答：\n${gptReply}\n\n---\nユーザーの質問に対して、実装・リスク・実行プランの観点から回答してください。o3と異なる見解がある場合は明確に示し、補完・修正してください。`,
+    `【Q&Aラウンド - Claude】ユーザーの質問への直接回答を優先してください。o3の回答で不十分な点があれば補完し、矛盾があれば指摘してください。実施すべきこと（誰が・何を・いつ）を明確にしてください。`,
+  );
+  const claudeMsg = pushMsg(session, 'claude', claudeReply);
+
+  await saveData();
+  return { gptMsg, claudeMsg };
 }
 
 // ─── データ取得 ────────────────────────────────────────────────────────────
