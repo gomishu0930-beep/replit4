@@ -223,39 +223,38 @@ function getResearchContext(session: MeetingSession): string {
 }
 
 function buildHistory(messages: MeetingMessage[]): string {
-  return messages.slice(-16).map((m) => {
-    const label = m.speaker === 'gpt' ? 'GPT-4o' : m.speaker === 'claude' ? 'Claude' : m.speaker === 'user' ? 'ユーザー' : 'システム';
+  return messages.slice(-20).map((m) => {
+    const label = m.speaker === 'gpt' ? 'o4-mini(GPT)' : m.speaker === 'claude' ? 'Claude Sonnet' : m.speaker === 'user' ? 'ユーザー' : 'システム';
     return `[${label}] ${m.content}`;
-  }).join('\n\n');
+  }).join('\n\n---\n\n');
 }
 
-// GPT-4o に発言させる
+// o4-mini に発言させる（推論モデル）
 async function speakAsGPT(session: MeetingSession, prompt: string, extraInstruction = ''): Promise<string> {
   const botContext = buildBotContext();
   const researchCtx = getResearchContext(session);
   const history = session.messages.length > 0 ? `\n\n## これまでの議論\n${buildHistory(session.messages)}` : '';
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      {
-        role: 'system',
-        content: `あなたはFANZA XボットのAI戦略アドバイザー（GPT-4o）として3者会議に参加しています。
-役割：リサーチ・データ分析・外部トレンドの視点から意見を述べる。
+  const systemContent = `あなたはFANZA XボットのAI戦略アドバイザー（o4-mini）として3者会議に参加しています。
+役割：リサーチ・データ分析・外部トレンドの視点から論理的かつ具体的に意見を述べる。
+Claudeとは対等な議論パートナーとして、相手の意見に合意・反論・修正を明確に示してください。
 ${botContext}${researchCtx}${history}
 ${extraInstruction}
-重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答。`,
-      },
+重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答してください。`;
+
+  const response = await openai.chat.completions.create({
+    model: 'o4-mini',
+    messages: [
+      { role: 'system', content: systemContent },
       { role: 'user', content: prompt },
     ],
-    temperature: 0.7,
-    max_tokens: 1500,
-  });
+    max_completion_tokens: 2000,
+  } as any);
 
   return response.choices[0]?.message?.content ?? '（応答なし）';
 }
 
-// Claude に発言させる
+// Claude Sonnet に発言させる
 async function speakAsClaude(session: MeetingSession, prompt: string, extraInstruction = ''): Promise<string> {
   const botContext = buildBotContext();
   const researchCtx = getResearchContext(session);
@@ -263,12 +262,13 @@ async function speakAsClaude(session: MeetingSession, prompt: string, extraInstr
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: `あなたはFANZA XボットのAIアドバイザー（Claude）として3者会議に参加しています。
-役割：実装可能性・リスク評価・具体的な実行プランの視点から意見を述べる。GPTの意見を補完・修正・強化してください。
+    max_tokens: 2000,
+    system: `あなたはFANZA XボットのAIアドバイザー（Claude Sonnet）として3者会議に参加しています。
+役割：実装可能性・リスク評価・具体的な実行プランの視点から意見を述べる。
+o4-miniとは対等な議論パートナーとして、相手の意見に合意・反論・修正を明確に示してください。
 ${botContext}${researchCtx}${history}
 ${extraInstruction}
-重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答。`,
+重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答してください。`,
     messages: [{ role: 'user', content: prompt }],
   });
 
