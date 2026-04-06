@@ -107,6 +107,26 @@ interface ManualObservation {
   hypothesis?: string;
   priority: "high" | "medium" | "low";
 }
+interface ResearchSession {
+  id: string;
+  topic: string;
+  result: string;
+  model: string;
+  startedAt: string;
+  completedAt: string;
+}
+interface MeetingMessage {
+  role: "user" | "assistant";
+  content: string;
+  at: string;
+}
+interface MeetingSession {
+  id: string;
+  title: string;
+  createdAt: string;
+  messages: MeetingMessage[];
+  researchId?: string;
+}
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
 
@@ -526,9 +546,19 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research">("overview");
+  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
+
+  // 会議室ステート
+  const [researchTopic, setResearchTopic] = useState("");
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchResult, setResearchResult] = useState<ResearchSession | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
+  const [meetingSession, setMeetingSession] = useState<MeetingSession | null>(null);
+  const [meetingInput, setMeetingInput] = useState("");
+  const [meetingLoading, setMeetingLoading] = useState(false);
+  const [meetingCreating, setMeetingCreating] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -589,6 +619,7 @@ function Dashboard() {
     { id: "posts",     label: "投稿履歴" },
     { id: "patterns",  label: "外部データ" },
     { id: "research",  label: "🔬 回復研究" },
+    { id: "meeting",   label: "🤝 会議室" },
   ] as const;
 
   // スケジュール（APIから取得、またはデフォルト）
@@ -1311,6 +1342,268 @@ function Dashboard() {
                   </div>
                 );
               })()}
+            </>
+          );
+        })()}
+
+        {/* ════════════════════ 会議室タブ ════════════════════ */}
+        {tab === "meeting" && (() => {
+          const PRESET_TOPICS = [
+            "Xのシャドウバン（Ghost Ban）から回復した日本語アカウントの実例と、回復を加速させた投稿戦略を調査してください。成人向けコンテンツアカウントの事例、回復にかかった平均日数、インプレッション数の変化を教えてください。",
+            "FANZAアフィリエイトで月10万円以上稼いでいるXアカウントの投稿パターン・頻度・コンテンツ内容を調査してください。成功事例に共通する戦略を教えてください。",
+            "X（Twitter）の2025〜2026年における成人向けコンテンツへのアルゴリズム変化を調査してください。インプレッション・リーチへの影響と対策を教えてください。",
+            "いいね・RTを多く獲得できる「インプ狙いツイート」の最適な文体・構成・絵文字の使い方を調査してください。非宣伝ツイートでバズる法則を教えてください。",
+          ];
+
+          async function startResearch(topic: string) {
+            if (!topic.trim()) return;
+            setResearchLoading(true);
+            setResearchError(null);
+            setResearchResult(null);
+            setMeetingSession(null);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/research`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ topic }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error ?? "エラー");
+              setResearchResult(data);
+            } catch (e: any) {
+              setResearchError(e.message);
+            } finally {
+              setResearchLoading(false);
+            }
+          }
+
+          async function startMeeting() {
+            if (!researchResult) return;
+            setMeetingCreating(true);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/sessions`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: researchResult.topic.slice(0, 40), researchId: researchResult.id }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error ?? "エラー");
+              setMeetingSession(data);
+            } catch (e: any) {
+              alert("会議作成エラー: " + e.message);
+            } finally {
+              setMeetingCreating(false);
+            }
+          }
+
+          async function sendMessage() {
+            if (!meetingSession || !meetingInput.trim()) return;
+            const msg = meetingInput.trim();
+            setMeetingInput("");
+            setMeetingLoading(true);
+            // 楽観的更新
+            setMeetingSession((s) => s ? { ...s, messages: [...s.messages, { role: "user", content: msg, at: new Date().toISOString() }] } : s);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error ?? "エラー");
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data] } : s);
+            } catch (e: any) {
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, { role: "assistant", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() }] } : s);
+            } finally {
+              setMeetingLoading(false);
+            }
+          }
+
+          return (
+            <>
+              {/* ヘッダー説明 */}
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl shrink-0">🤝</span>
+                  <div>
+                    <h2 className="text-sm font-bold text-indigo-300 mb-1">GPT 会議室</h2>
+                    <p className="text-xs text-white/50">
+                      GPT-4o（ウェブ検索付き）がリサーチを行い、ボットの現状データを踏まえた戦略議論ができます。
+                    </p>
+                    <div className="flex gap-4 mt-2 text-[10px] text-white/30">
+                      <span>🔍 Deep Research: <span className="text-indigo-300 font-medium">gpt-4o-search-preview</span></span>
+                      <span>💬 会議チャット: <span className="text-indigo-300 font-medium">gpt-4o</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── STEP 1: Deep Research ── */}
+              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
+                  STEP 1 — Deep Research 起動
+                </h2>
+
+                {/* プリセットトピック */}
+                <p className="text-[10px] text-white/40 mb-2">クイック選択：</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                  {PRESET_TOPICS.map((t, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setResearchTopic(t)}
+                      disabled={researchLoading}
+                      className="text-left text-[10px] text-white/50 p-2.5 rounded-lg bg-white/5 border border-white/8 hover:bg-indigo-500/10 hover:border-indigo-500/30 hover:text-indigo-300 transition-all line-clamp-2 disabled:opacity-40"
+                    >
+                      {["🔍", "💰", "📡", "💬"][i]} {t.slice(0, 60)}...
+                    </button>
+                  ))}
+                </div>
+
+                {/* カスタム入力 */}
+                <p className="text-[10px] text-white/40 mb-1.5">またはカスタムトピックを入力：</p>
+                <textarea
+                  value={researchTopic}
+                  onChange={(e) => setResearchTopic(e.target.value)}
+                  placeholder="例: シャドウバン回復後の投稿頻度の最適化について教えてください..."
+                  rows={3}
+                  disabled={researchLoading}
+                  className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 resize-none mb-3 disabled:opacity-40"
+                />
+                <button
+                  onClick={() => startResearch(researchTopic)}
+                  disabled={researchLoading || !researchTopic.trim()}
+                  className="w-full py-2.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  {researchLoading ? (
+                    <>
+                      <span className="animate-spin text-base">⟳</span>
+                      GPT がウェブ検索中... しばらくお待ちください
+                    </>
+                  ) : (
+                    <>🔍 Deep Research 起動</>
+                  )}
+                </button>
+
+                {/* エラー */}
+                {researchError && (
+                  <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+                    ❌ {researchError}
+                  </div>
+                )}
+
+                {/* リサーチ結果 */}
+                {researchResult && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-emerald-400 mb-0.5">✅ リサーチ完了</p>
+                        <p className="text-[10px] text-white/30">
+                          モデル: {researchResult.model} / 所要: {Math.round((new Date(researchResult.completedAt).getTime() - new Date(researchResult.startedAt).getTime()) / 1000)}秒
+                        </p>
+                      </div>
+                      <button
+                        onClick={startMeeting}
+                        disabled={meetingCreating}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 transition-colors disabled:opacity-40"
+                      >
+                        {meetingCreating ? "作成中..." : "💬 会議スタート →"}
+                      </button>
+                    </div>
+                    <div className="rounded-lg bg-black/30 border border-white/8 p-4 max-h-80 overflow-y-auto">
+                      <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed">{researchResult.result}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── STEP 2: 会議チャット ── */}
+              {meetingSession && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xs font-semibold text-emerald-400/70 uppercase tracking-wider">
+                      STEP 2 — 会議チャット
+                    </h2>
+                    <span className="text-[10px] text-white/30">{meetingSession.messages.length / 2 | 0} ターン</span>
+                  </div>
+
+                  {/* メッセージ履歴 */}
+                  <div className="space-y-3 max-h-96 overflow-y-auto mb-4 pr-1">
+                    {meetingSession.messages.length === 0 && (
+                      <div className="text-center py-6">
+                        <p className="text-xs text-white/30">最初のメッセージを送ってください</p>
+                        <p className="text-[10px] text-white/20 mt-1">GPT-4o がリサーチ結果とボット現状を踏まえて回答します</p>
+                      </div>
+                    )}
+                    {meetingSession.messages.map((m, i) => (
+                      <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[85%] rounded-xl px-3 py-2.5 ${
+                          m.role === "user"
+                            ? "bg-indigo-500/20 border border-indigo-500/30 text-indigo-100"
+                            : "bg-white/5 border border-white/10 text-white/80"
+                        }`}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] text-white/30">
+                              {m.role === "user" ? "👤 あなた" : "🤖 GPT-4o"}
+                            </span>
+                            <span className="text-[10px] text-white/20">{fmtDate(m.at).slice(5)}</span>
+                          </div>
+                          <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {meetingLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
+                          <p className="text-[10px] text-white/30 mb-1">🤖 GPT-4o</p>
+                          <p className="text-xs text-white/40 animate-pulse">考えています...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 入力エリア */}
+                  <div className="flex gap-2">
+                    <textarea
+                      value={meetingInput}
+                      onChange={(e) => setMeetingInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                      placeholder="質問や意見を入力... (Enter で送信 / Shift+Enter で改行)"
+                      rows={2}
+                      disabled={meetingLoading}
+                      className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 resize-none disabled:opacity-40"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={meetingLoading || !meetingInput.trim()}
+                      className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 transition-colors disabled:opacity-40 self-end shrink-0"
+                    >
+                      送信
+                    </button>
+                  </div>
+
+                  {/* クイック質問 */}
+                  <div className="mt-3">
+                    <p className="text-[10px] text-white/30 mb-1.5">クイック質問：</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "このボットに今すぐ実装すべきことは何ですか？",
+                        "投稿本数を増やすタイミングはいつが最適ですか？",
+                        "リスクの高い施策と低い施策を整理してください",
+                        "3ヶ月後の目標設定を提案してください",
+                      ].map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => setMeetingInput(q)}
+                          disabled={meetingLoading}
+                          className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors disabled:opacity-40"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           );
         })()}
