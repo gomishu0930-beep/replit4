@@ -569,7 +569,7 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting">("overview");
+  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -592,6 +592,58 @@ function Dashboard() {
   const [sendMode, setSendMode] = useState<"gpt" | "claude" | "trialogue">("trialogue");
   const [extractLoading, setExtractLoading] = useState(false);
   const [candidates, setCandidates] = useState<DecisionCandidate[]>([]);
+
+  // ── タスクリスト ────────────────────────────────────────────────────────────
+  type TaskFreq = "daily" | "weekly";
+  type TaskAssignee = "user" | "ai";
+  interface TaskItem {
+    id: string;
+    title: string;
+    description: string;
+    frequency: TaskFreq;
+    assignee: TaskAssignee;
+    category: string;
+    scheduledTime?: string;
+    scheduledDay?: string;
+    emoji: string;
+    completionKey: string;
+    completed: boolean;
+    completedAt?: string;
+    completedBy?: "user" | "bot";
+    isDirective?: boolean;
+  }
+  interface TaskList { daily: TaskItem[]; weekly: TaskItem[]; dateKey: string; weekKey: string; }
+  const [tasks, setTasks] = useState<TaskList | null>(null);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [taskToggling, setTaskToggling] = useState<Set<string>>(new Set());
+
+  async function fetchTasks() {
+    try {
+      const res = await fetch(`${API}/api/bot/tasks`);
+      if (res.ok) setTasks(await res.json());
+    } catch { /* silent */ }
+  }
+
+  async function toggleTaskItem(item: TaskItem) {
+    if (item.assignee === "ai") return; // AI タスクは手動変更不可
+    const newDone = !item.completed;
+    setTaskToggling((s) => new Set(s).add(item.completionKey));
+    try {
+      const res = await fetch(`${API}/api/bot/tasks/${encodeURIComponent(item.completionKey)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ done: newDone }),
+      });
+      if (res.ok) await fetchTasks();
+    } finally {
+      setTaskToggling((s) => { const ns = new Set(s); ns.delete(item.completionKey); return ns; });
+    }
+  }
+
+  // タスクタブを開いたとき or 30秒ごとにフェッチ
+  useEffect(() => {
+    if (tab === "tasks") { setTasksLoading(true); fetchTasks().finally(() => setTasksLoading(false)); }
+  }, [tab, tick]);
 
   // Q&Aラウンド管理（5ラウンドディベート後）
   const [debateCompleted, setDebateCompleted] = useState(false);
@@ -664,6 +716,7 @@ function Dashboard() {
     { id: "posts",     label: "投稿履歴" },
     { id: "patterns",  label: "外部データ" },
     { id: "research",  label: "🔬 回復研究" },
+    { id: "tasks",     label: "✅ タスク" },
     { id: "meeting",   label: "🤝 会議室" },
   ] as const;
 
@@ -1428,6 +1481,209 @@ function Dashboard() {
             </>
           );
         })()}
+
+        {/* ════════════════════ タスク管理タブ ════════════════════ */}
+        {tab === "tasks" && (
+          <div className="space-y-6 py-4">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-white">✅ タスク管理</h2>
+                <p className="text-[11px] text-white/35 mt-0.5">
+                  ロードマップから生成されたデイリー・ウィークリータスク
+                </p>
+              </div>
+              {tasks && (
+                <div className="text-right text-[10px] text-white/30">
+                  <p>📅 {tasks.dateKey}</p>
+                  <p>📆 {tasks.weekKey}</p>
+                </div>
+              )}
+            </div>
+
+            {tasksLoading && !tasks && (
+              <div className="text-center py-12">
+                <p className="text-xs text-white/30 animate-pulse">タスクを読み込み中...</p>
+              </div>
+            )}
+
+            {tasks && (() => {
+              // タスクカード1件
+              function TaskCard({ item }: { item: TaskItem }) {
+                const isAI = item.assignee === "ai";
+                const toggling = taskToggling.has(item.completionKey);
+                return (
+                  <div
+                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                      item.completed
+                        ? "border-white/6 bg-white/3 opacity-60"
+                        : isAI
+                          ? "border-blue-500/20 bg-blue-500/5 hover:border-blue-400/30"
+                          : "border-white/10 bg-white/5 hover:border-indigo-400/30 hover:bg-white/8 cursor-pointer"
+                    }`}
+                    onClick={() => !isAI && toggleTaskItem(item)}
+                  >
+                    {/* チェックボックス */}
+                    <div className="shrink-0 mt-0.5">
+                      {isAI ? (
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border text-[10px] ${
+                          item.completed
+                            ? "bg-blue-500/30 border-blue-400/40 text-blue-300"
+                            : "bg-blue-500/10 border-blue-400/20 text-blue-400/40"
+                        }`}>
+                          {item.completed ? "✓" : "⟳"}
+                        </div>
+                      ) : (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          toggling
+                            ? "border-white/20 bg-white/5"
+                            : item.completed
+                              ? "bg-emerald-500 border-emerald-400 text-white"
+                              : "border-white/30 hover:border-indigo-400"
+                        }`}>
+                          {item.completed && <span className="text-[11px] font-bold">✓</span>}
+                          {toggling && <span className="text-[9px] text-white/30 animate-pulse">⟳</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* テキスト */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm">{item.emoji}</span>
+                        <p className={`text-[12px] font-medium leading-snug ${item.completed ? "line-through text-white/40" : "text-white/90"}`}>
+                          {item.title}
+                        </p>
+                        {isAI && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/20 text-blue-300 shrink-0">自動</span>
+                        )}
+                        {item.isDirective && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-400/20 text-indigo-300 shrink-0">会議決定</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-white/30 mt-0.5 leading-relaxed">{item.description}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {item.scheduledTime && (
+                          <span className="text-[9px] text-blue-400/70 flex items-center gap-0.5">
+                            🕐 {item.scheduledTime}
+                          </span>
+                        )}
+                        {item.scheduledDay && (
+                          <span className="text-[9px] text-amber-400/70 flex items-center gap-0.5">
+                            📅 {item.scheduledDay}
+                          </span>
+                        )}
+                        {item.completed && item.completedAt && (
+                          <span className="text-[9px] text-white/25">
+                            {item.completedBy === "bot" ? "🤖 自動完了" : "👤 完了"}
+                            {" "}{fmtDate(item.completedAt).slice(5, 16)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              const dailyDone = tasks.daily.filter((t) => t.completed).length;
+              const weeklyDone = tasks.weekly.filter((t) => t.completed).length;
+
+              return (
+                <div className="space-y-6">
+                  {/* ── デイリータスク ── */}
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          📅 今日のタスク
+                          <span className="text-[10px] font-normal text-white/35">{tasks.dateKey}</span>
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {tasks.daily.map((_, i) => (
+                            <div key={i} className={`h-1.5 w-6 rounded-full ${i < dailyDone ? "bg-emerald-400" : "bg-white/10"}`} />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-white/40">{dailyDone}/{tasks.daily.length}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      {/* 手動タスク（上段） */}
+                      <div>
+                        <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">👤 あなたがやること</p>
+                        <div className="space-y-2">
+                          {tasks.daily.filter((t) => t.assignee === "user").map((item) => (
+                            <TaskCard key={item.id} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                      {/* 自動タスク（下段） */}
+                      <div className="mt-2">
+                        <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">🤖 AIが自動でやること</p>
+                        <div className="space-y-2">
+                          {tasks.daily.filter((t) => t.assignee === "ai").map((item) => (
+                            <TaskCard key={item.id} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* ── ウィークリータスク ── */}
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          📆 今週のタスク
+                          <span className="text-[10px] font-normal text-white/35">{tasks.weekKey}</span>
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {tasks.weekly.map((_, i) => (
+                            <div key={i} className={`h-1.5 w-5 rounded-full ${i < weeklyDone ? "bg-emerald-400" : "bg-white/10"}`} />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-white/40">{weeklyDone}/{tasks.weekly.length}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div>
+                        <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">👤 あなたがやること</p>
+                        <div className="space-y-2">
+                          {tasks.weekly.filter((t) => t.assignee === "user").map((item) => (
+                            <TaskCard key={item.id} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-[10px] text-white/30 mb-1.5 flex items-center gap-1">🤖 AIが自動でやること</p>
+                        <div className="space-y-2">
+                          {tasks.weekly.filter((t) => t.assignee === "ai").map((item) => (
+                            <TaskCard key={item.id} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* 説明フッター */}
+                  <div className="bg-white/3 border border-white/8 rounded-xl p-4">
+                    <p className="text-[10px] text-white/30 leading-relaxed">
+                      <span className="text-white/50 font-medium">タスクのルール：</span><br/>
+                      👤 手動タスク — あなたがチェックを入れてください。毎日/毎週リセットされます。<br/>
+                      🤖 自動タスク — ボットが実行した時点で自動的にチェックが入ります。手動変更不可。<br/>
+                      📌 会議決定タスク — 会議室で採用したディレクティブが自動追加されます。
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* ════════════════════ 3者会議室タブ ════════════════════ */}
         {tab === "meeting" && (() => {

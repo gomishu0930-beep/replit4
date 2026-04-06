@@ -9,6 +9,7 @@ import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, C
 import { contact } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
+import { autoCompleteTask } from './tasks.js';
 
 let isPosting = false;
 let _postingStartedAt: number | null = null;
@@ -297,6 +298,7 @@ export function startScheduler() {
     await discoverCampaignIds({ maxProbe: 300 }).catch((e: any) =>
       console.warn('  ⚠ キャンペーンID週次探索失敗:', e.message),
     );
+    autoCompleteTask('weekly-campaign-scan', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
   // ── 投稿スケジュール（シャドウバン回復モード）──────────────────────────────
@@ -309,12 +311,14 @@ export function startScheduler() {
   // 10:30 JST — インプ狙い（人間的な会話・共感ツイート）
   cron.schedule('30 10 * * *', async () => {
     await postImpressionSlot('10:30 インプ');
+    autoCompleteTask('daily-imp-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
   // 毎日 23:00 JST — シャドウバン回復自動チェック（③）
   cron.schedule('0 23 * * *', async () => {
     try {
       await checkShadowbanRecovery();
+      autoCompleteTask('daily-shadowban-check', 'daily').catch(() => {});
     } catch (e: any) {
       console.error(`  ❌ 回復チェックエラー: ${e.message}`);
     }
@@ -356,6 +360,8 @@ export function startScheduler() {
       外部パターン: { 総数: extInfo.count, 最終更新: extInfo.lastRefreshedAt },
       動的テンプレート: { 総数: dynInfo.count, 進化回数: dynInfo.evolutionCount, 最終進化: dynInfo.lastEvolvedAt },
     });
+    autoCompleteTask('weekly-perf-report', 'weekly').catch(() => {});
+    autoCompleteTask('weekly-external-monitor', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
   // 芸能人アフィリスロット — 18〜22時を毎時チェックし最適時間帯に投稿（毎日再計算）
@@ -381,6 +387,7 @@ export function startScheduler() {
     // 投稿済みフラグを先にセット（GCS保存）→ 二重投稿を防止
     setCelebPostedDate(todayKey);
     await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
+    autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
   // 起動時に永続化された投稿済み日付を表示（確認用）

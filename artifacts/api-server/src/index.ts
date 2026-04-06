@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startScheduler } from "./bot/scheduler";
 import { initStorage } from "./bot/storage";
 import { loadMeetingData } from "./bot/meeting";
+import { initTasks } from "./bot/tasks";
 
 const rawPort = process.env["PORT"];
 
@@ -29,6 +30,7 @@ const server = app.listen(port, async (err) => {
   // GCS からデータをロードしてからスケジューラーを起動
   await initStorage();
   await loadMeetingData();
+  await initTasks();
   startScheduler();
 });
 
