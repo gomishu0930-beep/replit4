@@ -1515,7 +1515,7 @@ function Dashboard() {
                 if (!res.ok) throw new Error(data.error ?? "エラー");
                 setMeetingSession((s) => s ? {
                   ...s,
-                  messages: [...s.messages, data.gptMsg1, data.claudeMsg1, data.gptMsg2, data.claudeMsg2],
+                  messages: [...s.messages, ...(data.messages ?? [])],
                 } : s);
               } else {
                 // GPT のみ / Claude のみ
@@ -1644,7 +1644,7 @@ function Dashboard() {
                   </div>
                 </div>
                 <p className="text-[10px] text-white/30 mt-2 text-center">
-                  ディープリサーチ → 2ラウンドディベート（GPT先手→Claude反論→GPT再反論→Claude統合）→ あなたが最終決定
+                  ディープリサーチ → 5ラウンドディベート（立論→反論→再論×3→最終統合）→ あなたが最終決定
                 </p>
               </div>
 
@@ -1757,16 +1757,22 @@ function Dashboard() {
                       <div className="space-y-2">
                         {sendMode === "trialogue" ? (
                           <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3">
-                            <p className="text-[10px] text-white/40 mb-2 font-medium">🎙 2ラウンドディベート進行中...</p>
+                            <p className="text-[10px] text-white/40 mb-2 font-medium">🎙 5ラウンドディベート進行中... (完了まで約1〜2分)</p>
                             <div className="space-y-1.5">
                               {[
-                                { icon: "🤖", label: "Round 1 — o3 Thinking が立論中", color: "text-blue-300/70" },
-                                { icon: "🧠", label: "Round 1 — Claude が反論中", color: "text-violet-300/50" },
-                                { icon: "🤖", label: "Round 2 — o3 Thinking が再反論中", color: "text-blue-300/30" },
-                                { icon: "🧠", label: "Round 2 — Claude が最終統合中", color: "text-violet-300/20" },
+                                { icon: "🤖", label: "Round 1 — o3 Thinking が立論中",       color: "text-blue-300/80" },
+                                { icon: "🧠", label: "Round 1 — Claude が反論中",             color: "text-violet-300/70" },
+                                { icon: "🤖", label: "Round 2 — o3 Thinking が再論中",        color: "text-blue-300/55" },
+                                { icon: "🧠", label: "Round 2 — Claude が再反論中",           color: "text-violet-300/45" },
+                                { icon: "🤖", label: "Round 3 — o3 Thinking が議論深化中",    color: "text-blue-300/35" },
+                                { icon: "🧠", label: "Round 3 — Claude が考察中",             color: "text-violet-300/30" },
+                                { icon: "🤖", label: "Round 4 — o3 Thinking が精査中",        color: "text-blue-300/22" },
+                                { icon: "🧠", label: "Round 4 — Claude が検証中",             color: "text-violet-300/18" },
+                                { icon: "🤖", label: "Round 5 — o3 Thinking が最終立場表明中", color: "text-blue-300/15" },
+                                { icon: "🧠", label: "Round 5 — Claude が最終統合中",         color: "text-violet-300/12" },
                               ].map((step, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                  <span className="text-sm">{step.icon}</span>
+                                  <span className="text-xs">{step.icon}</span>
                                   <p className={`text-[10px] animate-pulse ${step.color}`}>{step.label}</p>
                                 </div>
                               ))}
@@ -1792,7 +1798,7 @@ function Dashboard() {
                     <p className="text-[10px] text-white/30 mb-1.5">送信先：</p>
                     <div className="flex gap-2">
                       {([
-                        { mode: "trialogue" as const, label: "🎙 3者会議", desc: "2ラウンドディベート", active: "bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-indigo-400/40 text-white" },
+                        { mode: "trialogue" as const, label: "🎙 3者会議", desc: "5ラウンドディベート", active: "bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-indigo-400/40 text-white" },
                         { mode: "gpt"       as const, label: "🤖 o3のみ",  desc: "推論・リサーチ",     active: "bg-blue-500/20 border-blue-400/40 text-blue-200" },
                         { mode: "claude"    as const, label: "🧠 Claudeのみ", desc: "実装観点の意見",  active: "bg-violet-500/20 border-violet-400/40 text-violet-200" },
                       ] as const).map(({ mode, label, desc, active }) => (

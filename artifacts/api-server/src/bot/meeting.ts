@@ -325,58 +325,66 @@ export async function sendToClaude(sessionId: string, userMessage: string): Prom
   return msg;
 }
 
-// ─── 3者会議モード（2ラウンドディベート）────────────────────────────────
+// ─── 3者会議モード（5ラウンドディベート）────────────────────────────────
 
-export type TrialogueResult = {
-  gptMsg1: MeetingMessage;
-  claudeMsg1: MeetingMessage;
-  gptMsg2: MeetingMessage;
-  claudeMsg2: MeetingMessage;
-};
+const TOTAL_ROUNDS = 5;
+
+// ラウンドごとのGPT指示
+function gptRoundInstruction(round: number, total: number): string {
+  if (round === 1) {
+    return `【ラウンド${round}/${total} - 立論】あなたが最初に発言します。データと外部事例を根拠に明確な立場を示してください。論点を箇条書きで整理し、Claudeが反論しやすいよう構造化してください。`;
+  }
+  if (round === total) {
+    return `【ラウンド${round}/${total} - 最終立場】これが最後の発言です。これまでの議論を経て修正された立場を簡潔に示してください。Claudeへの最終的な問いかけや提案があれば添えてください。`;
+  }
+  return `【ラウンド${round}/${total} - 再論】Claudeの指摘を受けて立場を再検討してください。認める点は明示し、譲れない点は根拠を補強して主張してください。論点を絞って簡潔に。`;
+}
+
+// ラウンドごとのClaude指示
+function claudeRoundInstruction(round: number, total: number): string {
+  if (round === total) {
+    return `【ラウンド${round}/${total} - 最終統合】${total}ラウンドの議論全体を総括してください。①合意した点、②残る対立点、③ユーザーへの選択肢（A案/B案など）、④推奨案と根拠 を必ず含めてください。「📌 決定候補:」を使って実行項目を3〜5件提案してください。`;
+  }
+  return `【ラウンド${round}/${total} - 反論/補完】GPTの主張を批判的に検討してください。同意できる点を明示しつつ、実装リスク・現実的制約・見落としの観点から反論してください。新たな論点があれば提示してください。`;
+}
 
 export async function runTrialogue(
   sessionId: string,
   userMessage: string,
-): Promise<TrialogueResult> {
+): Promise<{ messages: MeetingMessage[] }> {
   const session = cache.meetings.find((m) => m.id === sessionId);
   if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
 
   pushMsg(session, 'user', userMessage);
 
-  // ── ラウンド1: GPT が調査・データ観点で先手を打つ ──
-  const gptReply1 = await speakAsGPT(
-    session,
-    `【議題】${userMessage}\n\nリサーチ・データ・外部トレンドの観点から先に意見を述べてください。論点を明確に整理し、Claudeが反論・補足しやすいよう構造化してください。`,
-    `【ラウンド1 - GPT先手】あなたが最初に発言します。データと外部事例を根拠に、具体的な立場を取ってください。曖昧な表現は避け、賛否・強弱・優先度を明示してください。`,
-  );
-  const gptMsg1 = pushMsg(session, 'gpt', gptReply1);
+  const newMessages: MeetingMessage[] = [];
+  let lastGptReply = '';
+  let lastClaudeReply = '';
 
-  // ── ラウンド1: Claude が GPT の意見に反論・補完 ──
-  const claudeReply1 = await speakAsClaude(
-    session,
-    `GPTが以下のように述べました：\n\n${gptReply1}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討してください。同意できる点・反論すべき点・見落としている点を明確に示してください。`,
-    `【ラウンド1 - Claude反論/補完】GPTの主張に対して積極的に議論してください。単なる補完ではなく、実装リスク・現実的制約の観点からGPTの意見に挑戦してください。重要な対立点があれば明示してください。`,
-  );
-  const claudeMsg1 = pushMsg(session, 'claude', claudeReply1);
+  for (let round = 1; round <= TOTAL_ROUNDS; round++) {
+    // ── GPT発言 ──
+    const gptPrompt = round === 1
+      ? `【議題】${userMessage}\n\nリサーチ・データ・外部トレンドの観点から先に意見を述べてください。論点を明確に整理し、Claudeが反論しやすいよう構造化してください。`
+      : `Claudeが以下のように述べました：\n\n${lastClaudeReply}\n\n---\n元の議題：${userMessage}\n\nClaudeの指摘を受けて立場を再検討し、返答してください。`;
 
-  // ── ラウンド2: GPT が Claude の反論を受けて立場を再表明・修正 ──
-  const gptReply2 = await speakAsGPT(
-    session,
-    `Claudeが以下のように反論・補完しました：\n\n${claudeReply1}\n\n---\n元の議題：${userMessage}\n\nClaudeの指摘を受けて、自分の立場を再検討してください。同意できる点は認め、譲れない点は根拠を補強して主張してください。`,
-    `【ラウンド2 - GPT再反論/修正】Claudeの指摘を受けた上で、あなたの最終的な立場を示してください。部分的に修正した場合はその理由を述べ、合意できた点と対立点を整理してください。ユーザーが判断しやすいよう論点を絞ってください。`,
-  );
-  const gptMsg2 = pushMsg(session, 'gpt', gptReply2);
+    const gptReply = await speakAsGPT(session, gptPrompt, gptRoundInstruction(round, TOTAL_ROUNDS));
+    const gptMsg = pushMsg(session, 'gpt', gptReply);
+    newMessages.push(gptMsg);
+    lastGptReply = gptReply;
 
-  // ── ラウンド2: Claude が最終統合・決定候補を提示 ──
-  const claudeReply2 = await speakAsClaude(
-    session,
-    `2ラウンドの議論を経て、GPTが以下のように再発言しました：\n\n${gptReply2}\n\n---\n元の議題：${userMessage}\n\n議論全体を踏まえ、最終的な統合見解と、ユーザーが決断すべき選択肢を整理してください。`,
-    `【ラウンド2 - Claude最終統合】2ラウンドの議論を総括してください。①合意できた点、②残る対立点、③ユーザーへの決断を求める選択肢（A案/B案など）、④推奨案とその根拠 を必ず含めてください。「📌 決定候補:」を使って具体的な実行項目を3〜5件提案してください。`,
-  );
-  const claudeMsg2 = pushMsg(session, 'claude', claudeReply2);
+    // ── Claude発言 ──
+    const claudePrompt = round === TOTAL_ROUNDS
+      ? `${TOTAL_ROUNDS}ラウンドの議論を経て、GPTが最終的に以下のように述べました：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\n議論全体を踏まえた最終統合見解とユーザーへの決断材料を提示してください。`
+      : `GPTが以下のように述べました（ラウンド${round}）：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討し、返答してください。`;
+
+    const claudeReply = await speakAsClaude(session, claudePrompt, claudeRoundInstruction(round, TOTAL_ROUNDS));
+    const claudeMsg = pushMsg(session, 'claude', claudeReply);
+    newMessages.push(claudeMsg);
+    lastClaudeReply = claudeReply;
+  }
 
   await saveData();
-  return { gptMsg1, claudeMsg1, gptMsg2, claudeMsg2 };
+  return { messages: newMessages };
 }
 
 // ─── 決定事項自動抽出 ────────────────────────────────────────────────────────
