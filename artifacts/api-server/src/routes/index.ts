@@ -5,6 +5,8 @@ import botRouter from "./bot";
 import triggerRouter from "./trigger";
 import meetingRouter from "./meeting";
 import tasksRouter from "./tasks";
+import goalsRouter from "./goals";
+import quickConfigRouter from "./quick-config";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use(botRouter);
 router.use(triggerRouter);
 router.use(meetingRouter);
 router.use(tasksRouter);
+router.use(goalsRouter);
+router.use(quickConfigRouter);
 
 export default router;

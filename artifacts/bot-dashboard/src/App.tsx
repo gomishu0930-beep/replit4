@@ -146,6 +146,48 @@ interface DirectiveExecution {
   changes: string[];
   success: boolean;
 }
+interface GoalKPI {
+  metric: string;
+  label: string;
+  target: number | string;
+  unit: string;
+  higherIsBetter: boolean;
+  actual: number | null;
+  achieved: boolean | null;
+}
+interface WeekGoal {
+  week: string;
+  start: string;
+  end: string;
+  slot: string;
+  kpis: GoalKPI[];
+  note?: string;
+  status: "upcoming" | "current" | "past";
+  postCount: number;
+}
+interface GateCondition {
+  metric: string;
+  label: string;
+  target: number | string;
+  unit: string;
+  actual: number | null;
+  achieved: boolean | null;
+}
+interface GateGoal {
+  id: string;
+  date: string;
+  label: string;
+  conditions: GateCondition[];
+  status: "upcoming" | "today" | "past";
+}
+interface GoalData {
+  goal: { base: number; stretch: number; period: string; startDate: string };
+  weeks: WeekGoal[];
+  gates: GateGoal[];
+}
+interface QuickConfigResult {
+  execution: { actionType: string; summary: string; changes: string[]; success: boolean };
+}
 interface MeetingDirective {
   id: string;
   text: string;
@@ -577,7 +619,7 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks">("overview");
+  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -596,6 +638,12 @@ function Dashboard() {
   const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"], assignee: "user" as Assignee });
   const [dirSaving, setDirSaving] = useState(false);
   const [executingId, setExecutingId] = useState<string | null>(null);
+
+  // クイック設定モーダル
+  const [qcOpen, setQcOpen] = useState(false);
+  const [qcInput, setQcInput] = useState("");
+  const [qcLoading, setQcLoading] = useState(false);
+  const [qcResult, setQcResult] = useState<QuickConfigResult | null>(null);
 
   // 送信モード・決定抽出
   const [sendMode, setSendMode] = useState<"gpt" | "claude" | "trialogue">("trialogue");
@@ -675,6 +723,11 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/posts`).then((r) => r.json()),
     refetchInterval: 60000,
   });
+  const { data: goalsData } = useQuery<GoalData>({
+    queryKey: ["goals", tick],
+    queryFn: () => fetch(`${API}/api/bot/goals`).then((r) => r.json()),
+    refetchInterval: 60000,
+  });
   const { data: externalInfo } = useQuery<ExternalInfo>({
     queryKey: ["externalPatterns", tick],
     queryFn: () => fetch(`${API}/api/bot/external-patterns`).then((r) => r.json()),
@@ -720,6 +773,7 @@ function Dashboard() {
 
   const TABS = [
     { id: "overview",  label: "概要" },
+    { id: "goals",     label: "🎯 目標" },
     { id: "analysis",  label: "📊 分析" },
     { id: "strategy",  label: "🧠 戦略エンジン" },
     { id: "posts",     label: "投稿履歴" },
@@ -756,6 +810,13 @@ function Dashboard() {
             <div className="text-[11px] text-white/40 hidden sm:block">
               稼働: {status ? formatUptime(status.uptime) : "—"}
             </div>
+            <button
+              onClick={() => { setQcOpen(true); setQcResult(null); setQcInput(""); }}
+              className="px-2.5 py-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-[11px] font-medium hover:bg-indigo-500/20 transition-colors"
+              title="クイック設定"
+            >
+              ⚙️ 設定
+            </button>
             <div className="flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -1694,6 +1755,158 @@ function Dashboard() {
           </div>
         )}
 
+        {/* ════════════════════ 目標タブ ════════════════════ */}
+        {tab === "goals" && (
+          <div className="space-y-5">
+            {/* 収益目標バナー */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-xs text-amber-300/70 mb-0.5">3ヶ月収益目標</p>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-2xl font-bold text-amber-300">
+                      ¥{goalsData?.goal.stretch.toLocaleString() ?? "50,000"}
+                    </span>
+                    <span className="text-xs text-amber-300/50">
+                      ベース目標 ¥{goalsData?.goal.base.toLocaleString() ?? "30,000"}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-amber-300/50">開始日</p>
+                  <p className="text-sm font-medium text-amber-300">{goalsData?.goal.startDate ?? "2026-04-06"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Gate 達成状況 */}
+            <div>
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Gate 達成条件</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(goalsData?.gates ?? []).map((gate) => {
+                  const statusCfg = {
+                    upcoming: { border: "border-white/10", bg: "bg-white/5",          badge: "bg-white/10 text-white/40",          label: "予定" },
+                    today:    { border: "border-amber-500/40", bg: "bg-amber-500/10", badge: "bg-amber-500/20 text-amber-300",      label: "本日判定" },
+                    past:     { border: "border-white/10", bg: "bg-white/5",          badge: "bg-white/10 text-white/40",          label: "判定済" },
+                  }[gate.status];
+                  const allPassed = gate.conditions.every(c => c.achieved === true);
+                  const anyFailed = gate.conditions.some(c => c.achieved === false);
+                  const gateResult = gate.status === "past" || gate.status === "today"
+                    ? (allPassed ? { icon: "✅", cls: "text-emerald-400" } : anyFailed ? { icon: "❌", cls: "text-red-400" } : { icon: "⏳", cls: "text-white/40" })
+                    : null;
+                  return (
+                    <div key={gate.id} className={`rounded-xl border p-3 ${statusCfg.border} ${statusCfg.bg}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-bold text-white">{gate.id}</span>
+                          {gateResult && <span className={`text-sm ${gateResult.cls}`}>{gateResult.icon}</span>}
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusCfg.badge}`}>{statusCfg.label}</span>
+                      </div>
+                      <p className="text-xs text-white/60 mb-1">{gate.label}</p>
+                      <p className="text-[10px] text-white/30 mb-2">{gate.date}</p>
+                      <div className="space-y-1">
+                        {gate.conditions.map((c) => (
+                          <div key={c.metric} className="flex items-center justify-between text-[11px]">
+                            <span className="text-white/50">{c.label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-white/70">≥ {c.target}{c.unit}</span>
+                              {c.actual !== null && (
+                                <span className={`font-mono font-medium ${c.achieved ? "text-emerald-400" : "text-red-400"}`}>
+                                  ({c.actual}{c.unit})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 週次KPI一覧 */}
+            <div>
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">週次KPIロードマップ</h3>
+              <div className="space-y-2">
+                {(goalsData?.weeks ?? []).map((w) => {
+                  const cfg = {
+                    current:  { border: "border-indigo-500/40", bg: "bg-indigo-500/10", badgeCls: "bg-indigo-500/20 text-indigo-300", badge: "今週" },
+                    upcoming: { border: "border-white/10",      bg: "bg-white/5",       badgeCls: "bg-white/10 text-white/40",       badge: "予定" },
+                    past:     { border: "border-white/10",      bg: "bg-white/5",       badgeCls: "bg-white/10 text-white/30",       badge: "完了" },
+                  }[w.status];
+                  return (
+                    <div key={w.week} className={`rounded-xl border p-3 ${cfg.border} ${cfg.bg}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${cfg.badgeCls}`}>{w.week}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-white/60">{w.start.slice(5)} 〜 {w.end.slice(5)}</span>
+                              <span className="text-[10px] text-white/30">{w.slot}</span>
+                              {w.postCount > 0 && (
+                                <span className="text-[10px] text-white/30">{w.postCount}投稿</span>
+                              )}
+                            </div>
+                            {w.note && <p className="text-[10px] text-white/30 mt-0.5 truncate">{w.note}</p>}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${cfg.badgeCls}`}>{cfg.badge}</span>
+                        </div>
+                      </div>
+                      {w.kpis.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {w.kpis.map((kpi) => {
+                            const hasActual = kpi.actual !== null;
+                            const achieved = kpi.achieved;
+                            return (
+                              <div key={kpi.metric} className={`rounded-lg border px-2.5 py-1.5 text-[11px] ${
+                                achieved === true  ? "border-emerald-500/30 bg-emerald-500/10" :
+                                achieved === false ? "border-red-500/30 bg-red-500/10" :
+                                "border-white/10 bg-white/5"
+                              }`}>
+                                <span className="text-white/50">{kpi.label}: </span>
+                                <span className="font-medium text-white/80">
+                                  {typeof kpi.target === "number" ? `≥ ${kpi.target}${kpi.unit}` : kpi.target}
+                                </span>
+                                {hasActual && (
+                                  <span className={`ml-1.5 font-mono font-bold ${achieved ? "text-emerald-400" : "text-red-400"}`}>
+                                    ({kpi.actual}{kpi.unit})
+                                  </span>
+                                )}
+                                {!hasActual && w.status !== "upcoming" && (
+                                  <span className="ml-1.5 text-white/20">（計測中）</span>
+                                )}
+                                {achieved === true && <span className="ml-1">✅</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* クイック設定への誘導 */}
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/80">⚙️ 詳細設定を変更する</p>
+                <p className="text-xs text-white/40 mt-0.5">投稿重み・間隔・テンプレートなどをAIに自然言語で指示</p>
+              </div>
+              <button
+                onClick={() => { setQcOpen(true); setQcResult(null); setQcInput(""); }}
+                className="shrink-0 px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-colors"
+              >
+                クイック設定を開く
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ════════════════════ 3者会議室タブ ════════════════════ */}
         {tab === "meeting" && (() => {
           const PRESET_TOPICS = [
@@ -2561,6 +2774,107 @@ function Dashboard() {
       <footer className="border-t border-white/8 mt-8 py-3 text-center text-[10px] text-white/20">
         FANZA X Bot — 自律稼働中 · 30秒ごとに自動更新 🤖
       </footer>
+
+      {/* ════ クイック設定モーダル ════ */}
+      {qcOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0d1529] shadow-2xl">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/8">
+              <div>
+                <h2 className="text-sm font-semibold text-white">⚙️ クイック設定</h2>
+                <p className="text-xs text-white/40 mt-0.5">設定したいことを自然言語で入力 → AIが即時実行</p>
+              </div>
+              <button onClick={() => setQcOpen(false)} className="text-white/30 hover:text-white/60 transition-colors text-lg leading-none">✕</button>
+            </div>
+
+            {/* 入力フォーム */}
+            <div className="p-5 space-y-3">
+              <textarea
+                value={qcInput}
+                onChange={(e) => setQcInput(e.target.value)}
+                disabled={qcLoading}
+                placeholder={"例: buzzの重みを3に上げて\n例: 投稿間隔を2時間にして\n例: amateur系テンプレートを3件追加して"}
+                rows={4}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 resize-none focus:outline-none focus:border-indigo-500/50 disabled:opacity-50"
+              />
+
+              {/* クイックプリセット */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "buzzの重みを2.5に",
+                  "amateurを強化して",
+                  "テンプレを3件追加",
+                  "監視間隔を2時間に",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => setQcInput(preset)}
+                    disabled={qcLoading}
+                    className="px-2.5 py-1 rounded-lg border border-white/10 bg-white/5 text-[11px] text-white/50 hover:text-white/80 hover:border-white/20 transition-colors disabled:opacity-40"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={async () => {
+                  if (!qcInput.trim() || qcLoading) return;
+                  setQcLoading(true);
+                  setQcResult(null);
+                  try {
+                    const res = await fetch(`${API}/api/bot/quick-config`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ instruction: qcInput.trim() }),
+                    });
+                    const data: QuickConfigResult = await res.json();
+                    setQcResult(data);
+                  } catch {
+                    setQcResult({ execution: { actionType: "error", summary: "通信エラー", changes: [], success: false } });
+                  } finally {
+                    setQcLoading(false);
+                  }
+                }}
+                disabled={qcLoading || !qcInput.trim()}
+                className="w-full py-2.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-sm font-medium hover:bg-indigo-500/30 transition-colors disabled:opacity-40"
+              >
+                {qcLoading ? "⏳ 実行中..." : "⚡ 今すぐ実行"}
+              </button>
+
+              {/* 実行結果 */}
+              {qcResult && (
+                <div className={`rounded-xl border p-3 ${
+                  qcResult.execution.success
+                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    : "border-red-500/30 bg-red-500/10"
+                }`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-sm">{qcResult.execution.success ? "✅" : "⚠️"}</span>
+                    <span className="text-sm font-medium text-white">{qcResult.execution.summary}</span>
+                  </div>
+                  {qcResult.execution.changes.length > 0 && (
+                    <ul className="space-y-0.5 mt-1">
+                      {qcResult.execution.changes.map((c, i) => (
+                        <li key={i} className="text-xs text-white/60 pl-2">・{c}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {qcResult.execution.success && (
+                    <button
+                      onClick={() => { setQcOpen(false); setQcInput(""); setQcResult(null); }}
+                      className="mt-2 text-xs text-indigo-300 hover:text-indigo-200 transition-colors"
+                    >
+                      閉じる →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
