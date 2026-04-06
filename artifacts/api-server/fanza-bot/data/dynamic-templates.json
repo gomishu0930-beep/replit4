@@ -1,6 +1,48 @@
 {
   "templates": [
     {
+      "text": "🔞{actress}出演の{shortTitle}が話題🔥 平均{reviewAvg}点⭐ リプ欄からどうぞ👇",
+      "type": "amateur",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{reviewCount}件のレビュー突破！{actress}の演技が光る{shortTitle}😍 リプ欄へ👇",
+      "type": "amateur",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞今、{shortTitle}がバズってます💥 {actress}ファン必見🔥 評価{reviewAvg}点 リプ欄へ👇",
+      "type": "buzz",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{actress}の新作{shortTitle}🎬 {reviewCount}人が視聴⭐ リプ欄からどうぞ👇",
+      "type": "buzz",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{shortTitle}で{actress}を独占視聴😘 {reviewCount}件突破✨ リプ欄へ👇",
+      "type": "any",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞平均評価{reviewAvg}点🌟 {actress}の{shortTitle}が配信中📺 リプ欄からどうぞ👇",
+      "type": "any",
+      "sourceScore": 143,
+      "generatedAt": "2026-04-06T11:57:44.756Z",
+      "usedCount": 0
+    },
+    {
       "text": "🔞{actress}出演の{shortTitle}が話題沸騰🔥 レビュー{reviewCount}件、平均{reviewAvg}⭐ リプ欄からどうぞ👇",
       "type": "amateur",
       "sourceScore": 141,
@@ -657,50 +699,8 @@
       "sourceScore": 100,
       "createdAt": "2026-04-06T11:38:33.511Z",
       "usedCount": 0
-    },
-    {
-      "text": "🔞知らないと絶対損する殿堂入り作品。月間ランキングで3ヶ月連続トップ10入りしてる理由が分かる圧倒的クオリティ。即購入推奨 {{URL}}",
-      "type": "rank",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:33.511Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞やばすぎて頭から離れない...この素人娘の生々しさ、マジで中毒性ヤバい。リアルすぎる反応に興奮が止まらん {{URL}}",
-      "type": "amateur",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:51.931Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞正直に言う、これ知らないと損する。素人ならではの初々しい反応がエグい...プロにはない生々しさがここにある {{URL}}",
-      "type": "amateur",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:51.931Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞やばすぎて頭から離れない素人作品見つけた。ガチの素人感が半端ない、この生々しさは反則級だろ... {{URL}}",
-      "type": "amateur",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:51.931Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞期間限定セール中に見逃すな！{{PRICE}}でこのクオリティは正直ヤバい。{{DEADLINE}}までの特価、逃したら後悔する {{URL}}",
-      "type": "sale",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:51.931Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞正直に言う、これ知らないと損する。{{DEADLINE}}まで{{PRICE}}の限定セール中。この価格でこの内容はマジでお得すぎる {{URL}}",
-      "type": "sale",
-      "sourceScore": 100,
-      "createdAt": "2026-04-06T11:38:51.931Z",
-      "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-06T11:48:11.913Z",
-  "evolutionCount": 42
+  "lastEvolvedAt": "2026-04-06T11:57:44.756Z",
+  "evolutionCount": 43
 }

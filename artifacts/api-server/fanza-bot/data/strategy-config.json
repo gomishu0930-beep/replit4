@@ -1,33 +1,33 @@
 {
   "monitorIntervalHours": 1,
   "typeWeights": {
-    "amateur": 1.16,
-    "buzz": 1.8,
+    "amateur": 1.13,
+    "buzz": 1.64,
     "rank": 0.8,
-    "sale": 0.87,
-    "random": 0.87
+    "sale": 0.9,
+    "random": 0.9
   },
   "cycleStats": {
-    "lastNewPatterns": 176,
-    "avgNewPatterns": 175.05853200717695,
-    "totalCycles": 66
+    "lastNewPatterns": 177,
+    "avgNewPatterns": 175.64097240502386,
+    "totalCycles": 67
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "66サイクル実績 / 平均新規パターン 175.1件/サイクル",
+      "finding": "67サイクル実績 / 平均新規パターン 175.6件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:48:12.414Z"
+      "testedAt": "2026-04-06T11:57:44.758Z"
     },
     {
       "id": "type-weights",
       "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
       "status": "adjusted",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
-      "adjustment": "buzz: 2.00 → 1.80 (平均スコア 1.0)",
-      "testedAt": "2026-04-06T11:48:12.414Z"
+      "adjustment": "buzz: 1.80 → 1.64 (平均スコア 1.0)",
+      "testedAt": "2026-04-06T11:57:44.759Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:48:12.414Z"
+      "testedAt": "2026-04-06T11:57:44.759Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,17 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:48:12.414Z"
+      "testedAt": "2026-04-06T11:57:44.759Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-06T11:57:44.759Z",
+      "cycle": 67,
+      "decisions": [
+        "コンテンツ重み更新: buzz: 1.80 → 1.64 (平均スコア 1.0)"
+      ]
+    },
     {
       "at": "2026-04-06T11:48:12.414Z",
       "cycle": 66,
@@ -402,15 +409,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-05T04:12:33.912Z",
-      "cycle": 20,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-06T11:48:12.414Z",
-  "version": 67
+  "lastEvaluatedAt": "2026-04-06T11:57:44.759Z",
+  "version": 68
 }
