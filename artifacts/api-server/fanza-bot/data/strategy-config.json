@@ -1,33 +1,33 @@
 {
   "monitorIntervalHours": 1,
   "typeWeights": {
-    "amateur": 1.5,
-    "buzz": 1.5,
-    "rank": 1,
-    "sale": 0.8,
-    "random": 0.8
+    "amateur": 1.2,
+    "buzz": 2,
+    "rank": 0.8,
+    "sale": 0.84,
+    "random": 0.84
   },
   "cycleStats": {
-    "lastNewPatterns": 172,
-    "avgNewPatterns": 172.7929224636265,
-    "totalCycles": 64
+    "lastNewPatterns": 179,
+    "avgNewPatterns": 174.65504572453852,
+    "totalCycles": 65
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "64サイクル実績 / 平均新規パターン 172.8件/サイクル",
+      "finding": "65サイクル実績 / 平均新規パターン 174.7件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:05:04.105Z"
+      "testedAt": "2026-04-06T11:34:55.042Z"
     },
     {
       "id": "type-weights",
       "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
-      "status": "confirmed",
+      "status": "adjusted",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
-      "adjustment": null,
-      "testedAt": "2026-04-06T11:05:04.106Z"
+      "adjustment": "buzz: 1.50 → 1.40 (平均スコア 1.0), amateur: 1.50 → 1.40 (平均スコア 1.0)",
+      "testedAt": "2026-04-06T11:34:55.043Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:05:04.106Z"
+      "testedAt": "2026-04-06T11:34:55.043Z"
     },
     {
       "id": "posting-hours",
@@ -43,10 +43,27 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-06T11:05:04.106Z"
+      "testedAt": "2026-04-06T11:34:55.043Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-06T11:39:11.237Z",
+      "cycle": 65,
+      "decisions": [
+        "[会議決定] 会議決定: シャドウバン回復期間はrankコンテンツの重みを0.8に下げ、buzzを2.0に引き上げる。impressionタイプとの相性を優先。amateur",
+        "投稿重み[buzz]: 1.4 → 2",
+        "投稿重み[rank]: 1 → 0.8",
+        "投稿重み[amateur]: 1.4 → 1.2"
+      ]
+    },
+    {
+      "at": "2026-04-06T11:34:55.043Z",
+      "cycle": 65,
+      "decisions": [
+        "コンテンツ重み更新: buzz: 1.50 → 1.40 (平均スコア 1.0) / amateur: 1.50 → 1.40 (平均スコア 1.0)"
+      ]
+    },
     {
       "at": "2026-04-06T11:29:31.169Z",
       "cycle": 64,
@@ -392,22 +409,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-05T01:30:35.941Z",
-      "cycle": 18,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-05T00:54:44.522Z",
-      "cycle": 17,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-06T11:05:04.106Z",
-  "version": 65
+  "lastEvaluatedAt": "2026-04-06T11:34:55.043Z",
+  "version": 66
 }

@@ -203,49 +203,79 @@ async function monitoringLoop() {
   }
 }
 
+// ─── A/Bテスト週判定 ──────────────────────────────────────────────────────────
+// W1 (4/7-4/13): 10:30 JST のみ
+// W2 (4/14-4/20): 05:00 JST のみ
+// W3以降: 通常の動的スロット (18-22 JST) に戻す
+
+function getABTestWeek(): 'W1' | 'W2' | 'normal' {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const dateKey = nowJst.toISOString().slice(0, 10);
+  if (dateKey >= '2026-04-07' && dateKey <= '2026-04-13') return 'W1';
+  if (dateKey >= '2026-04-14' && dateKey <= '2026-04-20') return 'W2';
+  return 'normal';
+}
+
 // ─── 取りこぼしスロット補完（起動時チェック）────────────────────────────────
-// 1日2件体制: 芸能人アフィリ(20:00) のみ補完対象
-// インプ狙い(10:30)は補完しない（時間帯を外れた宣伝色のない投稿は逆効果）
-//
-// バグB修正: postItems(buzzフォーマット) → postCelebritySlot(芸能人フォーマット)に変更
-// バグC修正: getPostsAfter()は全タイプ確認 → 'celebrity'タイプ限定に変更
-//           （impression投稿があっても芸能人スロット欠落と正しく判定できるように）
+// A/Bテスト週: 当日スロット時刻を判定して補完
+// 通常週: 動的芸能人スロット (20:00前後) の取りこぼしのみ補完
 
 async function catchUpMissedSlots() {
   const nowUtc = Date.now();
   const jstOffset = 9 * 60 * 60 * 1000;
   const nowJst = new Date(nowUtc + jstOffset);
+  const todayKey = nowJst.toISOString().slice(0, 10);
 
   const todayMidnightJst = new Date(
     Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate()) - jstOffset,
   );
 
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const week = getABTestWeek();
 
-  // 芸能人スロット（20:00 JST）の取りこぼしチェック
+  // A/Bテスト週: 今日の投稿済みフラグがあればスキップ
+  if (week === 'W1' || week === 'W2') {
+    if (getCelebPostedDate() === todayKey) {
+      console.log(`  ✅ [補完チェック] ${week} 本日分投稿済み → スキップ`);
+      return;
+    }
+    // A/Bテスト週の補完対象スロット時刻
+    const slotHour = week === 'W1' ? 10 : 5;
+    const slotMin  = week === 'W1' ? 30 : 0;
+    const slotTime = new Date(todayMidnightJst.getTime() + (slotHour * 60 + slotMin) * 60 * 1000);
+    const slotPastMs = nowUtc - slotTime.getTime();
+    if (slotPastMs < 0) {
+      console.log(`  ℹ️  [補完チェック] ${week} スロットはまだ先 → スキップ`);
+      return;
+    }
+    if (slotPastMs > 4 * 60 * 60 * 1000) {
+      console.log(`  ℹ️  [補完チェック] ${week} スロットから4時間超過 → スキップ`);
+      return;
+    }
+    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${week} スロット → 補完投稿開始`);
+    setCelebPostedDate(todayKey);
+    await postCelebritySlot(`${week} 補完`);
+    return;
+  }
+
+  // 通常週: 芸能人スロット（動的 20:00前後）の取りこぼしチェック
   const celebSlotHour = 20;
   const slotTime = new Date(todayMidnightJst.getTime() + celebSlotHour * 60 * 60 * 1000);
   const slotPastMs = nowUtc - slotTime.getTime();
-
-  // スロット未到達（未来）または6時間以上前はスキップ
   if (slotPastMs < 0) {
-    console.log(`  ℹ️  [補完チェック] 20:00 芸能人スロットはまだ先 → スキップ`);
+    console.log(`  ℹ️  [補完チェック] 芸能人スロットはまだ先 → スキップ`);
     return;
   }
   if (slotPastMs > 6 * 60 * 60 * 1000) {
-    console.log(`  ℹ️  [補完チェック] 20:00 芸能人スロットから6時間超過 → スキップ`);
+    console.log(`  ℹ️  [補完チェック] 芸能人スロットから6時間超過 → スキップ`);
     return;
   }
-
-  // バグC修正: 'celebrity'タイプの投稿のみチェック（impressionなど他タイプは無視）
   const celebPostsAfter = getPostsAfter(slotTime).filter((p: any) => p.type === 'celebrity');
   if (celebPostsAfter.length > 0) {
     console.log(`  ✅ [補完チェック] 芸能人スロット投稿済み確認 → スキップ`);
     return;
   }
-
-  // 取りこぼし検出 → バグB修正: postCelebritySlot（正しい芸能人フォーマット）で補完
-  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 20:00 芸能人スロット → 補完投稿開始`);
+  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 芸能人スロット → 補完投稿開始`);
   try {
     await postCelebritySlot('20:00 芸能人（補完）');
   } catch (e: any) {
@@ -301,17 +331,51 @@ export function startScheduler() {
     autoCompleteTask('weekly-campaign-scan', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // ── 投稿スケジュール（シャドウバン回復モード）──────────────────────────────
-  // 設計方針: 1日2件に絞りアカウント信頼スコアを回復させる
-  //   インプ狙い（リンクなし）: 10:30 → 1本
-  //   芸能人アフィリ           : 動的時間帯 → 1本
-  //   合計: 2本/日
-  // ※ 回復が確認できたら段階的に増やす
+  // ── 投稿スケジュール（シャドウバン回復 A/Bテストモード）─────────────────────
+  // 設計方針: 1日1件に絞り信頼スコアを回復しながらスロット最適化テストを実施
+  //   W1 (4/7-4/13):  10:30 JST のみ → 芸能人アフィリ1本
+  //   W2 (4/14-4/20): 05:00 JST のみ → 芸能人アフィリ1本
+  //   W3以降:          動的 (18-22 JST) に戻す
+  // ※ 合計: 1本/日（A/Bテスト期間）
 
-  // 10:30 JST — インプ狙い（人間的な会話・共感ツイート）
+  // 05:00 JST — W2専用スロット（週次A/Bテスト）
+  cron.schedule('0 5 * * *', async () => {
+    const week = getABTestWeek();
+    if (week !== 'W2') {
+      console.log(`  ℹ️  [05:00スロット] ${week}期間外 → スキップ`);
+      return;
+    }
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    if (getCelebPostedDate() === todayKey) {
+      console.log(`  ℹ️  [05:00スロット] 本日投稿済み → スキップ`);
+      return;
+    }
+    setCelebPostedDate(todayKey);
+    await postCelebritySlot('05:00 W2芸能人');
+    autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 10:30 JST — W1=芸能人アフィリ / 通常週=インプ狙い（人間的な会話・共感ツイート）
   cron.schedule('30 10 * * *', async () => {
-    await postImpressionSlot('10:30 インプ');
-    autoCompleteTask('daily-imp-post', 'daily').catch(() => {});
+    const week = getABTestWeek();
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    if (week === 'W1') {
+      // W1: 10:30に芸能人アフィリポスト
+      if (getCelebPostedDate() === todayKey) {
+        console.log(`  ℹ️  [10:30スロット W1] 本日投稿済み → スキップ`);
+        return;
+      }
+      setCelebPostedDate(todayKey);
+      await postCelebritySlot('10:30 W1芸能人');
+      autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
+    } else if (week === 'W2') {
+      // W2: 10:30は使わない (05:00スロット担当)
+      console.log(`  ℹ️  [10:30スロット] W2期間中 → スキップ (05:00スロット担当)`);
+    } else {
+      // 通常週: インプ狙い投稿
+      await postImpressionSlot('10:30 インプ');
+      autoCompleteTask('daily-imp-post', 'daily').catch(() => {});
+    }
   }, { timezone: 'Asia/Tokyo' });
 
   // 毎日 23:00 JST — シャドウバン回復自動チェック（③）
@@ -364,51 +428,50 @@ export function startScheduler() {
     autoCompleteTask('weekly-external-monitor', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // 芸能人アフィリスロット — 18〜22時を毎時チェックし最適時間帯に投稿（毎日再計算）
-  // ※ cron は毎日固定時間にしか設定できないため、毎時チェック方式で動的対応
-  // ② _celebPostedDate をメモリ変数→GCS永続化に変更（再起動しても状態が引き継がれる）
+  // 芸能人アフィリスロット — 18〜22時を毎時チェック（通常週のみ）
+  // A/Bテスト週 (W1/W2) はこのスロットをスキップ（専用スロット担当）
   cron.schedule('0 18,19,20,21,22 * * *', async () => {
+    const week = getABTestWeek();
+    if (week === 'W1' || week === 'W2') {
+      console.log(`  ℹ️  [18-22スロット] ${week}期間中 → スキップ (専用スロット担当)`);
+      return;
+    }
     const nowJst = new Date(Date.now() + 9 * 3600000);
-    const todayKey = nowJst.toISOString().slice(0, 10); // "2026-04-05"
+    const todayKey = nowJst.toISOString().slice(0, 10);
     if (getCelebPostedDate() === todayKey) {
       console.log(`  ℹ️  [芸能人スロット] 本日投稿済み (${todayKey}) → スキップ`);
       return;
     }
-
-    // 18〜22時以外の値はデフォルト20時に丸める（データ不足時の5時等を防止）
     const rawBest = getBestPostingHour();
     const bestHour = (rawBest >= 18 && rawBest <= 22) ? rawBest : 20;
-    const currentHour = nowJst.getUTCHours(); // JST = UTC+9 → すでに+9済み
+    const currentHour = nowJst.getUTCHours();
     if (currentHour !== bestHour) {
       console.log(`  ℹ️  [芸能人スロット] 現在${currentHour}時 / 最適${bestHour}時 → スキップ`);
       return;
     }
-
-    // 投稿済みフラグを先にセット（GCS保存）→ 二重投稿を防止
     setCelebPostedDate(todayKey);
     await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
     autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // 起動時に永続化された投稿済み日付を表示（確認用）
+  // 起動時に投稿状況を表示
   const loadedCelebDate = getCelebPostedDate();
   if (loadedCelebDate) {
     console.log(`  ℹ️  [起動] 芸能人スロット投稿済み日付を読み込み: ${loadedCelebDate}`);
   }
 
-  const rawBest2 = getBestPostingHour();
-  const effectiveHour = (rawBest2 >= 18 && rawBest2 <= 22) ? rawBest2 : 20;
+  const currentWeek = getABTestWeek();
+  const weekLabel = currentWeek === 'W1' ? 'W1: 10:30 JST のみ' : currentWeek === 'W2' ? 'W2: 05:00 JST のみ' : '動的 (18-22 JST)';
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  FANZA X Bot【シャドウバン回復モード】   ║');
   console.log('╠══════════════════════════════════════════╣');
-  console.log('║  ⚠️  1日2件に削減（回復優先）             ║');
-  console.log(`║  🎭 芸能人アフィリ: ${String(effectiveHour).padStart(2, '0')}:00 JST (動的)    ║`);
-  console.log('║  💬 インプ狙い  : 10:30 JST              ║');
+  console.log('║  ⚠️  1日1件 A/Bテストモード               ║');
+  console.log(`║  🎭 ${weekLabel.padEnd(35)}║`);
   console.log('║  📡 外部監視    : 常時ループ              ║');
   console.log('║  📊 回復チェック: 23:00 JST              ║');
   console.log('║  🌙 日次評価    : 03:00 JST              ║');
-  console.log('║  計: アフィリ1本 + インプ1本 = 2本/日    ║');
+  console.log('║  計: 芸能人アフィリ1本 = 1本/日          ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 }
