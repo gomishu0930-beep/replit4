@@ -13,9 +13,11 @@ import {
   addDirective,
   getDirectives,
   updateDirectiveStatus,
+  saveDirectiveExecution,
   type MeetingDirective,
   type Assignee,
 } from '../bot/meeting.js';
+import { executeDirective } from '../bot/directive-executor.js';
 
 const router = Router();
 
@@ -173,6 +175,24 @@ router.patch('/bot/meeting/directives/:id', async (req, res) => {
     if (!updated) { res.status(404).json({ error: '見つかりません' }); return; }
     res.json(updated);
   } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── 自動実行 ────────────────────────────────────────────────────────────────
+
+router.post('/bot/meeting/directives/:id/execute', async (req, res) => {
+  const directives = getDirectives();
+  const directive = directives.find((d) => d.id === req.params.id);
+  if (!directive) { res.status(404).json({ error: '見つかりません' }); return; }
+  if (directive.assignee !== 'ai') { res.status(400).json({ error: 'ai担当のディレクティブのみ自動実行できます' }); return; }
+
+  try {
+    const execution = await executeDirective(directive);
+    const updated = await saveDirectiveExecution(directive.id, execution);
+    res.json({ directive: updated, execution });
+  } catch (e: any) {
+    console.error('[execute directive] エラー:', e);
     res.status(500).json({ error: e.message });
   }
 });

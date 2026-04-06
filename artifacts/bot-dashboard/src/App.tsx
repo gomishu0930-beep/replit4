@@ -139,6 +139,13 @@ interface MeetingSession {
   researchId?: string;
   decisionCandidates?: DecisionCandidate[];
 }
+interface DirectiveExecution {
+  at: string;
+  actionType: string;
+  summary: string;
+  changes: string[];
+  success: boolean;
+}
 interface MeetingDirective {
   id: string;
   text: string;
@@ -149,6 +156,7 @@ interface MeetingDirective {
   source: string;
   createdAt: string;
   updatedAt: string;
+  executionLog?: DirectiveExecution[];
 }
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
@@ -587,6 +595,7 @@ function Dashboard() {
   const [dirModal, setDirModal] = useState<{ text: string; source: string } | null>(null);
   const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"], assignee: "user" as Assignee });
   const [dirSaving, setDirSaving] = useState(false);
+  const [executingId, setExecutingId] = useState<string | null>(null);
 
   // 送信モード・決定抽出
   const [sendMode, setSendMode] = useState<"gpt" | "claude" | "trialogue">("trialogue");
@@ -1903,6 +1912,20 @@ function Dashboard() {
             await refetchDirectives();
           }
 
+          async function runExecuteDirective(id: string) {
+            setExecutingId(id);
+            try {
+              const r = await fetch(`${API}/api/bot/meeting/directives/${id}/execute`, { method: "POST" });
+              const data = await r.json();
+              if (!r.ok) throw new Error(data.error ?? "実行失敗");
+              await refetchDirectives();
+            } catch (e: any) {
+              alert(`⚡ 自動実行エラー: ${e.message}`);
+            } finally {
+              setExecutingId(null);
+            }
+          }
+
           const allDirectives = directivesData?.directives ?? [];
 
           // スピーカーごとのスタイル定義
@@ -2328,23 +2351,57 @@ function Dashboard() {
                               <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/40`}>{items.length}件</span>
                             </p>
                             <div className="space-y-2">
-                              {items.map((d) => (
-                                <div key={d.id} className="flex items-start gap-2 group">
-                                  <span className="shrink-0 mt-0.5">{priIcon[d.priority]}</span>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] text-white/85 leading-snug">{d.text}</p>
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/8 text-emerald-400">● 実施中</span>
-                                      <span className="text-[9px] text-white/25">{d.source}</span>
+                              {items.map((d) => {
+                                const isExecRunning = executingId === d.id;
+                                const lastExec = d.executionLog?.[0];
+                                return (
+                                  <div key={d.id} className="group">
+                                    <div className="flex items-start gap-2">
+                                      <span className="shrink-0 mt-0.5">{priIcon[d.priority]}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] text-white/85 leading-snug">{d.text}</p>
+                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/8 text-emerald-400">● 実施中</span>
+                                          <span className="text-[9px] text-white/25">{d.source}</span>
+                                          {lastExec && (
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded border ${lastExec.success ? "border-blue-500/30 bg-blue-500/10 text-blue-400" : "border-orange-500/30 bg-orange-500/8 text-orange-400"}`}>
+                                              {lastExec.success ? "⚡ 実行済" : "⚠ 手動必要"}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {d.assignee === "ai" && (
+                                          <button
+                                            onClick={() => runExecuteDirective(d.id)}
+                                            disabled={isExecRunning}
+                                            className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/25 text-blue-300 hover:bg-blue-500/30 transition-colors disabled:opacity-40"
+                                          >
+                                            {isExecRunning ? "実行中..." : "⚡ 実行"}
+                                          </button>
+                                        )}
+                                        <button onClick={() => updateStatus(d.id, "completed")} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors">✓完了</button>
+                                        <button onClick={() => updateStatus(d.id, "cancelled")} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/15 text-red-400/70 hover:bg-red-500/20 transition-colors">✕</button>
+                                      </div>
                                     </div>
+                                    {/* 実行ログ表示 */}
+                                    {lastExec && (
+                                      <div className={`mt-1.5 ml-5 rounded p-2 text-[9px] ${lastExec.success ? "bg-blue-500/8 border border-blue-500/15" : "bg-orange-500/8 border border-orange-500/15"}`}>
+                                        <p className={`font-medium mb-0.5 ${lastExec.success ? "text-blue-300" : "text-orange-300"}`}>
+                                          {lastExec.success ? "⚡" : "⚠"} {lastExec.summary}
+                                        </p>
+                                        {lastExec.changes.length > 0 && (
+                                          <ul className="text-white/40 space-y-0.5">
+                                            {lastExec.changes.map((c, i) => <li key={i}>• {c}</li>)}
+                                          </ul>
+                                        )}
+                                        <p className="text-white/20 mt-0.5">{lastExec.at.slice(0, 16).replace("T", " ")}</p>
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => updateStatus(d.id, "completed")} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors">✓完了</button>
-                                    <button onClick={() => updateStatus(d.id, "cancelled")} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/15 text-red-400/70 hover:bg-red-500/20 transition-colors">✕</button>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );

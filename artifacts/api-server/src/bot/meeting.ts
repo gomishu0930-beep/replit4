@@ -65,6 +65,14 @@ export interface MeetingSession {
   decisionCandidates?: DecisionCandidate[];
 }
 
+export interface DirectiveExecution {
+  at: string;
+  actionType: string;        // 'strategy.update' | 'template.generate' | 'celeb.update' | 'no-op'
+  summary: string;           // 人間向け実行結果サマリー
+  changes: string[];         // 具体的な変更内容リスト
+  success: boolean;
+}
+
 export interface MeetingDirective {
   id: string;
   text: string;
@@ -75,6 +83,7 @@ export interface MeetingDirective {
   source: string;
   createdAt: string;
   updatedAt: string;
+  executionLog?: DirectiveExecution[];  // 自動実行の履歴
 }
 
 interface MeetingData {
@@ -501,6 +510,20 @@ export async function updateDirectiveStatus(id: string, status: MeetingDirective
   const d = cache.directives.find((x) => x.id === id);
   if (!d) return null;
   d.status = status;
+  d.updatedAt = new Date().toISOString();
+  await saveData();
+  return d;
+}
+
+export async function saveDirectiveExecution(
+  id: string,
+  execution: DirectiveExecution,
+): Promise<MeetingDirective | null> {
+  const d = cache.directives.find((x) => x.id === id);
+  if (!d) return null;
+  if (!d.executionLog) d.executionLog = [];
+  d.executionLog.unshift(execution);
+  d.executionLog = d.executionLog.slice(0, 10); // 最新10件のみ保持
   d.updatedAt = new Date().toISOString();
   await saveData();
   return d;

@@ -600,3 +600,39 @@ export function getStrategySummary() {
     recentDecisions: config.decisionLog.slice(0, 5),
   };
 }
+
+// ─── 会議決定事項からの設定変更API ───────────────────────────────────────────
+
+export interface StrategyPatch {
+  monitorIntervalHours?: number;
+  typeWeights?: Partial<Record<string, number>>;
+}
+
+export async function patchStrategyConfig(patch: StrategyPatch, reason: string): Promise<string[]> {
+  const changes: string[] = [];
+
+  if (patch.monitorIntervalHours !== undefined) {
+    const clamped = clamp(patch.monitorIntervalHours, 0.5, 24);
+    if (clamped !== config.monitorIntervalHours) {
+      changes.push(`監視間隔: ${config.monitorIntervalHours}h → ${clamped}h`);
+      config.monitorIntervalHours = clamped;
+    }
+  }
+
+  if (patch.typeWeights) {
+    for (const [key, val] of Object.entries(patch.typeWeights)) {
+      if (val !== undefined && config.typeWeights[key] !== undefined) {
+        const clamped = clamp(val, 0, 5);
+        changes.push(`投稿重み[${key}]: ${config.typeWeights[key]} → ${clamped}`);
+        config.typeWeights[key] = clamped;
+      }
+    }
+  }
+
+  if (changes.length > 0) {
+    log(config.cycleStats.totalCycles, [`[会議決定] ${reason}`, ...changes]);
+    await saveConfig();
+  }
+
+  return changes;
+}
