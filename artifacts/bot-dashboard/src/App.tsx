@@ -127,6 +127,16 @@ interface MeetingSession {
   messages: MeetingMessage[];
   researchId?: string;
 }
+interface MeetingDirective {
+  id: string;
+  text: string;
+  category: "strategy" | "content" | "timing" | "recovery" | "other";
+  priority: "high" | "medium" | "low";
+  status: "active" | "completed" | "cancelled";
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
 
@@ -560,6 +570,11 @@ function Dashboard() {
   const [meetingLoading, setMeetingLoading] = useState(false);
   const [meetingCreating, setMeetingCreating] = useState(false);
 
+  // 決定事項ステート
+  const [dirModal, setDirModal] = useState<{ text: string; source: string } | null>(null);
+  const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"] });
+  const [dirSaving, setDirSaving] = useState(false);
+
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(id);
@@ -600,6 +615,12 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/observations`).then((r) => r.json()),
     refetchInterval: 60000,
   });
+  const { data: directivesData, refetch: refetchDirectives } = useQuery<{ directives: MeetingDirective[] }>({
+    queryKey: ["directives"],
+    queryFn: () => fetch(`${API}/api/bot/meeting/directives`).then((r) => r.json()),
+    refetchInterval: 30000,
+  });
+  const activeDirectives = (directivesData?.directives ?? []).filter((d) => d.status === "active");
 
   const posts = postsData?.posts ?? [];
   const stats = status?.stats;
@@ -681,6 +702,44 @@ function Dashboard() {
         {/* ════════════════════ 概要タブ ════════════════════ */}
         {tab === "overview" && (
           <>
+            {/* アクティブ決定事項バナー */}
+            {activeDirectives.length > 0 && (
+              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/8 p-4">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h2 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                    📌 会議室アクティブ決定事項 ({activeDirectives.length}件)
+                  </h2>
+                  <button onClick={() => setTab("meeting")} className="text-[10px] text-indigo-400/60 hover:text-indigo-300 transition-colors">
+                    会議室を開く →
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {activeDirectives.map((d) => {
+                    const catColor: Record<string, string> = {
+                      strategy: "text-violet-300 border-violet-500/30 bg-violet-500/10",
+                      content:  "text-blue-300 border-blue-500/30 bg-blue-500/10",
+                      timing:   "text-amber-300 border-amber-500/30 bg-amber-500/10",
+                      recovery: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
+                      other:    "text-white/50 border-white/10 bg-white/5",
+                    };
+                    const priIcon: Record<string, string> = { high: "🔴", medium: "🟡", low: "🟢" };
+                    return (
+                      <div key={d.id} className="flex items-start gap-2.5">
+                        <span className="shrink-0 mt-0.5">{priIcon[d.priority]}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/80 leading-relaxed">{d.text}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
+                            <span className="text-[10px] text-white/30">{d.source}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard label="総投稿数" value={stats?.totalPosts ?? "—"} sub="全期間" />
               <StatCard label="今週の投稿" value={stats?.postsLast7Days ?? "—"} sub="過去7日間" />
@@ -1355,6 +1414,27 @@ function Dashboard() {
             "いいね・RTを多く獲得できる「インプ狙いツイート」の最適な文体・構成・絵文字の使い方を調査してください。非宣伝ツイートでバズる法則を教えてください。",
           ];
 
+          const catOptions: { value: MeetingDirective["category"]; label: string }[] = [
+            { value: "strategy", label: "🧠 戦略" },
+            { value: "content",  label: "📝 コンテンツ" },
+            { value: "timing",   label: "⏰ タイミング" },
+            { value: "recovery", label: "🔄 回復" },
+            { value: "other",    label: "📌 その他" },
+          ];
+          const priOptions: { value: MeetingDirective["priority"]; label: string; color: string }[] = [
+            { value: "high",   label: "🔴 高", color: "text-red-300" },
+            { value: "medium", label: "🟡 中", color: "text-yellow-300" },
+            { value: "low",    label: "🟢 低", color: "text-emerald-300" },
+          ];
+          const catColor: Record<string, string> = {
+            strategy: "text-violet-300 border-violet-500/30 bg-violet-500/10",
+            content:  "text-blue-300 border-blue-500/30 bg-blue-500/10",
+            timing:   "text-amber-300 border-amber-500/30 bg-amber-500/10",
+            recovery: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
+            other:    "text-white/50 border-white/10 bg-white/5",
+          };
+          const priIcon: Record<string, string> = { high: "🔴", medium: "🟡", low: "🟢" };
+
           async function startResearch(topic: string) {
             if (!topic.trim()) return;
             setResearchLoading(true);
@@ -1401,7 +1481,6 @@ function Dashboard() {
             const msg = meetingInput.trim();
             setMeetingInput("");
             setMeetingLoading(true);
-            // 楽観的更新
             setMeetingSession((s) => s ? { ...s, messages: [...s.messages, { role: "user", content: msg, at: new Date().toISOString() }] } : s);
             try {
               const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/chat`, {
@@ -1419,20 +1498,60 @@ function Dashboard() {
             }
           }
 
+          async function saveDirective() {
+            if (!dirModal) return;
+            setDirSaving(true);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/directives`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: dirModal.text, category: dirForm.category, priority: dirForm.priority, source: dirModal.source }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error ?? "エラー");
+              await refetchDirectives();
+              setDirModal(null);
+            } catch (e: any) {
+              alert("保存エラー: " + e.message);
+            } finally {
+              setDirSaving(false);
+            }
+          }
+
+          async function updateStatus(id: string, status: MeetingDirective["status"]) {
+            await fetch(`${API}/api/bot/meeting/directives/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status }),
+            });
+            await refetchDirectives();
+          }
+
+          const allDirectives = directivesData?.directives ?? [];
+
           return (
             <>
               {/* ヘッダー説明 */}
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl shrink-0">🤝</span>
-                  <div>
-                    <h2 className="text-sm font-bold text-indigo-300 mb-1">GPT 会議室</h2>
-                    <p className="text-xs text-white/50">
-                      GPT-4o（ウェブ検索付き）がリサーチを行い、ボットの現状データを踏まえた戦略議論ができます。
-                    </p>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-sm font-bold text-indigo-300 mb-1">GPT 会議室</h2>
+                        <p className="text-xs text-white/50">
+                          GPT-4oが全ボットデータ（インプ推移・投稿履歴・仮説・観察ログ）を参照しながら戦略議論します。決定事項はGCS保存後に概要タブと会議室の両方に反映されます。
+                        </p>
+                      </div>
+                      {activeDirectives.length > 0 && (
+                        <span className="shrink-0 ml-3 px-2 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] text-indigo-300">
+                          📌 {activeDirectives.length}件稼働中
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-4 mt-2 text-[10px] text-white/30">
                       <span>🔍 Deep Research: <span className="text-indigo-300 font-medium">gpt-4o-search-preview</span></span>
-                      <span>💬 会議チャット: <span className="text-indigo-300 font-medium">gpt-4o</span></span>
+                      <span>💬 会議: <span className="text-indigo-300 font-medium">gpt-4o</span></span>
                     </div>
                   </div>
                 </div>
@@ -1443,8 +1562,6 @@ function Dashboard() {
                 <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
                   STEP 1 — Deep Research 起動
                 </h2>
-
-                {/* プリセットトピック */}
                 <p className="text-[10px] text-white/40 mb-2">クイック選択：</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
                   {PRESET_TOPICS.map((t, i) => (
@@ -1458,13 +1575,11 @@ function Dashboard() {
                     </button>
                   ))}
                 </div>
-
-                {/* カスタム入力 */}
                 <p className="text-[10px] text-white/40 mb-1.5">またはカスタムトピックを入力：</p>
                 <textarea
                   value={researchTopic}
                   onChange={(e) => setResearchTopic(e.target.value)}
-                  placeholder="例: シャドウバン回復後の投稿頻度の最適化について教えてください..."
+                  placeholder="例: シャドウバン回復後の投稿頻度の最適化について..."
                   rows={3}
                   disabled={researchLoading}
                   className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 resize-none mb-3 disabled:opacity-40"
@@ -1475,30 +1590,19 @@ function Dashboard() {
                   className="w-full py-2.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
                 >
                   {researchLoading ? (
-                    <>
-                      <span className="animate-spin text-base">⟳</span>
-                      GPT がウェブ検索中... しばらくお待ちください
-                    </>
-                  ) : (
-                    <>🔍 Deep Research 起動</>
-                  )}
+                    <><span className="animate-spin text-base">⟳</span>GPT がウェブ検索中... しばらくお待ちください</>
+                  ) : <>🔍 Deep Research 起動</>}
                 </button>
-
-                {/* エラー */}
                 {researchError && (
-                  <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300">
-                    ❌ {researchError}
-                  </div>
+                  <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300">❌ {researchError}</div>
                 )}
-
-                {/* リサーチ結果 */}
                 {researchResult && (
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[10px] text-emerald-400 mb-0.5">✅ リサーチ完了</p>
                         <p className="text-[10px] text-white/30">
-                          モデル: {researchResult.model} / 所要: {Math.round((new Date(researchResult.completedAt).getTime() - new Date(researchResult.startedAt).getTime()) / 1000)}秒
+                          {researchResult.model} / {Math.round((new Date(researchResult.completedAt).getTime() - new Date(researchResult.startedAt).getTime()) / 1000)}秒
                         </p>
                       </div>
                       <button
@@ -1523,29 +1627,34 @@ function Dashboard() {
                     <h2 className="text-xs font-semibold text-emerald-400/70 uppercase tracking-wider">
                       STEP 2 — 会議チャット
                     </h2>
-                    <span className="text-[10px] text-white/30">{meetingSession.messages.length / 2 | 0} ターン</span>
+                    <span className="text-[10px] text-white/30">{Math.floor(meetingSession.messages.length / 2)} ターン</span>
                   </div>
-
-                  {/* メッセージ履歴 */}
-                  <div className="space-y-3 max-h-96 overflow-y-auto mb-4 pr-1">
+                  <div className="space-y-3 max-h-[32rem] overflow-y-auto mb-4 pr-1">
                     {meetingSession.messages.length === 0 && (
                       <div className="text-center py-6">
                         <p className="text-xs text-white/30">最初のメッセージを送ってください</p>
-                        <p className="text-[10px] text-white/20 mt-1">GPT-4o がリサーチ結果とボット現状を踏まえて回答します</p>
+                        <p className="text-[10px] text-white/20 mt-1">GPT-4o がリサーチ結果＋全ボットデータを踏まえて回答します</p>
                       </div>
                     )}
                     {meetingSession.messages.map((m, i) => (
                       <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[85%] rounded-xl px-3 py-2.5 ${
+                        <div className={`max-w-[88%] rounded-xl px-3 py-2.5 ${
                           m.role === "user"
                             ? "bg-indigo-500/20 border border-indigo-500/30 text-indigo-100"
                             : "bg-white/5 border border-white/10 text-white/80"
                         }`}>
                           <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-[10px] text-white/30">
-                              {m.role === "user" ? "👤 あなた" : "🤖 GPT-4o"}
-                            </span>
+                            <span className="text-[10px] text-white/30">{m.role === "user" ? "👤 あなた" : "🤖 GPT-4o"}</span>
                             <span className="text-[10px] text-white/20">{fmtDate(m.at).slice(5)}</span>
+                            {m.role === "assistant" && (
+                              <button
+                                onClick={() => setDirModal({ text: m.content.slice(0, 500), source: `会議: ${meetingSession.title}` })}
+                                className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/20 text-indigo-400/70 hover:text-indigo-300 hover:bg-indigo-500/25 transition-colors"
+                                title="この回答から決定事項を保存"
+                              >
+                                📌 決定事項に保存
+                              </button>
+                            )}
                           </div>
                           <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>
                         </div>
@@ -1560,8 +1669,6 @@ function Dashboard() {
                       </div>
                     )}
                   </div>
-
-                  {/* 入力エリア */}
                   <div className="flex gap-2">
                     <textarea
                       value={meetingInput}
@@ -1580,8 +1687,6 @@ function Dashboard() {
                       送信
                     </button>
                   </div>
-
-                  {/* クイック質問 */}
                   <div className="mt-3">
                     <p className="text-[10px] text-white/30 mb-1.5">クイック質問：</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -1590,6 +1695,7 @@ function Dashboard() {
                         "投稿本数を増やすタイミングはいつが最適ですか？",
                         "リスクの高い施策と低い施策を整理してください",
                         "3ヶ月後の目標設定を提案してください",
+                        "現在のアクティブ決定事項の進捗を評価してください",
                       ].map((q) => (
                         <button
                           key={q}
@@ -1600,6 +1706,141 @@ function Dashboard() {
                           {q}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 3: 決定事項管理 ── */}
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-indigo-400/70 uppercase tracking-wider">
+                    📋 決定事項管理
+                  </h2>
+                  <button
+                    onClick={() => setDirModal({ text: "", source: "手動入力" })}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30 transition-colors"
+                  >
+                    ＋ 手動で追加
+                  </button>
+                </div>
+
+                {allDirectives.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-xs text-white/30">決定事項はまだありません</p>
+                    <p className="text-[10px] text-white/20 mt-1">会議チャットの回答にある「📌 決定事項に保存」ボタンで追加できます</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {["active", "completed", "cancelled"].map((statusGroup) => {
+                      const items = allDirectives.filter((d) => d.status === statusGroup);
+                      if (items.length === 0) return null;
+                      const groupLabel: Record<string, string> = { active: "✅ アクティブ", completed: "☑️ 完了", cancelled: "✖️ キャンセル" };
+                      const groupOpacity: Record<string, string> = { active: "", completed: "opacity-50", cancelled: "opacity-30" };
+                      return (
+                        <div key={statusGroup}>
+                          <p className="text-[10px] text-white/30 mb-1.5">{groupLabel[statusGroup]} ({items.length}件)</p>
+                          <div className={`space-y-2 ${groupOpacity[statusGroup]}`}>
+                            {items.map((d) => (
+                              <div key={d.id} className="flex items-start gap-2 p-3 rounded-lg bg-white/5 border border-white/8">
+                                <span className="shrink-0 mt-0.5 text-xs">{priIcon[d.priority]}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-white/80 leading-relaxed mb-1.5">{d.text}</p>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
+                                    <span className="text-[10px] text-white/25">{d.source}</span>
+                                    <span className="text-[10px] text-white/20">{fmtDate(d.createdAt).slice(0, 10)}</span>
+                                    {d.status === "active" && (
+                                      <div className="ml-auto flex gap-1.5">
+                                        <button
+                                          onClick={() => updateStatus(d.id, "completed")}
+                                          className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+                                        >完了</button>
+                                        <button
+                                          onClick={() => updateStatus(d.id, "cancelled")}
+                                          className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/30 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                        >取消</button>
+                                      </div>
+                                    )}
+                                    {d.status !== "active" && (
+                                      <button
+                                        onClick={() => updateStatus(d.id, "active")}
+                                        className="ml-auto text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/30 hover:bg-indigo-500/10 hover:text-indigo-400 transition-colors"
+                                      >再開</button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ── 決定事項保存モーダル ── */}
+              {dirModal !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setDirModal(null)}>
+                  <div className="bg-[#0d1529] border border-indigo-500/30 rounded-xl p-5 w-full max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-sm font-bold text-indigo-300 mb-3">📌 決定事項として保存</h3>
+                    <textarea
+                      value={dirModal.text}
+                      onChange={(e) => setDirModal({ ...dirModal, text: e.target.value })}
+                      placeholder="決定した内容を入力してください..."
+                      rows={4}
+                      className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 resize-none mb-3"
+                    />
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-white/40 mb-1.5">カテゴリ</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {catOptions.map((c) => (
+                            <button
+                              key={c.value}
+                              onClick={() => setDirForm((f) => ({ ...f, category: c.value }))}
+                              className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                                dirForm.category === c.value
+                                  ? catColor[c.value] + " font-medium"
+                                  : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
+                              }`}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-white/40 mb-1.5">優先度</p>
+                        <div className="flex gap-1.5">
+                          {priOptions.map((p) => (
+                            <button
+                              key={p.value}
+                              onClick={() => setDirForm((f) => ({ ...f, priority: p.value }))}
+                              className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                                dirForm.priority === p.value
+                                  ? `${p.color} border-current bg-white/10 font-medium`
+                                  : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
+                              }`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setDirModal(null)} className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors">
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={saveDirective}
+                        disabled={dirSaving || !dirModal.text.trim()}
+                        className="px-4 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium hover:bg-indigo-500/30 transition-colors disabled:opacity-40"
+                      >
+                        {dirSaving ? "保存中..." : "📌 保存してボットに反映"}
+                      </button>
                     </div>
                   </div>
                 </div>

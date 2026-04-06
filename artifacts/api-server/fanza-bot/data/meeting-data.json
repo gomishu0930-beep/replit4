@@ -1,0 +1,26 @@
+{
+  "researches": [],
+  "meetings": [],
+  "directives": [
+    {
+      "id": "dir-1775466071420",
+      "text": "シャドウバン回復を最優先とし、当面は感情系インプ狙いツイートを継続する",
+      "category": "recovery",
+      "priority": "high",
+      "status": "cancelled",
+      "source": "動作テスト",
+      "createdAt": "2026-04-06T09:01:11.420Z",
+      "updatedAt": "2026-04-06T09:01:31.769Z"
+    },
+    {
+      "id": "dir-1775466064839",
+      "text": "テスト決定事項：シャドウバン回復を最優先とし、当面は感情系インプ狙いツイートを継続する",
+      "category": "recovery",
+      "priority": "high",
+      "status": "cancelled",
+      "source": "テスト",
+      "createdAt": "2026-04-06T09:01:04.839Z",
+      "updatedAt": "2026-04-06T09:01:31.932Z"
+    }
+  ]
+}
