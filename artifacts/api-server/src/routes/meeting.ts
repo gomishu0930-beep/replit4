@@ -2,7 +2,10 @@ import { Router } from 'express';
 import {
   runDeepResearch,
   createMeetingSession,
-  sendMeetingMessage,
+  sendToGPT,
+  sendToClaude,
+  runTrialogue,
+  extractDecisions,
   getResearches,
   getMeetings,
   getMeetingById,
@@ -17,119 +20,138 @@ const router = Router();
 // ─── Deep Research ──────────────────────────────────────────────────────────
 
 router.get('/bot/meeting/researches', (_req, res) => {
-  const researches = getResearches().map((r) => ({
-    id: r.id,
-    topic: r.topic,
+  res.json({ researches: getResearches().map((r) => ({
+    id: r.id, topic: r.topic,
     resultPreview: r.result.slice(0, 200) + '...',
-    model: r.model,
-    startedAt: r.startedAt,
-    completedAt: r.completedAt,
-  }));
-  res.json({ researches });
+    model: r.model, startedAt: r.startedAt, completedAt: r.completedAt,
+  })) });
 });
 
 router.get('/bot/meeting/researches/:id', (req, res) => {
-  const research = getResearches().find((r) => r.id === req.params.id);
-  if (!research) { res.status(404).json({ error: '見つかりません' }); return; }
-  res.json(research);
+  const r = getResearches().find((x) => x.id === req.params.id);
+  if (!r) { res.status(404).json({ error: '見つかりません' }); return; }
+  res.json(r);
 });
 
 router.post('/bot/meeting/research', async (req, res) => {
   const { topic } = req.body ?? {};
-  if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
-    res.status(400).json({ error: 'topic は必須です' });
-    return;
-  }
+  if (!topic?.trim()) { res.status(400).json({ error: 'topic は必須です' }); return; }
   try {
-    const session = await runDeepResearch(topic.trim());
-    res.json(session);
+    res.json(await runDeepResearch(topic.trim()));
   } catch (e: any) {
     console.error('  ❌ Deep Research エラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ─── Meeting Chat ────────────────────────────────────────────────────────────
+// ─── Meeting Sessions ────────────────────────────────────────────────────────
 
 router.get('/bot/meeting/sessions', (_req, res) => {
   res.json({ sessions: getMeetings() });
 });
 
 router.get('/bot/meeting/sessions/:id', (req, res) => {
-  const session = getMeetingById(req.params.id);
-  if (!session) { res.status(404).json({ error: '見つかりません' }); return; }
-  res.json(session);
+  const s = getMeetingById(req.params.id);
+  if (!s) { res.status(404).json({ error: '見つかりません' }); return; }
+  res.json(s);
 });
 
 router.post('/bot/meeting/sessions', async (req, res) => {
   const { title, researchId } = req.body ?? {};
-  if (!title || typeof title !== 'string') {
-    res.status(400).json({ error: 'title は必須です' });
-    return;
-  }
+  if (!title?.trim()) { res.status(400).json({ error: 'title は必須です' }); return; }
   try {
-    const session = await createMeetingSession(title.trim(), researchId);
-    res.json(session);
+    res.json(await createMeetingSession(title.trim(), researchId));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// ─── Chat: 個別送信 ──────────────────────────────────────────────────────────
+
+// GPTに送る
+router.post('/bot/meeting/sessions/:id/chat/gpt', async (req, res) => {
+  const { message } = req.body ?? {};
+  if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
+  try {
+    res.json(await sendToGPT(req.params.id, message.trim()));
+  } catch (e: any) {
+    console.error('  ❌ GPTチャットエラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Claudeに送る
+router.post('/bot/meeting/sessions/:id/chat/claude', async (req, res) => {
+  const { message } = req.body ?? {};
+  if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
+  try {
+    res.json(await sendToClaude(req.params.id, message.trim()));
+  } catch (e: any) {
+    console.error('  ❌ Claudeチャットエラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 3者会議モード（GPT→Claude の順で発言）
+router.post('/bot/meeting/sessions/:id/trialogue', async (req, res) => {
+  const { message } = req.body ?? {};
+  if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
+  try {
+    res.json(await runTrialogue(req.params.id, message.trim()));
+  } catch (e: any) {
+    console.error('  ❌ 3者会議エラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 旧互換: /chat → GPTに送る
 router.post('/bot/meeting/sessions/:id/chat', async (req, res) => {
   const { message } = req.body ?? {};
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    res.status(400).json({ error: 'message は必須です' });
-    return;
-  }
+  if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
   try {
-    const reply = await sendMeetingMessage(req.params.id, message.trim());
-    res.json(reply);
+    res.json(await sendToGPT(req.params.id, message.trim()));
   } catch (e: any) {
-    console.error('  ❌ 会議チャットエラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ─── Directives（会議決定事項）──────────────────────────────────────────────
+// ─── 決定事項自動抽出 ────────────────────────────────────────────────────────
 
-// 一覧取得
+router.post('/bot/meeting/sessions/:id/extract-decisions', async (req, res) => {
+  try {
+    const candidates = await extractDecisions(req.params.id);
+    res.json({ candidates });
+  } catch (e: any) {
+    console.error('  ❌ 決定事項抽出エラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Directives ──────────────────────────────────────────────────────────────
+
 router.get('/bot/meeting/directives', (_req, res) => {
   res.json({ directives: getDirectives() });
 });
 
-// 新規追加
 router.post('/bot/meeting/directives', async (req, res) => {
   const { text, category = 'other', priority = 'medium', source = '会議室' } = req.body ?? {};
-  if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    res.status(400).json({ error: 'text は必須です' });
-    return;
-  }
-  const validCategories: MeetingDirective['category'][] = ['strategy', 'content', 'timing', 'recovery', 'other'];
-  const validPriorities: MeetingDirective['priority'][] = ['high', 'medium', 'low'];
-  if (!validCategories.includes(category)) {
-    res.status(400).json({ error: `category は ${validCategories.join('/')} のいずれか` });
-    return;
-  }
-  if (!validPriorities.includes(priority)) {
-    res.status(400).json({ error: `priority は ${validPriorities.join('/')} のいずれか` });
-    return;
+  if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
+  const validCats: MeetingDirective['category'][] = ['strategy', 'content', 'timing', 'recovery', 'other'];
+  const validPris: MeetingDirective['priority'][] = ['high', 'medium', 'low'];
+  if (!validCats.includes(category) || !validPris.includes(priority)) {
+    res.status(400).json({ error: '無効な category または priority' }); return;
   }
   try {
-    const directive = await addDirective(text.trim(), category, priority, source);
-    res.json(directive);
+    res.json(await addDirective(text.trim(), category, priority, source));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ステータス更新（完了 / キャンセル / 再アクティブ）
 router.patch('/bot/meeting/directives/:id', async (req, res) => {
   const { status } = req.body ?? {};
-  const validStatuses: MeetingDirective['status'][] = ['active', 'completed', 'cancelled'];
-  if (!validStatuses.includes(status)) {
-    res.status(400).json({ error: `status は ${validStatuses.join('/')} のいずれか` });
-    return;
-  }
+  const valid: MeetingDirective['status'][] = ['active', 'completed', 'cancelled'];
+  if (!valid.includes(status)) { res.status(400).json({ error: '無効な status' }); return; }
   try {
     const updated = await updateDirectiveStatus(req.params.id, status);
     if (!updated) { res.status(404).json({ error: '見つかりません' }); return; }

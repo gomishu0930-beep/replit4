@@ -1,45 +1,45 @@
 {
   "templates": [
     {
-      "text": "🔞{actress}出演の{shortTitle}が話題沸騰中🔥 レビュー{reviewCount}件・平均{reviewAvg}点の傑作🎬 リプ欄からどうぞ👇",
+      "text": "🔞{actress}さんの最新作{shortTitle}が話題沸騰🔥レビュー{reviewCount}件、評価{reviewAvg}⭐️今すぐチェック！リプ欄へ👇",
       "type": "amateur",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}で{actress}の新しい魅力が解放される😍 {reviewCount}人が高評価⭐{reviewAvg}点 リプ欄へ👇",
+      "text": "🔞{shortTitle}の{actress}さん神演技😍視聴者{reviewCount}人が高評価{reviewAvg}🌟推し活応援🎬リプ欄からどうぞ👇",
       "type": "amateur",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
-      "text": "🔞今話題の{shortTitle}🔥{actress}の{reviewAvg}点評価作品が無料で見放題✨ リプ欄からどうぞ👇",
+      "text": "🔞話題の{shortTitle}🔥{actress}出演で{reviewCount}件レビュー🎉平均{reviewAvg}評価🏆リプ欄へ👇",
       "type": "buzz",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{reviewCount}件のレビューで話題沸騰🎬{actress}主演{shortTitle}は配信開始直後から高評価{reviewAvg}⭐ リプ欄へ👇",
+      "text": "🔞{actress}さん主演🌟{shortTitle}が熱い💥{reviewCount}人が{reviewAvg}点評価✨リプ欄からどうぞ👇",
       "type": "buzz",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}が神作品認定🏆{actress}演じるキャラクターに{reviewCount}人が虜😻評価{reviewAvg}点 リプ欄からどうぞ👇",
+      "text": "🔞{shortTitle}に{actress}さん出演💕{reviewCount}件で{reviewAvg}⭐絶対見るべき🎬リプ欄へ👇",
       "type": "any",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{actress}渾身の演技作品{shortTitle}⚡ユーザー評価{reviewAvg}点{reviewCount}件突破🎉 リプ欄へ👇",
+      "text": "🔞今期推し作品{shortTitle}🎯{actress}の演技が最高🔥{reviewCount}件評価{reviewAvg}🌈リプ欄からどうぞ👇",
       "type": "any",
       "sourceScore": 107,
-      "generatedAt": "2026-04-06T09:06:09.750Z",
+      "generatedAt": "2026-04-06T09:09:33.498Z",
       "usedCount": 0
     },
     {
@@ -701,6 +701,6 @@
       "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-06T09:06:09.750Z",
+  "lastEvolvedAt": "2026-04-06T09:09:33.498Z",
   "evolutionCount": 33
 }

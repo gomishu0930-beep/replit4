@@ -115,10 +115,19 @@ interface ResearchSession {
   startedAt: string;
   completedAt: string;
 }
+type Speaker = "user" | "gpt" | "claude" | "system";
 interface MeetingMessage {
   role: "user" | "assistant";
+  speaker: Speaker;
   content: string;
   at: string;
+}
+interface DecisionCandidate {
+  id: string;
+  text: string;
+  category: MeetingDirective["category"];
+  priority: MeetingDirective["priority"];
+  rationale: string;
 }
 interface MeetingSession {
   id: string;
@@ -126,6 +135,7 @@ interface MeetingSession {
   createdAt: string;
   messages: MeetingMessage[];
   researchId?: string;
+  decisionCandidates?: DecisionCandidate[];
 }
 interface MeetingDirective {
   id: string;
@@ -574,6 +584,11 @@ function Dashboard() {
   const [dirModal, setDirModal] = useState<{ text: string; source: string } | null>(null);
   const [dirForm, setDirForm] = useState({ category: "strategy" as MeetingDirective["category"], priority: "medium" as MeetingDirective["priority"] });
   const [dirSaving, setDirSaving] = useState(false);
+
+  // 送信モード・決定抽出
+  const [sendMode, setSendMode] = useState<"gpt" | "claude" | "trialogue">("trialogue");
+  const [extractLoading, setExtractLoading] = useState(false);
+  const [candidates, setCandidates] = useState<DecisionCandidate[]>([]);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -1405,7 +1420,7 @@ function Dashboard() {
           );
         })()}
 
-        {/* ════════════════════ 会議室タブ ════════════════════ */}
+        {/* ════════════════════ 3者会議室タブ ════════════════════ */}
         {tab === "meeting" && (() => {
           const PRESET_TOPICS = [
             "Xのシャドウバン（Ghost Ban）から回復した日本語アカウントの実例と、回復を加速させた投稿戦略を調査してください。成人向けコンテンツアカウントの事例、回復にかかった平均日数、インプレッション数の変化を教えてください。",
@@ -1441,6 +1456,7 @@ function Dashboard() {
             setResearchError(null);
             setResearchResult(null);
             setMeetingSession(null);
+            setCandidates([]);
             try {
               const res = await fetch(`${API}/api/bot/meeting/research`, {
                 method: "POST",
@@ -1460,6 +1476,7 @@ function Dashboard() {
           async function startMeeting() {
             if (!researchResult) return;
             setMeetingCreating(true);
+            setCandidates([]);
             try {
               const res = await fetch(`${API}/api/bot/meeting/sessions`, {
                 method: "POST",
@@ -1476,25 +1493,82 @@ function Dashboard() {
             }
           }
 
+          // 送信モードに応じて送信先を切り替え
           async function sendMessage() {
             if (!meetingSession || !meetingInput.trim()) return;
             const msg = meetingInput.trim();
             setMeetingInput("");
             setMeetingLoading(true);
-            setMeetingSession((s) => s ? { ...s, messages: [...s.messages, { role: "user", content: msg, at: new Date().toISOString() }] } : s);
+            // 楽観的にユーザー発言を表示
+            const userMsg: MeetingMessage = { role: "user", speaker: "user", content: msg, at: new Date().toISOString() };
+            setMeetingSession((s) => s ? { ...s, messages: [...s.messages, userMsg] } : s);
+
             try {
-              const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/chat`, {
+              if (sendMode === "trialogue") {
+                // 3者会議: GPT → Claude の順で返答
+                const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ message: msg }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error ?? "エラー");
+                setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data.gptMsg, data.claudeMsg] } : s);
+              } else {
+                // GPT のみ / Claude のみ
+                const endpoint = sendMode === "gpt" ? "chat/gpt" : "chat/claude";
+                const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/${endpoint}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ message: msg }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error ?? "エラー");
+                setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data] } : s);
+              }
+            } catch (e: any) {
+              const errMsg: MeetingMessage = { role: "assistant", speaker: "system", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() };
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, errMsg] } : s);
+            } finally {
+              setMeetingLoading(false);
+            }
+          }
+
+          // 決定事項を自動抽出（Claudeが議事録を解析）
+          async function extractDecisionsFromSession() {
+            if (!meetingSession) return;
+            setExtractLoading(true);
+            try {
+              const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/extract-decisions`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: msg }),
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "エラー");
-              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data] } : s);
+              setCandidates(data.candidates ?? []);
             } catch (e: any) {
-              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, { role: "assistant", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() }] } : s);
+              alert("抽出エラー: " + e.message);
             } finally {
-              setMeetingLoading(false);
+              setExtractLoading(false);
+            }
+          }
+
+          // 候補を1クリックで決定事項として保存
+          async function adoptCandidate(c: DecisionCandidate) {
+            try {
+              await fetch(`${API}/api/bot/meeting/directives`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  text: c.text,
+                  category: c.category,
+                  priority: c.priority,
+                  source: meetingSession ? `会議: ${meetingSession.title}` : "会議室",
+                }),
+              });
+              await refetchDirectives();
+              setCandidates((prev) => prev.filter((x) => x.id !== c.id));
+            } catch (e: any) {
+              alert("保存エラー: " + e.message);
             }
           }
 
@@ -1529,32 +1603,46 @@ function Dashboard() {
 
           const allDirectives = directivesData?.directives ?? [];
 
+          // スピーカーごとのスタイル定義
+          const speakerStyle: Record<Speaker, { bg: string; border: string; text: string; label: string; icon: string }> = {
+            user:   { bg: "bg-indigo-500/20",  border: "border-indigo-500/30",  text: "text-indigo-100",  label: "👤 あなた",     icon: "👤" },
+            gpt:    { bg: "bg-blue-500/15",     border: "border-blue-500/30",    text: "text-blue-100",    label: "🤖 GPT-4o",     icon: "🤖" },
+            claude: { bg: "bg-violet-500/15",   border: "border-violet-500/30",  text: "text-violet-100",  label: "🧠 Claude",     icon: "🧠" },
+            system: { bg: "bg-white/5",         border: "border-white/10",       text: "text-white/60",    label: "📋 システム",   icon: "📋" },
+          };
+
           return (
             <>
-              {/* ヘッダー説明 */}
+              {/* ヘッダー：3者会議の参加者説明 */}
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl shrink-0">🤝</span>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h2 className="text-sm font-bold text-indigo-300 mb-1">GPT 会議室</h2>
-                        <p className="text-xs text-white/50">
-                          GPT-4oが全ボットデータ（インプ推移・投稿履歴・仮説・観察ログ）を参照しながら戦略議論します。決定事項はGCS保存後に概要タブと会議室の両方に反映されます。
-                        </p>
-                      </div>
-                      {activeDirectives.length > 0 && (
-                        <span className="shrink-0 ml-3 px-2 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] text-indigo-300">
-                          📌 {activeDirectives.length}件稼働中
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-4 mt-2 text-[10px] text-white/30">
-                      <span>🔍 Deep Research: <span className="text-indigo-300 font-medium">gpt-4o-search-preview</span></span>
-                      <span>💬 会議: <span className="text-indigo-300 font-medium">gpt-4o</span></span>
-                    </div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-bold text-white">🤝 3者会議室</h2>
+                  {activeDirectives.length > 0 && (
+                    <span className="px-2 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] text-indigo-300">
+                      📌 {activeDirectives.length}件稼働中
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-lg mb-1">🤖</p>
+                    <p className="text-[11px] font-semibold text-blue-300">GPT-4o</p>
+                    <p className="text-[10px] text-blue-300/60 mt-0.5">調査・トレンド分析</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                    <p className="text-lg mb-1">🧠</p>
+                    <p className="text-[11px] font-semibold text-violet-300">Claude Sonnet</p>
+                    <p className="text-[10px] text-violet-300/60 mt-0.5">実装・リスク評価</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                    <p className="text-lg mb-1">👤</p>
+                    <p className="text-[11px] font-semibold text-indigo-300">あなた</p>
+                    <p className="text-[10px] text-indigo-300/60 mt-0.5">意思決定者</p>
                   </div>
                 </div>
+                <p className="text-[10px] text-white/30 mt-2 text-center">
+                  GPT-4o-search-preview でリサーチ → 3者で議論 → Claudeが決定事項を自動抽出 → ボット全体に反映
+                </p>
               </div>
 
               {/* ── STEP 1: Deep Research ── */}
@@ -1620,102 +1708,218 @@ function Dashboard() {
                 )}
               </div>
 
-              {/* ── STEP 2: 会議チャット ── */}
+              {/* ── STEP 2: 3者議論 ── */}
               {meetingSession && (
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xs font-semibold text-emerald-400/70 uppercase tracking-wider">
-                      STEP 2 — 会議チャット
+                <div className="rounded-xl border border-white/10 bg-white/3 p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                      STEP 2 — 3者議論
                     </h2>
-                    <span className="text-[10px] text-white/30">{Math.floor(meetingSession.messages.length / 2)} ターン</span>
+                    <span className="text-[10px] text-white/30">{meetingSession.messages.length}発言</span>
                   </div>
-                  <div className="space-y-3 max-h-[32rem] overflow-y-auto mb-4 pr-1">
+
+                  {/* メッセージ履歴 */}
+                  <div className="space-y-3 max-h-[36rem] overflow-y-auto mb-4 pr-1">
                     {meetingSession.messages.length === 0 && (
-                      <div className="text-center py-6">
-                        <p className="text-xs text-white/30">最初のメッセージを送ってください</p>
-                        <p className="text-[10px] text-white/20 mt-1">GPT-4o がリサーチ結果＋全ボットデータを踏まえて回答します</p>
+                      <div className="text-center py-8">
+                        <p className="text-2xl mb-2">🎙</p>
+                        <p className="text-xs text-white/40">議題を入力して「3者会議」を押してください</p>
+                        <p className="text-[10px] text-white/25 mt-1">GPT-4oが調査観点、Claudeが実装観点で続けて発言します</p>
                       </div>
                     )}
-                    {meetingSession.messages.map((m, i) => (
-                      <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[88%] rounded-xl px-3 py-2.5 ${
-                          m.role === "user"
-                            ? "bg-indigo-500/20 border border-indigo-500/30 text-indigo-100"
-                            : "bg-white/5 border border-white/10 text-white/80"
-                        }`}>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-[10px] text-white/30">{m.role === "user" ? "👤 あなた" : "🤖 GPT-4o"}</span>
-                            <span className="text-[10px] text-white/20">{fmtDate(m.at).slice(5)}</span>
-                            {m.role === "assistant" && (
-                              <button
-                                onClick={() => setDirModal({ text: m.content.slice(0, 500), source: `会議: ${meetingSession.title}` })}
-                                className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/20 text-indigo-400/70 hover:text-indigo-300 hover:bg-indigo-500/25 transition-colors"
-                                title="この回答から決定事項を保存"
-                              >
-                                📌 決定事項に保存
-                              </button>
-                            )}
+                    {meetingSession.messages.map((m, i) => {
+                      const sp = speakerStyle[m.speaker ?? (m.role === "user" ? "user" : "gpt")];
+                      const isUser = m.speaker === "user";
+                      return (
+                        <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[90%] rounded-xl px-3 py-2.5 ${sp.bg} border ${sp.border}`}>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <span className={`text-[10px] font-medium ${sp.text.replace("100", "400")}`}>{sp.label}</span>
+                              <span className="text-[10px] text-white/20">{fmtDate(m.at).slice(5)}</span>
+                              {!isUser && m.speaker !== "system" && (
+                                <button
+                                  onClick={() => setDirModal({ text: m.content.slice(0, 600), source: `会議: ${meetingSession.title}` })}
+                                  className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
+                                >
+                                  📌 保存
+                                </button>
+                              )}
+                            </div>
+                            <p className={`text-xs leading-relaxed whitespace-pre-wrap ${sp.text}`}>{m.content}</p>
                           </div>
-                          <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {meetingLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
-                          <p className="text-[10px] text-white/30 mb-1">🤖 GPT-4o</p>
-                          <p className="text-xs text-white/40 animate-pulse">考えています...</p>
-                        </div>
+                      <div className="flex gap-2">
+                        {sendMode === "trialogue" || sendMode === "gpt" ? (
+                          <div className="bg-blue-500/10 border border-blue-500/25 rounded-xl px-3 py-2.5">
+                            <p className="text-[10px] text-blue-400 mb-1">🤖 GPT-4o</p>
+                            <p className="text-xs text-blue-300/50 animate-pulse">リサーチ中...</p>
+                          </div>
+                        ) : null}
+                        {sendMode === "trialogue" && (
+                          <div className="bg-violet-500/10 border border-violet-500/25 rounded-xl px-3 py-2.5">
+                            <p className="text-[10px] text-violet-400 mb-1">🧠 Claude</p>
+                            <p className="text-xs text-violet-300/50 animate-pulse">分析中...</p>
+                          </div>
+                        )}
+                        {sendMode === "claude" && (
+                          <div className="bg-violet-500/10 border border-violet-500/25 rounded-xl px-3 py-2.5">
+                            <p className="text-[10px] text-violet-400 mb-1">🧠 Claude</p>
+                            <p className="text-xs text-violet-300/50 animate-pulse">考え中...</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* 送信モード選択 */}
+                  <div className="mb-3">
+                    <p className="text-[10px] text-white/30 mb-1.5">送信先：</p>
+                    <div className="flex gap-2">
+                      {([
+                        { mode: "trialogue" as const, label: "🎙 3者会議", desc: "GPT→Claude順に発言", active: "bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-indigo-400/40 text-white" },
+                        { mode: "gpt"       as const, label: "🤖 GPTのみ", desc: "素早いリサーチ",     active: "bg-blue-500/20 border-blue-400/40 text-blue-200" },
+                        { mode: "claude"    as const, label: "🧠 Claudeのみ", desc: "実装観点の意見",  active: "bg-violet-500/20 border-violet-400/40 text-violet-200" },
+                      ] as const).map(({ mode, label, desc, active }) => (
+                        <button
+                          key={mode}
+                          onClick={() => setSendMode(mode)}
+                          className={`flex-1 py-2 px-2 rounded-lg border text-[10px] font-medium transition-all ${
+                            sendMode === mode
+                              ? active
+                              : "bg-white/5 border-white/10 text-white/30 hover:bg-white/10 hover:text-white/50"
+                          }`}
+                        >
+                          <div>{label}</div>
+                          <div className="text-[9px] font-normal opacity-60 mt-0.5">{desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 入力エリア */}
+                  <div className="flex gap-2 mb-3">
                     <textarea
                       value={meetingInput}
                       onChange={(e) => setMeetingInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                      placeholder="質問や意見を入力... (Enter で送信 / Shift+Enter で改行)"
+                      placeholder={
+                        sendMode === "trialogue"
+                          ? "議題を入力... GPT→Claudeの順で議論します (Enter送信)"
+                          : sendMode === "gpt"
+                          ? "GPT-4oへの質問... (Enter送信)"
+                          : "Claudeへの質問... (Enter送信)"
+                      }
                       rows={2}
                       disabled={meetingLoading}
-                      className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 resize-none disabled:opacity-40"
+                      className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/40 resize-none disabled:opacity-40"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={meetingLoading || !meetingInput.trim()}
-                      className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-500/30 transition-colors disabled:opacity-40 self-end shrink-0"
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-40 self-end shrink-0 border ${
+                        sendMode === "trialogue"
+                          ? "bg-indigo-500/25 text-white border-indigo-400/40 hover:bg-indigo-500/40"
+                          : sendMode === "gpt"
+                          ? "bg-blue-500/20 text-blue-300 border-blue-400/30 hover:bg-blue-500/30"
+                          : "bg-violet-500/20 text-violet-300 border-violet-400/30 hover:bg-violet-500/30"
+                      }`}
                     >
-                      送信
+                      {meetingLoading ? "⟳" : "送信"}
                     </button>
                   </div>
-                  <div className="mt-3">
-                    <p className="text-[10px] text-white/30 mb-1.5">クイック質問：</p>
+
+                  {/* クイック議題 */}
+                  <div className="mb-4">
+                    <p className="text-[10px] text-white/25 mb-1.5">クイック議題：</p>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        "このボットに今すぐ実装すべきことは何ですか？",
-                        "投稿本数を増やすタイミングはいつが最適ですか？",
-                        "リスクの高い施策と低い施策を整理してください",
-                        "3ヶ月後の目標設定を提案してください",
-                        "現在のアクティブ決定事項の進捗を評価してください",
+                        "今すぐ実装すべき最優先施策は何か？",
+                        "投稿本数を増やす最適なタイミングと条件は？",
+                        "現在のリスクと対策を整理してほしい",
+                        "3ヶ月後の目標と必要なアクションを提案して",
+                        "決定事項の進捗を評価して次のアクションを決めたい",
                       ].map((q) => (
                         <button
                           key={q}
                           onClick={() => setMeetingInput(q)}
                           disabled={meetingLoading}
-                          className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors disabled:opacity-40"
+                          className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/8 text-white/35 hover:text-white/65 hover:bg-white/10 transition-colors disabled:opacity-40"
                         >
                           {q}
                         </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* 決定事項自動抽出ボタン */}
+                  {meetingSession.messages.filter((m) => m.role === "assistant").length >= 2 && (
+                    <div className="border-t border-white/8 pt-3">
+                      <button
+                        onClick={extractDecisionsFromSession}
+                        disabled={extractLoading}
+                        className="w-full py-2.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-xs font-medium hover:bg-emerald-500/25 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                      >
+                        {extractLoading ? (
+                          <><span className="animate-spin text-base">⟳</span>Claudeが議事録を解析中...</>
+                        ) : (
+                          <>💡 Claudeが決定事項を自動抽出する</>
+                        )}
+                      </button>
+                      <p className="text-[10px] text-white/20 text-center mt-1">会議の内容からClaudeが実行可能な決定候補を3〜6件提案します</p>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* ── STEP 3: 決定事項管理 ── */}
+              {/* ── STEP 3: 決定候補の確認・採用 ── */}
+              {candidates.length > 0 && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                      STEP 3 — 決定事項の確認・採用
+                    </h2>
+                    <span className="text-[10px] text-emerald-400/60">{candidates.length}件の候補</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 mb-3">以下の決定候補を確認してください。「✅ 採用」で即座にボットの全コンテキストに反映されます。</p>
+                  <div className="space-y-3">
+                    {candidates.map((c) => (
+                      <div key={c.id} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <span className="shrink-0 mt-0.5">{priIcon[c.priority]}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/85 leading-relaxed mb-1">{c.text}</p>
+                          <p className="text-[10px] text-white/35 italic mb-2">根拠: {c.rationale}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[c.category]}`}>{c.category}</span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex flex-col gap-1.5">
+                          <button
+                            onClick={() => adoptCandidate(c)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold hover:bg-emerald-500/35 transition-colors"
+                          >
+                            ✅ 採用
+                          </button>
+                          <button
+                            onClick={() => { setCandidates((prev) => prev.filter((x) => x.id !== c.id)); }}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/30 text-[10px] hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                          >
+                            ✖ 却下
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 4: 決定事項管理 ── */}
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xs font-semibold text-indigo-400/70 uppercase tracking-wider">
-                    📋 決定事項管理
+                    STEP 4 — 📋 稼働中の決定事項
                   </h2>
                   <button
                     onClick={() => setDirModal({ text: "", source: "手動入力" })}
