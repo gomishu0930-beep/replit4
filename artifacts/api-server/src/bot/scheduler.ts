@@ -11,7 +11,7 @@ import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision 
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
-import { contact } from './contact.js';
+import { contact, sendMetricsReport, MetricsReportPost } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 import { autoCompleteTask } from './tasks.js';
@@ -637,6 +637,58 @@ export function startScheduler() {
       const topLinks = [...rbData.links].sort((a, b) => b.clicks - a.clicks).slice(0, 3)
         .map(l => ({ title: l.title, clicks: l.clicks }));
       await contact.rebrandlyWeeklySummary(rbTotalClicks, topLinks);
+    }
+
+    // ── 週次メトリクスレポート（スプレッドシート代替・IPF自動計算含む）──
+    try {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weekPosts = getPostsAfter(weekAgo);
+      if (weekPosts.length > 0) {
+        const metricsRows: MetricsReportPost[] = weekPosts.map(p => {
+          const imp = p.metrics?.impression_count ?? 0;
+          const likes = p.metrics?.like_count ?? 0;
+          const rt = p.metrics?.retweet_count ?? 0;
+          // Rebrandlyクリック数：destinationURLで照合
+          const rbLink = rbData.links.find(l => l.destination === p.item?.affiliateURL);
+          const clicks = rbLink?.clicks ?? 0;
+          const er = imp > 0 ? (likes + rt) / imp : 0;
+          const pvr = imp > 0 ? clicks / imp : 0;
+          return {
+            postedAt: p.postedAt,
+            type: p.type,
+            text: p.text,
+            impressions: imp,
+            likes,
+            retweets: rt,
+            clicks,
+            sbStatus: imp > 0 ? (imp >= 10 ? '正常' : 'SB疑い') : '未計測',
+            note: p.contentType ?? '',
+            engagementRate: er,
+            pvr,
+          };
+        });
+        const totalImp = metricsRows.reduce((s, p) => s + p.impressions, 0);
+        const avgImp = totalImp / metricsRows.length;
+        const now = new Date();
+        const startDate = weekAgo.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' });
+        const endDate = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' });
+        const sbNormal = metricsRows.filter(p => p.sbStatus === '正常').length;
+        await sendMetricsReport({
+          period: `${startDate}〜${endDate}`,
+          posts: metricsRows,
+          avgImpression: avgImp,
+          totalLikes: metricsRows.reduce((s, p) => s + p.likes, 0),
+          totalRetweets: metricsRows.reduce((s, p) => s + p.retweets, 0),
+          totalClicks: rbTotalClicks,
+          rbLinks: rbData.links.length,
+          sbStatusSummary: `正常${sbNormal}件 / SB疑い${metricsRows.length - sbNormal}件`,
+        });
+        console.log(`  ✅ 週次メトリクスレポート送信完了 (${metricsRows.length}件 / 平均IPF: ${avgImp.toFixed(1)})`);
+      } else {
+        console.log('  ℹ️  週次メトリクスレポート: 対象投稿なし（スキップ）');
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ 週次メトリクスレポート生成失敗:', e.message);
     }
 
     await contact.weeklyReport({

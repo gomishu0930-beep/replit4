@@ -91,7 +91,9 @@ export async function syncRebrandlyClicks(): Promise<{
  * 英数字とハイフンのみ許可（Rebrandly仕様）。
  */
 function toSlashtag(itemId: string): string {
-  return itemId.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().slice(0, 50);
+  const slug = itemId.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().slice(0, 46);
+  // Rebrandly: slashtag must start with a letter (not digit or hyphen)
+  return /^[a-z]/.test(slug) ? slug : `fz-${slug}`;
 }
 
 /**

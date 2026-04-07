@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
-import { sendMeetingFullLog } from '../bot/contact.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData } from '../bot/storage.js';
+import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot/contact.js';
 import { getMeetingById, getMeetings } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
 import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
@@ -297,6 +297,61 @@ router.post('/trigger/emergency-meeting', auth, async (_req, res) => {
     .finally(() => {
       isEmergencyMeetingRunning = false;
     });
+});
+
+// POST /api/trigger/send-metrics-report — 週次メトリクスレポートを今すぐ手動送信
+router.post('/trigger/send-metrics-report', auth, async (req, res) => {
+  try {
+    const days = Number(req.body?.days ?? 7);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const posts = getPostsAfter(since);
+    const rbData = getRebrandlyData();
+    const rbTotalClicks = rbData.links.reduce((s: number, l: any) => s + l.clicks, 0);
+
+    const metricsRows: MetricsReportPost[] = posts.map((p: any) => {
+      const imp = p.metrics?.impression_count ?? 0;
+      const likes = p.metrics?.like_count ?? 0;
+      const rt = p.metrics?.retweet_count ?? 0;
+      const rbLink = rbData.links.find((l: any) => l.destination === p.item?.affiliateURL);
+      const clicks = rbLink?.clicks ?? 0;
+      const er = imp > 0 ? (likes + rt) / imp : 0;
+      const pvr = imp > 0 ? clicks / imp : 0;
+      return {
+        postedAt: p.postedAt,
+        type: p.type,
+        text: p.text,
+        impressions: imp,
+        likes,
+        retweets: rt,
+        clicks,
+        sbStatus: imp > 0 ? (imp >= 10 ? '正常' : 'SB疑い') : '未計測',
+        note: p.contentType ?? '',
+        engagementRate: er,
+        pvr,
+      };
+    });
+
+    const totalImp = metricsRows.reduce((s, p) => s + p.impressions, 0);
+    const avgImp = metricsRows.length > 0 ? totalImp / metricsRows.length : 0;
+    const startDate = since.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' });
+    const endDate = new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' });
+    const sbNormal = metricsRows.filter(p => p.sbStatus === '正常').length;
+
+    await sendMetricsReport({
+      period: `${startDate}〜${endDate}`,
+      posts: metricsRows,
+      avgImpression: avgImp,
+      totalLikes: metricsRows.reduce((s, p) => s + p.likes, 0),
+      totalRetweets: metricsRows.reduce((s, p) => s + p.retweets, 0),
+      totalClicks: rbTotalClicks,
+      rbLinks: rbData.links.length,
+      sbStatusSummary: `正常${sbNormal}件 / SB疑い${metricsRows.length - sbNormal}件`,
+    });
+
+    res.json({ ok: true, postCount: metricsRows.length, avgImpression: avgImp.toFixed(1), period: `${startDate}〜${endDate}` });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // ─── 緊急停止 / 再開 ──────────────────────────────────────────────────────────

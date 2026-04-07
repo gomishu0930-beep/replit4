@@ -354,3 +354,104 @@ export const contact = {
       body,
     }),
 };
+
+// ─── 週次メトリクスレポート（スプレッドシート代替）────────────────────────────
+
+export interface MetricsReportPost {
+  postedAt: string;           // A: 日付
+  type: string;               // B: 投稿タイプ
+  text: string;               // (本文抜粋)
+  impressions: number;        // D: インプレッション
+  likes: number;              // E: いいね
+  retweets: number;           // F: RT
+  clicks: number;             // G: クリック数 (Rebrandly)
+  sbStatus: string;           // H: SBステータス
+  note?: string;              // I: 備考
+  engagementRate: number;     // O: エンゲージメント率 = (E+F) ÷ D
+  pvr: number;                // M: PVR = G ÷ D (クリック÷インプ)
+}
+
+export async function sendMetricsReport(params: {
+  period: string;             // 例: "2026/4/8〜4/14"
+  posts: MetricsReportPost[];
+  avgImpression: number;
+  totalLikes: number;
+  totalRetweets: number;
+  totalClicks: number;
+  rbLinks: number;
+  sbStatusSummary: string;
+}): Promise<void> {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) {
+    console.warn('  ⚠ [メール] SMTP未設定のためメトリクスレポートスキップ');
+    return;
+  }
+
+  const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const { period, posts, avgImpression, totalLikes, totalRetweets, totalClicks } = params;
+
+  // ── ヘッダーサマリー ──────────────────────────────────────────────────────
+  const lines: string[] = [
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `【週次メトリクスレポート】@gomi_shu_god`,
+    `対象期間: ${period}`,
+    `送信日時: ${jst}`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `## 📊 週次サマリー`,
+    ``,
+    `投稿数       : ${posts.length}件`,
+    `平均IMP (IPF): ${avgImpression.toFixed(1)}`,
+    `合計いいね   : ${totalLikes}件`,
+    `合計RT       : ${totalRetweets}件`,
+    `合計クリック : ${totalClicks}件 (Rebrandly)`,
+    `SB状況       : ${params.sbStatusSummary}`,
+    ``,
+    `平均ER       : ${posts.length > 0 ? (posts.reduce((s, p) => s + p.engagementRate, 0) / posts.length * 100).toFixed(2) : '0.00'}%`,
+    `平均PVR      : ${posts.length > 0 ? (posts.reduce((s, p) => s + p.pvr, 0) / posts.length * 100).toFixed(2) : '0.00'}%`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `## 📋 投稿別データ（列 A〜O 相当）`,
+    ``,
+    `【凡例】D=インプ / E=いいね / F=RT / G=クリック / O=ER% / M=PVR%`,
+    ``,
+  ];
+
+  // ── 投稿ごとの行 ──────────────────────────────────────────────────────────
+  posts.forEach((p, i) => {
+    const dateStr = new Date(p.postedAt).toLocaleString('ja-JP', {
+      timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const erPct = (p.engagementRate * 100).toFixed(2);
+    const pvrPct = (p.pvr * 100).toFixed(2);
+    lines.push(`─── [${i + 1}] ${dateStr} ───`);
+    lines.push(`A: ${dateStr}  B: ${p.type}  H: ${p.sbStatus}`);
+    lines.push(`D: ${p.impressions}IMP  E: ${p.likes}❤  F: ${p.retweets}RT  G: ${p.clicks}クリック`);
+    lines.push(`O: ER=${erPct}%  M: PVR=${pvrPct}%`);
+    lines.push(`投稿: ${p.text.slice(0, 80)}${p.text.length > 80 ? '...' : ''}`);
+    if (p.note) lines.push(`I: ${p.note}`);
+    lines.push('');
+  });
+
+  if (posts.length === 0) {
+    lines.push('（今週の投稿データなし）');
+    lines.push('');
+  }
+
+  lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  lines.push(`FANZA X Bot 連絡チーム`);
+
+  const avgImpStr = avgImpression.toFixed(1);
+  const subjectTag = Number(avgImpStr) >= 15 ? '🟢' : Number(avgImpStr) >= 8 ? '🟡' : '🔴';
+
+  await createTransport().sendMail({
+    from: `"FANZA Bot 連絡チーム" <${user}>`,
+    to: OWNER_EMAIL,
+    subject: `${subjectTag} [FANZABot] 週次メトリクス ${period} | 平均IPF: ${avgImpStr}`,
+    text: lines.join('\n'),
+  });
+
+  console.log(`  📧 [メール] 週次メトリクスレポート送信完了 (${posts.length}件 → ${OWNER_EMAIL})`);
+}

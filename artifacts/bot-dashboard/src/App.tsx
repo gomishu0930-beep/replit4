@@ -1706,6 +1706,24 @@ function Dashboard() {
                   >
                     {autoExecRunning ? "実行中..." : "▶ 指令実行"}
                   </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`${API}/api/trigger/send-metrics-report`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", "x-trigger-secret": "fanza-bot-trigger" },
+                          body: JSON.stringify({ days: 7 }),
+                        });
+                        const data = await res.json();
+                        if (data.ok) alert(`📊 週次メトリクスレポートを送信しました\n投稿: ${data.postCount}件 / 平均IPF: ${data.avgImpression} / 期間: ${data.period}`);
+                        else alert("エラー: " + data.error);
+                      } catch (e: any) { alert("送信失敗: " + e.message); }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition-colors"
+                    title="過去7日間のインプ/ER/PVR/Rebrandlyクリックをメールで送信（スプレッドシート代替）"
+                  >
+                    📊 週次メトリクス
+                  </button>
                 </div>
               </div>
 
@@ -1716,6 +1734,7 @@ function Dashboard() {
                   { label: "会議室決定の自動実行", schedule: "毎朝 07:30 JST", enabled: true },
                   { label: "アルゴ推奨の自動適用", schedule: "日曜 23:30 JST", enabled: true },
                   { label: "A/Bテスト自動判定", schedule: "W2終了後 月曜 09:00", enabled: true },
+                  { label: "📊 週次メトリクスレポート", schedule: "月曜 08:00 JST (メール自動送信)", enabled: true },
                 ]).map((f) => (
                   <div key={f.label} className="bg-white/3 rounded-lg p-2.5 border border-white/8">
                     <div className="flex items-center gap-1.5 mb-1">
