@@ -115,7 +115,7 @@ interface ResearchSession {
   startedAt: string;
   completedAt: string;
 }
-type Speaker = "user" | "gpt" | "claude" | "system";
+type Speaker = "user" | "gpt" | "claude" | "grok" | "system";
 type Assignee = "user" | "others" | "ai";
 interface MeetingMessage {
   role: "user" | "assistant";
@@ -2726,10 +2726,11 @@ function Dashboard() {
 
           // スピーカーごとのスタイル定義
           const speakerStyle: Record<Speaker, { bg: string; border: string; text: string; label: string; icon: string }> = {
-            user:   { bg: "bg-indigo-500/20",  border: "border-indigo-500/30",  text: "text-indigo-100",  label: "👤 あなた",            icon: "👤" },
-            gpt:    { bg: "bg-blue-500/15",     border: "border-blue-500/30",    text: "text-blue-100",    label: "🤖 o3 Thinking",       icon: "🤖" },
-            claude: { bg: "bg-violet-500/15",   border: "border-violet-500/30",  text: "text-violet-100",  label: "🧠 Claude Sonnet",     icon: "🧠" },
-            system: { bg: "bg-white/5",         border: "border-white/10",       text: "text-white/60",    label: "📋 システム",          icon: "📋" },
+            user:   { bg: "bg-indigo-500/20",  border: "border-indigo-500/30",  text: "text-indigo-100",  label: "👤 あなた",              icon: "👤" },
+            gpt:    { bg: "bg-blue-500/15",     border: "border-blue-500/30",    text: "text-blue-100",    label: "🤖 o3 Thinking",         icon: "🤖" },
+            claude: { bg: "bg-violet-500/15",   border: "border-violet-500/30",  text: "text-violet-100",  label: "🧠 Claude Sonnet",       icon: "🧠" },
+            grok:   { bg: "bg-orange-500/15",   border: "border-orange-500/30",  text: "text-orange-100",  label: "🦅 Grok (X情報官)",     icon: "🦅" },
+            system: { bg: "bg-white/5",         border: "border-white/10",       text: "text-white/60",    label: "📋 システム",            icon: "📋" },
           };
 
           return (
@@ -2748,21 +2749,21 @@ function Dashboard() {
                   <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <p className="text-lg mb-1">🤖</p>
                     <p className="text-[11px] font-semibold text-blue-300">o3 Thinking</p>
-                    <p className="text-[10px] text-blue-300/60 mt-0.5">調査・立論・再反論</p>
+                    <p className="text-[10px] text-blue-300/60 mt-0.5">データ分析・立論</p>
                   </div>
                   <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
                     <p className="text-lg mb-1">🧠</p>
                     <p className="text-[11px] font-semibold text-violet-300">Claude Sonnet</p>
-                    <p className="text-[10px] text-violet-300/60 mt-0.5">反論・最終統合</p>
+                    <p className="text-[10px] text-violet-300/60 mt-0.5">リスク評価・最終統合</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                    <p className="text-lg mb-1">👤</p>
-                    <p className="text-[11px] font-semibold text-indigo-300">あなた</p>
-                    <p className="text-[10px] text-indigo-300/60 mt-0.5">フォロー・最終決定</p>
+                  <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <p className="text-lg mb-1">🦅</p>
+                    <p className="text-[11px] font-semibold text-orange-300">Grok (X情報官)</p>
+                    <p className="text-[10px] text-orange-300/60 mt-0.5">X現場・ファクトチェック</p>
                   </div>
                 </div>
                 <p className="text-[10px] text-white/30 mt-2 text-center">
-                  ディープリサーチ → 5ラウンドディベート（立論→反論→再論×3→最終統合）→ あなたが最終決定
+                  Webリサーチ → 5ラウンド3者ディベート（GPT立論 → Claude反論 → Grok裁定）→ あなたが最終決定
                 </p>
               </div>
 

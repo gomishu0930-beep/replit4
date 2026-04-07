@@ -1,17 +1,18 @@
 /**
- * meeting.ts — 3者会議室
+ * meeting.ts — AI 3者会議室
  *
  * 参加者：
- *   - GPT-4o          (調査・リサーチ担当)
- *   - Claude Sonnet   (実装・判断担当)
- *   - あなた           (意思決定者)
+ *   - o3 Thinking (GPT)    : データ分析・アルゴリズム戦略
+ *   - Claude Sonnet        : リスク評価・シャドウバン回復戦略
+ *   - Grok 4.1 Fast        : X リアルタイム情報・現場事実の裁定者
  *
  * フロー：
- *   Deep Research → 3者議論 → 決定事項抽出 → 保存・全体反映
+ *   Web Research → 3AI議論（5ラウンド×3者）→ 決定事項抽出 → 保存・全体反映
  */
 
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
+import { queryGrok } from './grok.js';
 import { readJson, writeJson } from './cloudStore.js';
 import { getAllPosts, getStats, getExternalPatternsInfo, getDailyImpressionSnapshots, getObservations } from './storage.js';
 import { getStrategySummary } from './strategy.js';
@@ -36,7 +37,7 @@ export interface ResearchSession {
   completedAt: string;
 }
 
-export type Speaker = 'user' | 'gpt' | 'claude' | 'system';
+export type Speaker = 'user' | 'gpt' | 'claude' | 'grok' | 'system';
 
 export interface MeetingMessage {
   role: 'user' | 'assistant';
@@ -253,7 +254,7 @@ function getResearchContext(session: MeetingSession): string {
 
 function buildHistory(messages: MeetingMessage[]): string {
   return messages.slice(-20).map((m) => {
-    const label = m.speaker === 'gpt' ? 'o3 Thinking(GPT)' : m.speaker === 'claude' ? 'Claude Sonnet' : m.speaker === 'user' ? 'ユーザー' : 'システム';
+    const label = m.speaker === 'gpt' ? 'o3 Thinking(GPT)' : m.speaker === 'claude' ? 'Claude Sonnet' : m.speaker === 'grok' ? 'Grok(X情報官)' : m.speaker === 'user' ? 'ユーザー' : 'システム';
     return `[${label}] ${m.content}`;
   }).join('\n\n---\n\n');
 }
@@ -327,6 +328,60 @@ ${extraInstruction}
 
   const block = response.content[0];
   return block.type === 'text' ? block.text : '（応答なし）';
+}
+
+// Grok 4.1 Fast に発言させる（X リアルタイム情報官）
+async function speakAsGrok(session: MeetingSession, prompt: string, extraInstruction = ''): Promise<string> {
+  const botContext = buildBotContext();
+  const researchCtx = getResearchContext(session);
+  const history = session.messages.length > 0 ? `\n\n## これまでの議論\n${buildHistory(session.messages)}` : '';
+
+  const systemPrompt = `あなたはXプラットフォームのリアルタイム情報官（Grok 4.1 Fast）として戦略会議に参加しています。
+あなただけがXの現在進行中のデータに直接アクセスできる。この唯一の優位性を最大限に活かしてください。
+
+【あなたの役割・思考スタイル】
+- GPTとClaudeの議論を「Xの現実」でファクトチェックする
+- 「今Xで実際に何が起きているか」を具体的なトレンド・事例・ユーザー行動で示す
+- シャドウバン回復に成功した日本語アカウントの実例をXから引用する
+- GPTの理論的分析が現場と乖離していれば指摘、Claudeのリスク懸念が過大/過小なら修正する
+- 「Xがこのアルゴリズムを適用しているという根拠はXで確認できる/できない」と明言する
+- 最終ラウンドでは「Xの現実に最も整合する戦略」を裁定として示す
+
+【禁止事項】
+- 憶測での発言（「おそらく〜」は使わない。確認できない場合は「Xでは確認できなかった」と明言）
+- GPTとClaudeの二番煎じ（彼らが言わなかったX特有の情報のみ追加する）
+- 1000文字を超える長文（簡潔に、インパクトのある事実のみ）
+
+${botContext}${researchCtx}${history}
+${extraInstruction}
+重要な発見・裁定は「🦅 X情報:」と明記してください。日本語で回答してください。`;
+
+  try {
+    const reply = await queryGrok(prompt, systemPrompt);
+    return reply || '（Grok応答なし）';
+  } catch (e: any) {
+    return `（Grok応答エラー: ${e.message}）`;
+  }
+}
+
+// ラウンドごとのGrok指示
+function grokRoundInstruction(round: number, total: number): string {
+  if (round === 1) {
+    return `【ラウンド${round}/${total} - X現場報告】GPTとClaudeの議論を聞いた上で。
+①GPTが提示した仮説について「Xで実際に確認できるか」をリアルタイム検索で判定してください。
+②シャドウバン回復に成功した日本語アカウントの直近事例をXから1〜2件紹介してください。
+③現在のXアルゴリズムで最も効いている手法を1つ、具体的証拠と共に提示してください。`;
+  }
+  if (round === total) {
+    return `【ラウンド${round}/${total} - X裁定】5ラウンドの議論を経て、Xの現実に照らした最終裁定を下してください。
+①GPT案・Claude案のうち「Xアルゴリズムの現実に最も合致するのはどちらか」を断言してください。
+②現在のXで@suguhalove0419が今週試すべき最優先アクション（X実例付き）を1つ提示してください。
+③「🦅 X情報:」から始まる形式で、3点以内の最終ファクトを列挙して締めてください。`;
+  }
+  return `【ラウンド${round}/${total} - Xファクトチェック】
+GPTとClaudeの最新の主張を「Xで確認できる事実」でジャッジしてください。
+どちらかの主張が事実と異なれば訂正、両者が見落としているX特有のデータがあれば追加してください。
+発言は400文字以内に収めてください。`;
 }
 
 // ─── 会議セッション作成・通常メッセージ ────────────────────────────────────
@@ -456,27 +511,43 @@ export async function runTrialogue(
   const newMessages: MeetingMessage[] = [];
   let lastGptReply = '';
   let lastClaudeReply = '';
+  let lastGrokReply = '';
 
   for (let round = 1; round <= TOTAL_ROUNDS; round++) {
-    // ── GPT発言 ──
+    console.log(`  🔄 [会議] ラウンド ${round}/${TOTAL_ROUNDS} 開始`);
+
+    // ── GPT 発言 ──
     const gptPrompt = round === 1
-      ? `【議題】${userMessage}\n\nリサーチ・データ・外部トレンドの観点から先に意見を述べてください。論点を明確に整理し、Claudeが反論しやすいよう構造化してください。`
-      : `Claudeが以下のように述べました：\n\n${lastClaudeReply}\n\n---\n元の議題：${userMessage}\n\nClaudeの指摘を受けて立場を再検討し、返答してください。`;
+      ? `【議題】${userMessage}\n\nデータ分析の観点から最初の立場を示してください。`
+      : `【前ラウンドのまとめ】\nClaude: ${lastClaudeReply.slice(0, 400)}\nGrok(X情報官): ${lastGrokReply.slice(0, 300)}\n\n---\n元の議題：${userMessage}\n\nClaudeの反論とGrokのX実態報告を受けて立場を再検討し、返答してください。`;
 
     const gptReply = await speakAsGPT(session, gptPrompt, gptRoundInstruction(round, TOTAL_ROUNDS));
     const gptMsg = pushMsg(session, 'gpt', gptReply);
     newMessages.push(gptMsg);
     lastGptReply = gptReply;
+    console.log(`    ✅ GPT完了 (${gptReply.length}文字)`);
 
-    // ── Claude発言 ──
+    // ── Claude 発言 ──
     const claudePrompt = round === TOTAL_ROUNDS
-      ? `${TOTAL_ROUNDS}ラウンドの議論を経て、GPTが最終的に以下のように述べました：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\n議論全体を踏まえた最終統合見解とユーザーへの決断材料を提示してください。`
+      ? `${TOTAL_ROUNDS}ラウンドの議論全体（GPT・Grokの発言含む）を踏まえて最終統合見解を示してください。\n\nGPT最終発言: ${gptReply.slice(0, 500)}\n前ラウンドGrok報告: ${lastGrokReply.slice(0, 300)}\n\n元の議題：${userMessage}`
       : `GPTが以下のように述べました（ラウンド${round}）：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討し、返答してください。`;
 
     const claudeReply = await speakAsClaude(session, claudePrompt, claudeRoundInstruction(round, TOTAL_ROUNDS));
     const claudeMsg = pushMsg(session, 'claude', claudeReply);
     newMessages.push(claudeMsg);
     lastClaudeReply = claudeReply;
+    console.log(`    ✅ Claude完了 (${claudeReply.length}文字)`);
+
+    // ── Grok 発言（X リアルタイム情報官）──
+    const grokPrompt = round === TOTAL_ROUNDS
+      ? `GPT最終発言: ${gptReply.slice(0, 400)}\nClaude最終統合: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXの現実に照らした最終裁定を下してください。`
+      : `GPT（ラウンド${round}）: ${gptReply.slice(0, 400)}\nClaude（ラウンド${round}）: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXのリアルタイムデータでこの議論をファクトチェックしてください。`;
+
+    const grokReply = await speakAsGrok(session, grokPrompt, grokRoundInstruction(round, TOTAL_ROUNDS));
+    const grokMsg = pushMsg(session, 'grok', grokReply);
+    newMessages.push(grokMsg);
+    lastGrokReply = grokReply;
+    console.log(`    ✅ Grok完了 (${grokReply.length}文字)`);
   }
 
   await saveData();
@@ -493,7 +564,7 @@ export async function extractDecisions(sessionId: string): Promise<DecisionCandi
   const transcript = buildHistory(session.messages);
   const botContext = buildBotContext();
 
-  const prompt = `以下はFANZA Xボット運営に関する戦略会議（o3 Thinking・Claude Sonnet）の議事録です。
+  const prompt = `以下はFANZA Xボット運営に関する3者戦略会議（o3 Thinking・Claude Sonnet・Grok X情報官）の議事録です。
 
 ${botContext}
 
