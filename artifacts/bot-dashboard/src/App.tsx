@@ -754,6 +754,7 @@ function ManualFeedbackPanel({ feedbacks, onRun }: { feedbacks: ManualPostFeedba
 function Dashboard() {
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb" | "rebrandly" | "algo">("overview");
+  const [platform, setPlatform] = useState<"x" | "threads">("x");
 
   // mainTab は tab から自動導出（既存の setTab 呼び出しをそのまま使える）
   const mainTab = (() => {
@@ -1038,15 +1039,46 @@ function Dashboard() {
       <header className="border-b border-white/8 bg-[#0d1529]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* プラットフォームトグル */}
+            <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
+              <button
+                onClick={() => setPlatform("x")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                  platform === "x"
+                    ? "bg-[#1d9bf0] text-white shadow-sm"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                𝕏
+              </button>
+              <button
+                onClick={() => setPlatform("threads")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                  platform === "threads"
+                    ? "bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] text-white shadow-sm"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                🪡
+              </button>
+            </div>
             <div>
               <h1 className="text-sm font-bold leading-tight">
-                {mainTab === "home"     && "🏠 ホーム"}
-                {mainTab === "posts"    && "📝 投稿管理"}
-                {mainTab === "analysis" && "📊 分析"}
-                {mainTab === "strategy" && "🧠 戦略"}
-                {mainTab === "admin"    && "⚙️ 管理"}
+                {platform === "threads" ? (
+                  <>🪡 Threads — {mainTab === "home" ? "ホーム" : mainTab === "posts" ? "投稿管理" : mainTab === "analysis" ? "分析" : mainTab === "strategy" ? "戦略" : "管理"}</>
+                ) : (
+                  <>
+                    {mainTab === "home"     && "🏠 ホーム"}
+                    {mainTab === "posts"    && "📝 投稿管理"}
+                    {mainTab === "analysis" && "📊 分析"}
+                    {mainTab === "strategy" && "🧠 戦略"}
+                    {mainTab === "admin"    && "⚙️ 管理"}
+                  </>
+                )}
               </h1>
-              <p className="text-[11px] text-white/40">{status?.account ?? "読み込み中..."}</p>
+              <p className="text-[11px] text-white/40">
+                {platform === "threads" ? "Amazon/楽天 アフィリエイト" : (status?.account ?? "読み込み中...")}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -1090,6 +1122,251 @@ function Dashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-5 pb-24 space-y-5">
+
+        {/* ════ Threads ビュー ════ */}
+        {platform === "threads" && (
+          <div className="space-y-5">
+            {/* ── Threads ホーム ── */}
+            {mainTab === "home" && (
+              <>
+                {/* 接続ステータス */}
+                <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🪡</span>
+                      <div>
+                        <p className="text-sm font-bold text-orange-300">Threads 未接続</p>
+                        <p className="text-[10px] text-orange-300/60">API設定が必要です</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setTab("tasks")}
+                      className="px-3 py-1.5 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[11px] font-medium hover:bg-orange-500/30 transition-colors"
+                    >
+                      ⚙️ 設定へ
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { step: "1", label: "Threads API", status: "未設定", color: "red" },
+                      { step: "2", label: "Amazon Associates", status: "未設定", color: "red" },
+                      { step: "3", label: "楽天アフィリ", status: "未設定", color: "red" },
+                    ].map(s => (
+                      <div key={s.step} className="p-2.5 rounded-lg bg-white/5 border border-white/8 text-center">
+                        <p className="text-[10px] text-white/40 mb-0.5">STEP {s.step}</p>
+                        <p className="text-[11px] font-semibold text-white/70">{s.label}</p>
+                        <p className="text-[10px] text-red-400/80 mt-0.5">{s.status}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 運用戦略サマリー */}
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                  <h2 className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3">📋 確定戦略（AI会議より）</h2>
+                  <div className="space-y-2.5">
+                    {[
+                      { icon: "🎯", label: "マネタイズ", value: "Amazon/楽天 芸能人コンテンツ（写真集・DVD・グッズ）" },
+                      { icon: "📅", label: "投稿頻度", value: "1日1〜2件（X投稿とは独立して運用）" },
+                      { icon: "✍️", label: "コンテンツ型", value: "芸能人レビュー・ランキング・新作速報（アフィリリンク直接掲載）" },
+                      { icon: "🤝", label: "X連携", value: "独立運用（Xへの誘導なし・Threads単独でコンバート）" },
+                      { icon: "🤖", label: "AI生成", value: "既存のGPT/Claude/Grokパイプラインをそのまま活用" },
+                    ].map(item => (
+                      <div key={item.label} className="flex gap-3">
+                        <span className="text-base shrink-0">{item.icon}</span>
+                        <div>
+                          <p className="text-[10px] text-white/40">{item.label}</p>
+                          <p className="text-xs text-white/80">{item.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 予想収益 */}
+                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">📈 収益シミュレーション</h2>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    {[
+                      { period: "1ヶ月後", followers: "〜100", revenue: "¥1,000〜3,000", color: "text-white/50" },
+                      { period: "3ヶ月後", followers: "〜500", revenue: "¥5,000〜15,000", color: "text-yellow-300/80" },
+                      { period: "6ヶ月後", followers: "〜2,000", revenue: "¥20,000〜50,000", color: "text-emerald-300/80" },
+                    ].map(s => (
+                      <div key={s.period} className="p-3 rounded-lg bg-white/5 border border-white/8">
+                        <p className="text-[10px] text-white/40 mb-1">{s.period}</p>
+                        <p className="text-[10px] text-white/60">フォロワー {s.followers}</p>
+                        <p className={`text-xs font-bold mt-1 ${s.color}`}>{s.revenue}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-white/25 mt-2 text-center">※Amazon/楽天アフィリ 平均クリック率2%・成約率5%・単価¥3,000で試算</p>
+                </div>
+              </>
+            )}
+
+            {/* ── Threads 投稿管理 ── */}
+            {mainTab === "posts" && (
+              <>
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                  <h2 className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3">✍️ Threads投稿生成（プレビュー）</h2>
+                  <p className="text-[10px] text-white/40 mb-4">API接続後、以下のテンプレートで自動投稿が開始されます。</p>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        type: "📸 写真集レビュー型",
+                        example: "【{芸能人名}最新写真集レビュー】\n\n全{ページ数}ページ、{撮影場所}ロケが圧巻。\n特に{特徴的なシーン}のカットは必見。\n\nファンなら絶対持っておきたい一冊です📖\n\n▶ Amazon予約・購入はプロフのリンクから",
+                        color: "border-blue-500/30 bg-blue-500/5",
+                      },
+                      {
+                        type: "🏆 ランキング型",
+                        example: "【2026年 買ってよかった芸能人グッズTOP3】\n\n1位: {商品名} - {理由}\n2位: {商品名} - {理由}\n3位: {商品名} - {理由}\n\n詳細リンクはプロフから👆",
+                        color: "border-emerald-500/30 bg-emerald-500/5",
+                      },
+                      {
+                        type: "⚡ 新作速報型",
+                        example: "🚨 速報: {芸能人名}の新作{コンテンツ種別}が発売！\n\n発売日: {日付}\n価格: ¥{価格}\n\n予約開始してます→ リンクはプロフから",
+                        color: "border-orange-500/30 bg-orange-500/5",
+                      },
+                    ].map(t => (
+                      <div key={t.type} className={`p-3 rounded-lg border ${t.color}`}>
+                        <p className="text-[10px] font-semibold text-white/70 mb-2">{t.type}</p>
+                        <pre className="text-[10px] text-white/50 whitespace-pre-wrap font-sans leading-relaxed">{t.example}</pre>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">📅 投稿スケジュール案</h2>
+                  <div className="space-y-2">
+                    {[
+                      { time: "07:00 JST", type: "写真集レビュー", note: "朝の通勤時間帯狙い" },
+                      { time: "12:30 JST", type: "ランキング・おすすめ", note: "昼休み狙い" },
+                      { time: "21:00 JST", type: "新作速報・セール情報", note: "夜のリラックスタイム" },
+                    ].map(s => (
+                      <div key={s.time} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5">
+                        <span className="text-[11px] font-mono text-indigo-300 w-20 shrink-0">{s.time}</span>
+                        <span className="text-xs text-white/70 flex-1">{s.type}</span>
+                        <span className="text-[10px] text-white/30">{s.note}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-white/30 mt-3">※ AI会議での方針確定後、自動スケジューラーに組み込まれます</p>
+                </div>
+              </>
+            )}
+
+            {/* ── Threads 分析 ── */}
+            {mainTab === "analysis" && (
+              <div className="rounded-xl border border-white/8 bg-white/3 p-4 text-center py-12">
+                <p className="text-3xl mb-3">📊</p>
+                <p className="text-sm font-semibold text-white/60 mb-2">API接続後に分析が開始されます</p>
+                <p className="text-[11px] text-white/35 mb-4">計測予定: インプレッション・アフィリリンククリック数・コンバージョン数・収益</p>
+                <button
+                  onClick={() => setTab("tasks")}
+                  className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+                >
+                  ⚙️ 管理画面でAPI接続する
+                </button>
+              </div>
+            )}
+
+            {/* ── Threads 戦略（X戦略と共有） ── */}
+            {mainTab === "strategy" && (
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🧠</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">戦略・会議室はX/Threads共通</p>
+                    <p className="text-[10px] text-white/40">AI会議でThreadsの方針も策定できます</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-white/50 mb-4">会議のトピックに「Threads × Amazon/楽天アフィリ戦略」と入力すると、GPT・Claude・GrokがThreads専用の方針を決定します。</p>
+                <button
+                  onClick={() => setTab("meeting")}
+                  className="w-full py-2.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-medium hover:bg-indigo-500/30 transition-colors"
+                >
+                  🤝 会議室を開く（Threads戦略を議論する）
+                </button>
+              </div>
+            )}
+
+            {/* ── Threads 管理（セットアップガイド） ── */}
+            {mainTab === "admin" && (
+              <>
+                <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+                  <h2 className="text-xs font-semibold text-orange-300 uppercase tracking-wider mb-4">⚙️ Threads 接続セットアップ</h2>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        step: 1, title: "Meta開発者アカウント作成 + Threads APIアクセス申請",
+                        detail: "developers.facebook.com → アプリ作成 → Threads APIを追加 → アクセストークン取得",
+                        link: "https://developers.facebook.com/",
+                        status: "未完了",
+                      },
+                      {
+                        step: 2, title: "Amazon アソシエイト登録（3%〜10%報酬）",
+                        detail: "affiliate.amazon.co.jp → 審査申請 → トラッキングID取得（審査: 約1週間）",
+                        link: "https://affiliate.amazon.co.jp/",
+                        status: "未完了",
+                      },
+                      {
+                        step: 3, title: "楽天アフィリエイト登録（1%〜3%報酬）",
+                        detail: "affiliate.rakuten.co.jp → 無料登録 → APIキー取得（即日開始可）",
+                        link: "https://affiliate.rakuten.co.jp/",
+                        status: "未完了",
+                      },
+                    ].map(s => (
+                      <div key={s.step} className="p-3 rounded-lg bg-white/5 border border-white/8">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[10px] font-bold flex items-center justify-center shrink-0">{s.step}</span>
+                            <p className="text-xs font-semibold text-white/80">{s.title}</p>
+                          </div>
+                          <span className="text-[10px] text-red-400/80 shrink-0">{s.status}</span>
+                        </div>
+                        <p className="text-[10px] text-white/40 ml-7 mb-2">{s.detail}</p>
+                        <a
+                          href={s.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-7 text-[10px] text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          {s.link} →
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">🔑 APIキー入力（取得後に設定）</h2>
+                  <div className="space-y-2.5">
+                    {[
+                      { label: "Threads Access Token", placeholder: "Meta開発者コンソールから取得" },
+                      { label: "Amazon Associate Tag", placeholder: "例: yourname-22" },
+                      { label: "楽天アフィリエイト ID", placeholder: "楽天アフィリエイト管理画面から取得" },
+                    ].map(f => (
+                      <div key={f.label}>
+                        <p className="text-[10px] text-white/50 mb-1">{f.label}</p>
+                        <input
+                          type="password"
+                          placeholder={f.placeholder}
+                          className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50"
+                          disabled
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-white/25 mt-3">※ 取得後にシステムに組み込みます。現在は表示のみ（保存不可）</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ════ X コンテンツ（platform === 'x' のときのみ表示）════ */}
+        <div className={platform === "threads" ? "hidden" : ""}>
 
         {/* ════════════════════ 概要タブ ════════════════════ */}
         {tab === "overview" && (
@@ -3357,6 +3634,8 @@ function Dashboard() {
             </>
           );
         })()}
+
+        </div>{/* X コンテンツラッパー終了 */}
       </main>
 
       <footer className="border-t border-white/8 mt-8 py-3 text-center text-[10px] text-white/20">
