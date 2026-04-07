@@ -1271,23 +1271,54 @@ function Dashboard() {
               </div>
             )}
 
-            {/* ── Threads 戦略（X戦略と共有） ── */}
+            {/* ── Threads 戦略（会議室へ直行） ── */}
             {mainTab === "strategy" && (
-              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">🧠</span>
-                  <div>
-                    <p className="text-sm font-semibold text-white">戦略・会議室はX/Threads共通</p>
-                    <p className="text-[10px] text-white/40">AI会議でThreadsの方針も策定できます</p>
+              <div className="space-y-4">
+                {/* 会議室直行バナー */}
+                <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-2xl">🤝</div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Threads 方針決定会議</p>
+                      <p className="text-[11px] text-white/40">GPT × Claude × Grok の3者が議論し、アカウント運営方針を決定します</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-white/60 mb-4 leading-relaxed">
+                    どんなジャンルを扱うか・どんなトーンで投稿するか・どんなキャラクター設定にするか——これらをAI3者が事実ベースで議論し、<span className="text-white font-semibold">あなたが最終決定</span>する会議を開きます。
+                  </p>
+                  <button
+                    onClick={() => setTab("meeting")}
+                    className="w-full py-3 rounded-xl bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-sm font-bold hover:bg-indigo-500/40 transition-colors"
+                  >
+                    🪡 Threads 方針決定会議を開く →
+                  </button>
+                </div>
+
+                {/* 議題候補 */}
+                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                  <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">📋 今すぐ議論できる議題</h3>
+                  <div className="space-y-2">
+                    {[
+                      { label: "アカウントのジャンル・ニッチ決定", desc: "グラビア・アイドル・俳優・女優のどれを中心にするか", urgent: true },
+                      { label: "投稿トーンとキャラクター設定", desc: "個人感あり vs まとめ系 / キャラ設定の有無", urgent: true },
+                      { label: "マネタイズ戦略の優先順位", desc: "Amazon vs 楽天 / 商品カテゴリ（写真集・DVD・グッズ）", urgent: false },
+                      { label: "投稿スケジュール・頻度", desc: "1日何件・何時に投稿するか", urgent: false },
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setTab("meeting")}
+                        className="w-full flex items-start gap-3 p-3 rounded-lg bg-white/4 border border-white/6 hover:bg-white/8 transition-colors text-left"
+                      >
+                        {item.urgent && <span className="text-[9px] font-bold text-red-400 shrink-0 mt-0.5 px-1 py-0.5 bg-red-500/15 rounded">未決定</span>}
+                        {!item.urgent && <span className="text-[9px] font-bold text-white/30 shrink-0 mt-0.5 px-1 py-0.5 bg-white/5 rounded">要検討</span>}
+                        <div>
+                          <p className="text-[11px] font-semibold text-white/80">{item.label}</p>
+                          <p className="text-[10px] text-white/40">{item.desc}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <p className="text-[11px] text-white/50 mb-4">会議のトピックに「Threads × Amazon/楽天アフィリ戦略」と入力すると、GPT・Claude・GrokがThreads専用の方針を決定します。</p>
-                <button
-                  onClick={() => setTab("meeting")}
-                  className="w-full py-2.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-medium hover:bg-indigo-500/30 transition-colors"
-                >
-                  🤝 会議室を開く（Threads戦略を議論する）
-                </button>
               </div>
             )}
 
@@ -1616,8 +1647,8 @@ function Dashboard() {
           </div>
         )}
 
-        {/* ════ X コンテンツ（platform === 'x' のときのみ表示）════ */}
-        <div className={platform === "threads" ? "hidden" : ""}>
+        {/* ════ X コンテンツ（platform === 'x' のときのみ表示。ただし会議室は両プラットフォームで表示）════ */}
+        <div className={platform === "threads" && tab !== "meeting" ? "hidden" : ""}>
 
         {/* ════════════════════ 概要タブ ════════════════════ */}
         {tab === "overview" && (
@@ -3021,6 +3052,11 @@ function Dashboard() {
         {/* ════════════════════ 3者会議室タブ ════════════════════ */}
         {tab === "meeting" && (() => {
           const PRESET_TOPICS = [
+            // ── Threads 方針決定（新規追加） ──────────────────────────────────
+            "【🪡 Threads 方針決定】Threadsで芸能人・エンタメ系コンテンツを発信しAmazon/楽天アフィリエイトで収益化するアカウントの最適な運営方針を決定する。調査すべき観点：①Threadsで成功している日本語アフィリエイトアカウントの特徴、②芸能人コンテンツの中で最もエンゲージメントが高いジャンル（グラビア・アイドル・俳優・女優）、③投稿トーン（個人感あり vs まとめ系）の成功率、④1日の投稿頻度と最適時間帯、⑤アカウントキャラクター設定の有無による差。これらを踏まえてGPT・Claude・Grokが3者で議論し、具体的な運営方針を決定すること。",
+            "【🪡 Threadsアカウント収益化】Threads × Amazon/楽天アフィリエイトで月5万円以上稼いでいるアカウントの実例を調査。成功しているアカウントが扱う商品カテゴリ（写真集・DVD・Kindle・グッズ）、投稿フォーマット、フォロワー獲得速度、コンバージョン率の目安を教えてください。",
+            "【🪡 Threadsアルゴリズム2025〜2026】Threadsの日本語アカウントにおけるアルゴリズムの特徴を調査してください。フォロワー外へのリーチ条件、おすすめ表示に乗りやすい投稿の特徴、エンゲージメント（いいね・返信・リポスト）の重み付け、投稿頻度の最適値を教えてください。",
+            // ── X 既存トピック ─────────────────────────────────────────────────
             "Xのシャドウバン（Ghost Ban）から回復した日本語アカウントの実例と、回復を加速させた投稿戦略を調査してください。成人向けコンテンツアカウントの事例、回復にかかった平均日数、インプレッション数の変化を教えてください。",
             "FANZAアフィリエイトで月10万円以上稼いでいるXアカウントの投稿パターン・頻度・コンテンツ内容を調査してください。成功事例に共通する戦略を教えてください。",
             "X（Twitter）の2025〜2026年における成人向けコンテンツへのアルゴリズム変化を調査してください。インプレッション・リーチへの影響と対策を教えてください。",
@@ -3263,6 +3299,27 @@ function Dashboard() {
 
           return (
             <>
+              {/* Threads 方針決定バナー（Threadsプラットフォームのときのみ表示） */}
+              {platform === "threads" && (
+                <div className="rounded-xl border border-purple-500/30 bg-gradient-to-r from-purple-500/15 to-indigo-500/10 p-4 flex items-start gap-3">
+                  <span className="text-2xl shrink-0">🪡</span>
+                  <div>
+                    <p className="text-sm font-bold text-purple-200 mb-1">Threads アカウント方針決定会議</p>
+                    <p className="text-[11px] text-purple-200/60 leading-relaxed">
+                      この会議でThreadsアカウントの運営方針を決定します。<br/>
+                      下の <strong className="text-white">「プリセット」</strong> から
+                      <span className="text-purple-300 font-semibold">「🪡 Threads 方針決定」</span>
+                      を選んでリサーチを開始してください。
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      {["ジャンル・ニッチ", "トーン・キャラ設定", "マネタイズ優先順位"].map(tag => (
+                        <span key={tag} className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[9px] font-semibold">未決定: {tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ヘッダー：3者会議の参加者説明 */}
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
                 <div className="flex items-center justify-between mb-3">
