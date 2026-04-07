@@ -205,7 +205,8 @@ router.post('/bot/manual-feedback/run', async (_req, res) => {
   try {
     const fb = await buildManualPostFeedback(7);
     if (!fb) {
-      return res.json({ ok: false, reason: '直近7日間の手動投稿が見つかりませんでした' });
+      res.json({ ok: false, reason: '直近7日間の手動投稿が見つかりませんでした' });
+      return;
     }
     const saved = recordManualFeedback(fb);
     res.json({ ok: true, feedback: saved });
@@ -254,10 +255,10 @@ router.patch('/bot/algo-discoveries/:id', (req, res) => {
   const { status, note } = req.body as { status: string; note?: string };
   const validStatuses = ['pending', 'adopted', 'rejected'];
   if (!validStatuses.includes(status)) {
-    return res.status(400).json({ error: 'invalid status' });
+    res.status(400).json({ error: 'invalid status' }); return;
   }
   const ok = updateAlgoDiscoveryStatus(req.params.id, status as any, note);
-  if (!ok) return res.status(404).json({ error: 'not found' });
+  if (!ok) { res.status(404).json({ error: 'not found' }); return; }
   res.json({ ok: true });
 });
 

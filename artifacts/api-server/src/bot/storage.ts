@@ -248,7 +248,7 @@ function saveExtAsync() {
 }
 
 export function upsertExternalPatterns(
-  incoming: Omit<ExternalPattern, 'savedAt'>[],
+  incoming: Omit<ExternalPattern, 'savedAt' | 'source'>[],
   source: string,
 ) {
   const existingIds = new Set(extCache.patterns.map((p) => p.tweetId));

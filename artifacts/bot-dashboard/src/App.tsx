@@ -209,6 +209,7 @@ interface MeetingDirective {
   priority: "high" | "medium" | "low";
   status: "active" | "completed" | "cancelled";
   source: string;
+  platform?: "x" | "threads";
   createdAt: string;
   updatedAt: string;
   executionLog?: DirectiveExecution[];

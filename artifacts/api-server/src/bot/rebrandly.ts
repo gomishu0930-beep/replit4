@@ -5,7 +5,7 @@
  * 毎日 06:00 JST にスケジューラーから呼び出す。
  */
 
-import { upsertRebrandlyLinks, RebrandlyLink } from './storage.js';
+import { upsertRebrandlyLinks, getRebrandlyData, RebrandlyLink } from './storage.js';
 
 const REBRANDLY_BASE = 'https://api.rebrandly.com/v1';
 
@@ -52,7 +52,7 @@ export async function syncRebrandlyClicks(): Promise<{
       const body = await res.text();
       throw new Error(`Rebrandly API エラー (${res.status}): ${body.slice(0, 200)}`);
     }
-    const data: RebrandlyApiLink[] = await res.json();
+    const data = await res.json() as RebrandlyApiLink[];
     if (data.length === 0) break;
     allLinks = allLinks.concat(data);
     if (data.length < limit) break;
@@ -134,7 +134,7 @@ async function createRebrandlyLink(
       return null;
     }
 
-    const data: RebrandlyApiLink = await res.json();
+    const data = await res.json() as RebrandlyApiLink;
     const now = new Date().toISOString();
     const newLink: RebrandlyLink = {
       id: data.id,

@@ -30,6 +30,7 @@ router.post('/bot/quick-config', async (req, res) => {
     status: 'active',
     assignee: 'ai',
     source: 'クイック設定',
+    platform: 'x',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

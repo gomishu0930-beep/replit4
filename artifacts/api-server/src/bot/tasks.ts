@@ -182,7 +182,7 @@ function completionKey(templateId: string, frequency: TaskFrequency): string {
 
 export async function initTasks(): Promise<void> {
   try {
-    const data = await readJson<TasksState>(FILE_KEY);
+    const data = await readJson<TasksState>(FILE_KEY, { completions: {} });
     if (data?.completions) {
       tasksState = data;
       // 古い完了記録を掃除（60日以上前）
