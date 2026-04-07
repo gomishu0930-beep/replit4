@@ -27,7 +27,9 @@ interface BotStatus {
   status: string;
   uptime: number;
   account: string;
-  schedule: { time: string; type: string; label: string }[];
+  mode?: string;
+  abTestWeek?: 'W1' | 'W2' | 'normal';
+  schedule: { time: string; type: string; label: string; active?: boolean; reason?: string }[];
   stats: Stats;
 }
 interface Post {
@@ -1867,20 +1869,42 @@ function Dashboard() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-semibold text-amber-400/70 uppercase tracking-wider">投稿スケジュール【回復モード】</h2>
-                  <span className="text-[10px] text-amber-400/60">⚠️ 2本/日</span>
+                  <h2 className="text-xs font-semibold text-amber-400/70 uppercase tracking-wider">
+                    投稿スケジュール
+                    {status?.abTestWeek && status.abTestWeek !== "normal" && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-red-300 text-[9px] font-bold">
+                        {status.abTestWeek}モード
+                      </span>
+                    )}
+                  </h2>
+                  <span className="text-[10px] text-amber-400/60">
+                    {status?.abTestWeek === "normal" ? "通常運営" : "⚠️ 1本/日"}
+                  </span>
                 </div>
                 <div className="space-y-1">
-                  {schedule.map((s) => (
-                    <div key={`${s.time}-${s.type}`} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-                      <span className="text-xs font-mono text-indigo-300">{s.time}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${typeBadge(s.type)}`}>
-                        {s.label}
-                      </span>
+                  {schedule.map((s: any) => (
+                    <div
+                      key={`${s.time}-${s.type}`}
+                      className={`flex items-center justify-between py-1.5 border-b border-white/5 last:border-0 ${s.active === false ? "opacity-40" : ""}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-mono ${s.active === false ? "text-white/30" : "text-indigo-300"}`}>{s.time}</span>
+                        {s.active === false && (
+                          <span className="text-[9px] text-red-400/60 bg-red-500/10 border border-red-500/20 px-1 rounded">停止中</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${s.active === false ? "border-white/10 text-white/25 bg-transparent" : typeBadge(s.type)}`}>
+                          {s.label}
+                        </span>
+                        {s.reason && (
+                          <span className="text-[9px] text-white/25">{s.reason}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-white/20 mt-2">💬 = リンクなし・共感型 / 🎭 = アフィリリンク付き</p>
+                <p className="text-[10px] text-white/20 mt-2">💬 = リンクなし・共感型 / 🎭 = アフィリリンク付き / 停止中スロットは今週動きません</p>
               </div>
 
               <div className="space-y-4">

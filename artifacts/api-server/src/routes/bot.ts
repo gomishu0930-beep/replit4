@@ -13,19 +13,45 @@ import { runAutonomousMeeting } from '../bot/auto-meeting.js';
 
 const router = Router();
 
+function getABTestWeek(): 'W1' | 'W2' | 'normal' {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const dateKey = nowJst.toISOString().slice(0, 10);
+  if (dateKey >= '2026-04-07' && dateKey <= '2026-04-13') return 'W1';
+  if (dateKey >= '2026-04-14' && dateKey <= '2026-04-20') return 'W2';
+  return 'normal';
+}
+
 router.get('/bot/status', async (_req, res) => {
   const stats = getStats();
   const account = await getMyUsername();
+  const week = getABTestWeek();
+
+  // A/Bテスト週は1本/日のみ。通常週は動的3スロット。
+  const schedule = week === 'W1'
+    ? [
+        { time: '10:30 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W1・本命スロット）', active: true },
+        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い', active: false, reason: 'W1停止中' },
+        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（通常週スロット）', active: false, reason: 'W1停止中 — 今週は10:30のみ' },
+      ]
+    : week === 'W2'
+    ? [
+        { time: '05:00 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W2・本命スロット）', active: true },
+        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い', active: false, reason: 'W2停止中' },
+        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（通常週スロット）', active: false, reason: 'W2停止中 — 今週は05:00のみ' },
+      ]
+    : [
+        { time: '10:30 JST', type: 'impression', label: '💬 インプ狙い①', active: true },
+        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い②', active: true },
+        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（動的時間帯）', active: true },
+      ];
 
   res.json({
     status: 'running',
     uptime: Math.floor(process.uptime()),
     account,
-    mode: 'recovery',
-    schedule: [
-      { time: '10:30 JST', type: 'impression', label: '💬 インプ狙い（リンクなし）' },
-      { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（動的時間帯）' },
-    ],
+    mode: week === 'normal' ? 'normal' : 'recovery',
+    abTestWeek: week,
+    schedule,
     stats,
   });
 });
