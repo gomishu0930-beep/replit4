@@ -170,9 +170,22 @@ function evaluateMonitorInterval(newPatternsThisCycle: number): string | null {
   return null;
 }
 
+// A/Bテスト週判定（strategy内ローカル）
+function isABTestWeek(): boolean {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const dateKey = nowJst.toISOString().slice(0, 10);
+  return (dateKey >= '2026-04-07' && dateKey <= '2026-04-20');
+}
+
 // ─── 仮説②：コンテンツ種別の投稿重みは最適か？ ──────────────────────────────
 
 function evaluateTypeWeights(): string | null {
+  // シャドウバン回復A/Bテスト期間中は重みを自動調整しない（手動設定を維持）
+  if (isABTestWeek()) {
+    console.log('  ⚙️  [重み評価] A/Bテスト期間中 → 重み自動調整をスキップ（手動設定を維持）');
+    return null;
+  }
+
   const posts = getAllPosts().filter((p) => p.metrics && p.type);
   if (posts.length < 10) {
     addHypothesis({

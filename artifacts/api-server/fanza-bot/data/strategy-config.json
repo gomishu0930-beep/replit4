@@ -1,25 +1,25 @@
 {
   "monitorIntervalHours": 1,
   "typeWeights": {
-    "amateur": 1.04,
-    "buzz": 1.21,
+    "amateur": 1.2,
+    "buzz": 2,
     "rank": 0.8,
-    "sale": 0.97,
-    "random": 0.97
+    "sale": 1,
+    "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 191,
-    "avgNewPatterns": 190.98250780888287,
-    "totalCycles": 85
+    "lastNewPatterns": 196,
+    "avgNewPatterns": 192.487755466218,
+    "totalCycles": 86
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "85サイクル実績 / 平均新規パターン 191.0件/サイクル",
+      "finding": "86サイクル実績 / 平均新規パターン 192.5件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-07T02:55:28.999Z"
+      "testedAt": "2026-04-07T04:27:27.179Z"
     },
     {
       "id": "type-weights",
@@ -27,7 +27,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: buzz(1.0) > random(1.0) > sale(1.0) > amateur(1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-07T02:55:29.099Z"
+      "testedAt": "2026-04-07T04:27:27.179Z"
     },
     {
       "id": "dynamic-templates",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "直近 8件の平均スコア 1.0 vs 以前 1.0 (+0.0%)",
       "adjustment": null,
-      "testedAt": "2026-04-07T02:55:29.099Z"
+      "testedAt": "2026-04-07T04:27:27.179Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 5時 (avg 1.0) / 最低スロット: 12時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-07T02:55:29.099Z"
+      "testedAt": "2026-04-07T04:27:27.179Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,25 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-07T04:35:15.658Z",
+      "cycle": 86,
+      "decisions": [
+        "[会議決定] 戦略重みをbuzz=2.0, rank=0.8, amateur=1.2, sale=1.0, random=1.0に設定してください。これはシャドウバン回復A",
+        "投稿重み[buzz]: 1.21 → 2",
+        "投稿重み[rank]: 0.8 → 0.8",
+        "投稿重み[amateur]: 1.04 → 1.2",
+        "投稿重み[sale]: 0.97 → 1",
+        "投稿重み[random]: 0.97 → 1"
+      ]
+    },
+    {
+      "at": "2026-04-07T04:27:27.179Z",
+      "cycle": 86,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-07T02:55:29.099Z",
       "cycle": 85,
@@ -435,22 +454,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-05T11:33:46.360Z",
-      "cycle": 41,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-05T11:03:50.146Z",
-      "cycle": 40,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-07T02:55:29.099Z",
-  "version": 87
+  "lastEvaluatedAt": "2026-04-07T04:27:27.179Z",
+  "version": 88
 }

@@ -148,7 +148,7 @@ function fillTemplate(template: string, vars: Record<string, string>): string {
 
 function buildTemplateText(item: any, type: string): string {
   const vars = {
-    actress: item.actress?.map((a: any) => a.name).join('・') || '人気女優',
+    actress: item.actress?.map((a: any) => a.name).join('・') || '出演女優',
     reviewCount: String(item.review?.count ?? 0),
     reviewAvg: String(item.review?.average ?? '4.5'),
     shortTitle: shortTitle(item.title),
@@ -195,8 +195,12 @@ function isRefusal(text: string): boolean {
 }
 
 function isValidTweet(text: string): boolean {
-  // ハッシュタグ廃止のため 🔞 のみ必須チェック
-  return text.includes('🔞');
+  if (!text.includes('🔞')) return false;
+  // 曖昧な芸能人類似表現が使われていたら警告（ブロックはしない）
+  if (text.includes('人気女優') || text.includes('トップ女優') || text.includes('著名女優')) {
+    console.warn('  ⚠ [品質] 曖昧表現「人気女優」等が検出されました → 次回は改善されます');
+  }
+  return true;
 }
 
 // ─── Claude 生成────────────────────────────────────────────────────────────
@@ -210,7 +214,8 @@ async function generateWithClaude(
 
   const client = new Anthropic({ baseURL: baseUrl, apiKey });
 
-  const actress = item.actress?.map((a: any) => a.name).join('・') || '人気女優';
+  const actressRaw = item.actress?.map((a: any) => a.name).join('・') || '';
+  const actress = actressRaw; // 空の場合はClaudeプロンプト内で適切に処理
   const reviewCount = item.review?.count ?? 0;
   const reviewAvg = item.review?.average ?? '4.5';
   const title = shortTitle(item.title, 30);
@@ -292,11 +297,15 @@ async function generateWithClaude(
   const selectedType = contentTypes[selectedTypeIdx];
   _lastContentType = selectedType.name; // 型を記録（schedulerがrecordPostで使用）
 
+  const actressLine = actress
+    ? `- 出演者: ${actress}`
+    : '- 出演者: （情報なし。作品タイトルのシナリオから魅力を伝えること）';
+
   const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。動画配信サービスの紹介ツイートを1件作成してください。
 
 作品情報:
 - タイトル: ${title}
-- 出演者: ${actress}
+${actressLine}
 - カテゴリ: ${typeLabel}
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点${saleHint}
@@ -317,6 +326,7 @@ ${ownSection}${extSection}
 - 日本語140文字以内
 - 絵文字は1〜3個（シナリオ型は絵文字少なめでリアル感を出す）
 - 「リプ欄へ👇」を含める
+- 「人気女優」「トップ女優」「著名女優」などの曖昧な表現は使わない ← 厳禁
 
 ツイート本文だけを出力してください:`;
 
@@ -351,7 +361,7 @@ ${ownSection}${extSection}
 // ─── 芸能人スロット専用：本文生成 ───────────────────────────────────────────
 
 export function generateCelebrityMainTweet(celebrity: string, hook: string, item: any): string {
-  const actress = item.actress?.map((a: any) => a.name).join('・') || '人気女優';
+  const actress = item.actress?.map((a: any) => a.name).join('・') || shortTitle(item.title, 15);
   const reviewAvg = item.review?.average ?? '4.5';
   const reviewCount = item.review?.count ?? 0;
   return [
@@ -366,7 +376,7 @@ export function generateCelebrityMainTweet(celebrity: string, hook: string, item
 
 export function generateCelebrityIntroReply(introLine: string, item: any): string {
   const title = item.title?.slice(0, 30) ?? '';
-  const actress = item.actress?.map((a: any) => a.name).join('・') || '人気女優';
+  const actress = item.actress?.map((a: any) => a.name).join('・') || shortTitle(item.title, 15);
   return [
     introLine,
     ``,

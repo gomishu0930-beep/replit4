@@ -39,7 +39,16 @@ const WATCHDOG_KEY = 'watchdog-state.json';
 const MAX_EVENTS = 50;
 const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30分
 // 「停止」とみなす最大無投稿時間（スロット間最大は9h: 23:00〜09:00）
-const STALL_THRESHOLD_MS = 10 * 60 * 60 * 1000; // 10時間
+const STALL_THRESHOLD_NORMAL_MS = 10 * 60 * 60 * 1000; // 通常: 10時間
+const STALL_THRESHOLD_AB_MS    = 28 * 60 * 60 * 1000; // A/Bテスト週: 28時間（1日1件制限）
+
+function getABTestWeek(): 'W1' | 'W2' | 'normal' {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const dateKey = nowJst.toISOString().slice(0, 10);
+  if (dateKey >= '2026-04-07' && dateKey <= '2026-04-13') return 'W1';
+  if (dateKey >= '2026-04-14' && dateKey <= '2026-04-20') return 'W2';
+  return 'normal';
+}
 // isPosting が stuck とみなす時間
 const POSTING_STUCK_THRESHOLD_MS = 45 * 60 * 1000; // 45分
 
@@ -192,8 +201,14 @@ async function runWatchdogCycle(): Promise<void> {
   const lastPostedAt = stats.lastPostedAt ? new Date(stats.lastPostedAt).getTime() : 0;
   const silenceDuration = Date.now() - lastPostedAt;
 
+  // A/Bテスト週は1日1件制限のため閾値を28時間に拡大（通常は10時間）
+  const abWeek = getABTestWeek();
+  const stallThresholdMs = (abWeek === 'W1' || abWeek === 'W2')
+    ? STALL_THRESHOLD_AB_MS
+    : STALL_THRESHOLD_NORMAL_MS;
+
   // 投稿停止しているかチェック
-  const isStalled = lastPostedAt > 0 && silenceDuration > STALL_THRESHOLD_MS;
+  const isStalled = lastPostedAt > 0 && silenceDuration > stallThresholdMs;
   if (!lastPostedAt) {
     addEvent('info', '投稿履歴なし（まだ初回投稿前）');
     await saveState();

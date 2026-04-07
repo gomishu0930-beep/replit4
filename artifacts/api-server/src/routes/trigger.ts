@@ -11,6 +11,15 @@ const router = Router();
 const TRIGGER_SECRET = process.env.TRIGGER_SECRET ?? 'fanza-bot-trigger';
 
 let isPosting = false;
+let _postingLock: Promise<void> = Promise.resolve();
+
+function getABTestWeek(): 'W1' | 'W2' | 'normal' {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const dateKey = nowJst.toISOString().slice(0, 10);
+  if (dateKey >= '2026-04-07' && dateKey <= '2026-04-13') return 'W1';
+  if (dateKey >= '2026-04-14' && dateKey <= '2026-04-20') return 'W2';
+  return 'normal';
+}
 
 async function postItem(item: any, type: string) {
   const topPatterns = getTopPatterns(5);
@@ -31,10 +40,20 @@ async function runJob(type: string, label: string, fetchItems: () => Promise<any
   if (isPosting) {
     return { skipped: true, reason: '別の投稿が進行中' };
   }
+
+  // A/Bテスト週は手動トリガーも1件限定（1日1件制限を維持）
+  const abWeek = getABTestWeek();
+  const maxItems = (abWeek === 'W1' || abWeek === 'W2') ? 1 : 3;
+  if (abWeek !== 'normal') {
+    console.log(`  ⚠ [trigger/${type}] ${abWeek}期間中 → 手動トリガー投稿を1件限定で実行`);
+  }
+
+  // 競合防止ロック（isPosting フラグを同期的に設定）
   isPosting = true;
   const results = [];
   try {
-    const items = await fetchItems();
+    const allItems = await fetchItems();
+    const items = allItems.slice(0, maxItems);
     for (const item of items) {
       const tweetId = await postItem(item, type);
       results.push({ tweetId, title: item.title });
