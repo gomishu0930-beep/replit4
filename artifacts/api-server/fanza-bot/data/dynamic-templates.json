@@ -169,6 +169,48 @@
       "usedCount": 0
     },
     {
+      "text": "🔞{actress}の{shortTitle}が話題💥 {reviewCount}件のレビュー⭐{reviewAvg}獲得🎬 リプ欄へ👇",
+      "type": "amateur",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞今旬の{shortTitle}🔥 {actress}の演技に{reviewCount}人が高評価✨ {reviewAvg}点の傑作😍 リプ欄からどうぞ👇",
+      "type": "amateur",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{actress}×{shortTitle}で{reviewCount}件💬平均{reviewAvg}⭐話題沸騰中🚀 リプ欄へ👇",
+      "type": "buzz",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{shortTitle}が{reviewCount}評価で話題🔥 {actress}の熱演が{reviewAvg}点🌟 リプ欄からどうぞ👇",
+      "type": "buzz",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{actress}出演{shortTitle}📺 レビュー{reviewCount}件⭐{reviewAvg}の高評価🎯 リプ欄へ👇",
+      "type": "any",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
+      "text": "🔞{reviewCount}人が選ぶ{shortTitle}💫{actress}で{reviewAvg}点獲得✨ リプ欄からどうぞ👇",
+      "type": "any",
+      "sourceScore": 172,
+      "generatedAt": "2026-04-07T04:56:16.239Z",
+      "usedCount": 0
+    },
+    {
       "text": "🔞{actress}出演の{shortTitle}が話題🔥 平均{reviewAvg}⭐評価で{reviewCount}件のレビュー💬 もっと詳しく知りたい方はリプ欄へ👇",
       "type": "amateur",
       "sourceScore": 171,
@@ -657,50 +699,8 @@
       "sourceScore": 158,
       "generatedAt": "2026-04-06T13:50:55.984Z",
       "usedCount": 0
-    },
-    {
-      "text": "🔞{actress}×{shortTitle}={最高🔥 {reviewCount}件評価{reviewAvg}⭐ リプ欄からどうぞ👇",
-      "type": "any",
-      "sourceScore": 158,
-      "generatedAt": "2026-04-06T13:50:55.984Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞今見るべき{shortTitle}💦{actress}に{reviewCount}件レビュー殺到✨{reviewAvg}評価 リプ欄へ👇",
-      "type": "any",
-      "sourceScore": 158,
-      "generatedAt": "2026-04-06T13:50:55.984Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞{actress}出演の{shortTitle}が神作品🔥視聴者{reviewCount}人超え⭐平均{reviewAvg}点の傑作🎬 リプ欄へ👇",
-      "type": "amateur",
-      "sourceScore": 153,
-      "generatedAt": "2026-04-06T13:07:54.337Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞{actress}の新作{shortTitle}が話題沸騰中💦{reviewCount}件のレビューで{reviewAvg}評価🌟今すぐチェック📱 リプ欄からどうぞ👇",
-      "type": "amateur",
-      "sourceScore": 153,
-      "generatedAt": "2026-04-06T13:07:54.337Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞{shortTitle}が{reviewCount}人の視聴者に支持されて平均{reviewAvg}点獲得🏆{actress}の演技がエグい😭 リプ欄へ👇",
-      "type": "buzz",
-      "sourceScore": 153,
-      "generatedAt": "2026-04-06T13:07:54.337Z",
-      "usedCount": 0
-    },
-    {
-      "text": "🔞速報🚨{actress}×{shortTitle}のコンボが最強すぎて{reviewCount}件評価{reviewAvg}超え⚡視聴必須🔥 リプ欄からどうぞ👇",
-      "type": "buzz",
-      "sourceScore": 153,
-      "generatedAt": "2026-04-06T13:07:54.337Z",
-      "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-07T04:46:35.473Z",
-  "evolutionCount": 63
+  "lastEvolvedAt": "2026-04-07T04:56:16.239Z",
+  "evolutionCount": 64
 }
