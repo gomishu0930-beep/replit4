@@ -309,73 +309,6 @@ async function catchUpMissedSlots() {
   }
 }
 
-// ─── 【本日限り】20:45会議 → 21:00投稿テスト ─────────────────────────────────
-async function runImpTestSequence() {
-  const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-
-  // ── ステップ1: 会議開始 ──
-  console.log(`\n[${jst()}] 🎙 [IMP会議テスト] 「5000IMP投稿」自律会議 開始`);
-  const topic = `【今夜21:00投稿テスト】インプレッション5000件が見込める投稿を決定する緊急会議
-
-## 現状
-- @suguhalove0419 はシャドウバン中だが、インプレッションは微増傾向
-- A/Bテスト W1期間中（今日は10:30に芸能人アフィリ投稿済み）
-- 今夜21:00に「5000IMP狙い」の投稿を1本追加で行う（緊急テスト）
-
-## 投稿内容は完全自由
-ジャンル・形式・内容・スタイルに一切制限なし。
-芸能人アフィリ・インプ型・共感型・時事ネタ・エンタメ・挑発的なフック・なんでもOK。
-Xでバズる可能性がある投稿ならどんな形式でも構わない。
-投稿文を実際に生成して決定すること（概念だけでなく具体的な本文を作る）。
-
-## 3者に議論してほしいこと
-1. シャドウバン中の今夜、5000IMPを最大化できる投稿ジャンル・形式は何か？
-2. 今夜のXリアルタイムトレンドを踏まえた最強コンテンツは？（Grokがリアルタイムデータで判断）
-3. 具体的な投稿本文（ツイートテキスト）をGrokが最終決定して出力すること
-
-## 裁定条件（必須）
-Grokは最終ラウンドで「5000IMP最大化」の観点からo3案・Claude案を採点・裁定し、
-以下の形式で必ず出力してください：
-📊 最終総合スコア: [o3合計: X/50] [Claude合計: Y/50]
-🏆 最終裁定: [o3|Claude]案採用 — （理由1行）
-🎯 自律実行指令: 今夜21:00に[完全なツイート本文または投稿タイプ+フック戦略]で投稿を実行
-AIがこの指令に従い21:00に自動投稿します。内容は完全にAI3者の裁量に委ねます。`;
-
-  try {
-    const result = await runAutonomousMeeting(topic);
-    console.log(`\n[${jst()}] ✅ [IMP会議テスト] 会議完了 — 自動実行${result.autoExecuted.length}件 / 手動確認${result.manualItems.length}件`);
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [IMP会議テスト] 会議エラー: ${e.message}`);
-  }
-
-  // ── ステップ2: 会議終了直後に投稿（長時間sleepはプロセス不安定の原因になるため即実行）──
-  console.log(`\n[${jst()}] 🚀 [IMP会議テスト] 会議完了 → 即時投稿実行`);
-  await postCelebritySlot('IMP会議テスト');
-  console.log(`[${jst()}] 🏁 [IMP会議テスト] テスト完了`);
-}
-
-function scheduleImpTest() {
-  const nowUtc = Date.now();
-  const jstOffset = 9 * 3600000;
-  const todayJst = new Date(nowUtc + jstOffset).toISOString().slice(0, 10);
-
-  // 20:45 JST = 11:45 UTC
-  const meetingTargetUtc = new Date(`${todayJst}T11:45:00.000Z`).getTime();
-  const msUntilMeeting = meetingTargetUtc - nowUtc;
-
-  if (msUntilMeeting < 0) {
-    console.log('  ℹ️  [IMP会議テスト] 本日の20:45はすでに過ぎています — スキップ');
-    return;
-  }
-
-  console.log(`  ⏰ [IMP会議テスト] ${Math.round(msUntilMeeting / 60000)}分後（20:45 JST）に「5000IMP」会議テストを開始します`);
-  setTimeout(() => {
-    runImpTestSequence().catch((e: any) =>
-      console.error(`[IMP会議テスト] 予期せぬエラー: ${e.message}`),
-    );
-  }, msUntilMeeting);
-}
-
 export function startScheduler() {
   // ── 戦略設定を読み込んでから起動 ─────────────────────────────────────────
   loadStrategyConfig().catch((e: any) =>
@@ -407,9 +340,6 @@ export function startScheduler() {
 
   // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────
   sleep(2 * 60 * 1000).then(() => catchUpMissedSlots());
-
-  // ── 【本日4/7限り】20:45会議 → 21:00投稿テスト ─────────────────────────
-  scheduleImpTest();
 
   // ── 起動10分後にキャンペーンID探索（キャッシュが新鮮な場合はスキップ）──
   sleep(10 * 60 * 1000).then(() =>
