@@ -1222,6 +1222,30 @@
   ],
   "directives": [
     {
+      "id": "dir-1775571848232",
+      "text": "【✅ 自動化完了 4/7】スプレッドシート＋Slack通知をボット内部メール完結に移行。週次メトリクスレポート（列A-I/M/O相当）を毎週月曜08:00 JSTにメール自動送信。平均IPF自動計算・ER・PVR・Rebrandlyクリック数を含む。ダッシュボードの「📊週次メトリクス」ボタンで手動送信も可能。",
+      "category": "strategy",
+      "priority": "high",
+      "status": "completed",
+      "assignee": "ai",
+      "source": "system-auto",
+      "platform": "x",
+      "createdAt": "2026-04-07T14:24:08.232Z",
+      "updatedAt": "2026-04-07T14:24:16.116Z"
+    },
+    {
+      "id": "dir-1775571847761",
+      "text": "【✅ 自動化完了 4/7】Rebrandlyスラッシュタグ検証エラー（The string did not match the expected pattern）を修正。数字始まりのslashtag に fz- プレフィックスを自動付与する仕様に変更済み。今後のURL短縮作成は正常動作。",
+      "category": "other",
+      "priority": "high",
+      "status": "completed",
+      "assignee": "ai",
+      "source": "system-auto",
+      "platform": "x",
+      "createdAt": "2026-04-07T14:24:07.761Z",
+      "updatedAt": "2026-04-07T14:24:15.779Z"
+    },
+    {
       "id": "dir-1775568951171",
       "text": "投稿後30分時点でEV5<5かつインプレッション<50の場合のみ削除検討通知を送信し、週内削除上限2回・3回目以降は24時間観察する削除判定ルールを実装する",
       "category": "content",
