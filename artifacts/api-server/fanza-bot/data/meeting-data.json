@@ -1222,6 +1222,39 @@
   ],
   "directives": [
     {
+      "id": "dir-1775568951171",
+      "text": "投稿後30分時点でEV5<5かつインプレッション<50の場合のみ削除検討通知を送信し、週内削除上限2回・3回目以降は24時間観察する削除判定ルールを実装する",
+      "category": "content",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:51.171Z",
+      "updatedAt": "2026-04-07T13:35:53.452Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:51.486Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: 削除判定ルールの実装はシステムのコード変更が必要であり、自動実行エンジンでは対応できないため手動対応が必要です",
+          "changes": [],
+          "success": false
+        }
+      ]
+    },
+    {
+      "id": "dir-1775568950921",
+      "text": "4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする",
+      "category": "other",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "user",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:50.921Z",
+      "updatedAt": "2026-04-07T13:35:50.921Z"
+    },
+    {
       "id": "dir-1775568948192",
       "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する",
       "category": "strategy",
@@ -1231,7 +1264,16 @@
       "source": "緊急会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T13:35:48.192Z",
-      "updatedAt": "2026-04-07T13:35:48.192Z"
+      "updatedAt": "2026-04-07T13:35:50.650Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:48.508Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: A/Bテストの実施はTwitter投稿の手動操作とデータ収集・分析が必要なため、自動実行エンジンでは対応不可",
+          "changes": [],
+          "success": false
+        }
+      ]
     },
     {
       "id": "dir-1775568947903",
