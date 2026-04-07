@@ -29,27 +29,27 @@ function shouldSend(key: string): boolean {
   return Date.now() - last > ALERT_COOLDOWN_MS;
 }
 
-// ─── メール送信 ────────────────────────────────────────────────────────────
+// ─── メール送信（通常アラート）────────────────────────────────────────────────
+
+function createTransport() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+}
 
 async function sendEmail(alert: Alert): Promise<void> {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-
-  if (!user || !pass) return; // 設定なし → サイレント
-
-  const transport = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
+  if (!user || !pass) return;
 
   const levelEmoji = alert.level === 'CRITICAL' ? '🚨' : alert.level === 'WARN' ? '⚠️' : 'ℹ️';
   const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-
   const dataSection = alert.data
     ? `\n\n【詳細データ】\n${JSON.stringify(alert.data, null, 2)}`
     : '';
 
-  await transport.sendMail({
+  await createTransport().sendMail({
     from: `"FANZA Bot 連絡チーム" <${user}>`,
     to: OWNER_EMAIL,
     subject: `${levelEmoji} [FANZABot] ${alert.title}`,
@@ -64,6 +64,89 @@ async function sendEmail(alert: Alert): Promise<void> {
       `FANZA X Bot 連絡チーム`,
     ].join('\n'),
   });
+}
+
+// ─── 会議フルログ送信 ────────────────────────────────────────────────────────
+
+export interface MeetingMessage {
+  role: string;
+  content: string;
+  speaker?: string;
+  round?: number;
+}
+
+export async function sendMeetingFullLog(params: {
+  title: string;
+  sessionId: string;
+  messages: MeetingMessage[];
+  summary: string;
+  decisions: string[];
+  duration_ms: number;
+}): Promise<void> {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) {
+    console.warn('  ⚠ [メール] SMTP未設定のため会議ログ送信スキップ');
+    return;
+  }
+
+  const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const ROLE_LABEL: Record<string, string> = {
+    user: '📋 議題',
+    assistant: '💬 発言',
+    gpt: '🧠 o3',
+    claude: '✍️  Claude',
+    grok: '📡 Grok',
+    system: '⚙️  システム',
+  };
+
+  // 会議ログ本文を組み立て
+  const logLines: string[] = [
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `【会議タイトル】${params.title}`,
+    `【セッションID】${params.sessionId}`,
+    `【送信日時】${jst}`,
+    `【所要時間】${Math.round(params.duration_ms / 1000)}秒`,
+    `【メッセージ数】${params.messages.length}件`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `## 📋 サマリー`,
+    ``,
+    params.summary,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `## ✅ 決定事項（${params.decisions.length}件）`,
+    ``,
+    ...params.decisions.map((d, i) => `${i + 1}. ${d}`),
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `## 💬 会議全文ログ`,
+    ``,
+  ];
+
+  params.messages.forEach((msg, idx) => {
+    const label = ROLE_LABEL[msg.speaker ?? msg.role] ?? `[${msg.role}]`;
+    const roundTag = msg.round !== undefined ? ` ラウンド${msg.round}` : '';
+    logLines.push(`─── [${idx + 1}/${params.messages.length}] ${label}${roundTag} ───`);
+    logLines.push(msg.content ?? '（内容なし）');
+    logLines.push('');
+  });
+
+  logLines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  logLines.push(`FANZA X Bot 連絡チーム`);
+
+  const fullText = logLines.join('\n');
+
+  await createTransport().sendMail({
+    from: `"FANZA Bot 連絡チーム" <${user}>`,
+    to: OWNER_EMAIL,
+    subject: `📋 [FANZABot] 会議ログ: ${params.title}`,
+    text: fullText,
+  });
+
+  console.log(`  📧 [メール] 会議フルログ送信完了 (${fullText.length}文字 → ${OWNER_EMAIL})`);
 }
 
 // ─── 公開API ───────────────────────────────────────────────────────────────
