@@ -34,12 +34,19 @@ export async function syncRebrandlyClicks(): Promise<{
   };
 
   let allLinks: RebrandlyApiLink[] = [];
-  let last = 0;
   const limit = 25;
+  let lastId: string | null = null;
 
-  // ページネーション（最大200件）
+  // ページネーション（最大200件）- lastはリンクIDで指定するカーソル方式
   for (let page = 0; page < 8; page++) {
-    const url = `${REBRANDLY_BASE}/links?limit=${limit}&last=${last}&orderBy=createdAt&orderDir=desc`;
+    const params = new URLSearchParams({
+      limit: String(limit),
+      orderBy: 'createdAt',
+      orderDir: 'desc',
+    });
+    if (lastId) params.set('last', lastId);
+
+    const url = `${REBRANDLY_BASE}/links?${params.toString()}`;
     const res = await fetch(url, { headers });
     if (!res.ok) {
       const body = await res.text();
@@ -49,7 +56,7 @@ export async function syncRebrandlyClicks(): Promise<{
     if (data.length === 0) break;
     allLinks = allLinks.concat(data);
     if (data.length < limit) break;
-    last = allLinks.length;
+    lastId = data[data.length - 1].id;
   }
 
   // FANZA系のみフィルタ（オプション: destination に al.dmm.co.jp を含む）
