@@ -376,24 +376,45 @@ ${extraInstruction}
   }
 }
 
+// Grokスコア解析（📊 採点 R1: [o3: 7/10] [Claude: 8/10]）
+function parseGrokScores(reply: string): { gpt: number; claude: number } | null {
+  const m = reply.match(/\[o3[^\]]*?:\s*(\d+(?:\.\d+)?)\s*\/10\][\s\S]*?\[Claude[^\]]*?:\s*(\d+(?:\.\d+)?)\s*\/10\]/i);
+  if (!m) return null;
+  return { gpt: parseFloat(m[1]), claude: parseFloat(m[2]) };
+}
+
+// Grok最終裁定の自律実行指令を抽出（🎯 自律実行指令: ...）
+function extractGrokDirective(reply: string): string | null {
+  const m = reply.match(/🎯\s*自律実行指令[：:]\s*(.+?)(?:\n|$)/);
+  return m ? m[1].trim() : null;
+}
+
 // ラウンドごとのGrok指示
 function grokRoundInstruction(round: number, total: number): string {
+  const scoreFormat = `\n\n発言の最後に必ず以下の採点を記載してください（必須）：\n📊 採点 R${round}: [o3: X/10] [Claude: Y/10] 理由：（1行）`;
+
   if (round === 1) {
-    return `【ラウンド${round}/${total} - X現場報告】GPTとClaudeの議論を聞いた上で。
+    return `【ラウンド${round}/${total} - X現場報告＋採点】GPTとClaudeの議論を聞いた上で。
 ①GPTが提示した仮説について「Xで実際に確認できるか」をリアルタイム検索で判定してください。
 ②シャドウバン回復に成功した日本語アカウントの直近事例をXから1〜2件紹介してください。
-③現在のXアルゴリズムで最も効いている手法を1つ、具体的証拠と共に提示してください。`;
+③現在のXアルゴリズムで最も効いている手法を1つ、具体的証拠と共に提示してください。${scoreFormat}`;
   }
   if (round === total) {
-    return `【ラウンド${round}/${total} - X裁定】5ラウンドの議論を経て、Xの現実に照らした最終裁定を下してください。
-①GPT案・Claude案のうち「Xアルゴリズムの現実に最も合致するのはどちらか」を断言してください。
-②現在のXで@suguhalove0419が今週試すべき最優先アクション（X実例付き）を1つ提示してください。
-③「🦅 X情報:」から始まる形式で、3点以内の最終ファクトを列挙して締めてください。`;
+    return `【ラウンド${round}/${total} - 最終採点＆自律裁定】${total}ラウンドの議論を経て、Xの現実に照らした最終裁定を下してください。
+
+①各ラウンドの採点を合計し、総合スコアで勝者を決定してください。
+②Xアルゴリズムの現実に最も合致する案の「今週実行すべき具体アクション」を1つ断言してください。
+
+必須フォーマット（以下をそのまま使用）：
+📊 最終総合スコア: [o3合計: X/${total * 10}] [Claude合計: Y/${total * 10}]
+🏆 最終裁定: [o3|Claude]案採用 — （勝者を選んだ理由を1行）
+🎯 自律実行指令: （cronが自動実行する具体的な1文。例:「FANZA新作AV投稿を毎朝10:30に1件投稿し、Rebrandlyで短縮URLを生成して本文末尾に追記する」）
+🦅 X情報: （根拠となるXのリアルタイムデータを2〜3点）`;
   }
-  return `【ラウンド${round}/${total} - Xファクトチェック】
+  return `【ラウンド${round}/${total} - Xファクトチェック＋採点】
 GPTとClaudeの最新の主張を「Xで確認できる事実」でジャッジしてください。
 どちらかの主張が事実と異なれば訂正、両者が見落としているX特有のデータがあれば追加してください。
-発言は400文字以内に収めてください。`;
+発言は500文字以内に収めてください。${scoreFormat}`;
 }
 
 // ─── 会議セッション作成・通常メッセージ ────────────────────────────────────
@@ -522,11 +543,15 @@ export async function runTrialogueRound(
   lastGptReply: string = '',
   lastClaudeReply: string = '',
   lastGrokReply: string = '',
+  cumulativeScores: { gpt: number; claude: number } = { gpt: 0, claude: 0 },
 ): Promise<{
   messages: MeetingMessage[];
   round: number;
   totalRounds: number;
   isLastRound: boolean;
+  roundScores: { gpt: number; claude: number } | null;
+  cumulativeScores: { gpt: number; claude: number };
+  grokDirective?: MeetingDirective;
 }> {
   const session = cache.meetings.find((m) => m.id === sessionId);
   if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
@@ -536,13 +561,13 @@ export async function runTrialogueRound(
     pushMsg(session, 'user', userMessage);
   }
 
-  console.log(`  🔄 [会議] ラウンド ${round}/${TOTAL_ROUNDS} 開始`);
+  console.log(`  🔄 [会議] ラウンド ${round}/${TOTAL_ROUNDS} 開始 (累積 o3:${cumulativeScores.gpt} Claude:${cumulativeScores.claude})`);
   const newMessages: MeetingMessage[] = [];
 
   // ── GPT 発言 ──
   const gptPrompt = round === 1
     ? `【議題】${userMessage}\n\nデータ分析の観点から最初の立場を示してください。`
-    : `【前ラウンドのまとめ】\nClaude: ${lastClaudeReply.slice(0, 400)}\nGrok(X情報官): ${lastGrokReply.slice(0, 300)}\n\n---\n元の議題：${userMessage}\n\nClaudeの反論とGrokのX実態報告を受けて立場を再検討し、返答してください。`;
+    : `【前ラウンドのまとめ】\nClaude: ${lastClaudeReply.slice(0, 400)}\nGrok(X情報官・採点者): ${lastGrokReply.slice(0, 300)}\n\n---\n元の議題：${userMessage}\n\nClaudeの反論とGrokのX実態報告・採点を受けて立場を再検討し、返答してください。`;
 
   const gptReply = await speakAsGPT(session, gptPrompt, gptRoundInstruction(round, TOTAL_ROUNDS));
   const gptMsg = pushMsg(session, 'gpt', gptReply);
@@ -551,7 +576,7 @@ export async function runTrialogueRound(
 
   // ── Claude 発言 ──
   const claudePrompt = round === TOTAL_ROUNDS
-    ? `${TOTAL_ROUNDS}ラウンドの議論全体（GPT・Grokの発言含む）を踏まえて最終統合見解を示してください。\n\nGPT最終発言: ${gptReply.slice(0, 500)}\n前ラウンドGrok報告: ${lastGrokReply.slice(0, 300)}\n\n元の議題：${userMessage}`
+    ? `${TOTAL_ROUNDS}ラウンドの議論全体（GPT・Grokの発言・採点含む）を踏まえて最終統合見解を示してください。\n\nGPT最終発言: ${gptReply.slice(0, 500)}\n前ラウンドGrok採点: ${lastGrokReply.slice(0, 300)}\n\n元の議題：${userMessage}`
     : `GPTが以下のように述べました（ラウンド${round}）：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討し、返答してください。`;
 
   const claudeReply = await speakAsClaude(session, claudePrompt, claudeRoundInstruction(round, TOTAL_ROUNDS));
@@ -559,15 +584,44 @@ export async function runTrialogueRound(
   newMessages.push(claudeMsg);
   console.log(`    ✅ Claude完了 (${claudeReply.length}文字)`);
 
-  // ── Grok 発言（X リアルタイム情報官）──
+  // ── Grok 発言（採点者＆最終裁定者）──
+  const cumulStr = `累積スコア（R1〜R${round - 1}）: o3合計=${cumulativeScores.gpt}点 / Claude合計=${cumulativeScores.claude}点\n\n`;
   const grokPrompt = round === TOTAL_ROUNDS
-    ? `GPT最終発言: ${gptReply.slice(0, 400)}\nClaude最終統合: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXの現実に照らした最終裁定を下してください。`
-    : `GPT（ラウンド${round}）: ${gptReply.slice(0, 400)}\nClaude（ラウンド${round}）: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXのリアルタイムデータでこの議論をファクトチェックしてください。`;
+    ? `${cumulStr}GPT最終発言: ${gptReply.slice(0, 400)}\nClaude最終統合: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\n${TOTAL_ROUNDS}ラウンド全体の採点合計を出し、最終裁定と自律実行指令を必須フォーマットで出力してください。`
+    : `GPT（ラウンド${round}）: ${gptReply.slice(0, 400)}\nClaude（ラウンド${round}）: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXのリアルタイムデータでこの議論をファクトチェックし、採点してください。`;
 
   const grokReply = await speakAsGrok(session, grokPrompt, grokRoundInstruction(round, TOTAL_ROUNDS));
   const grokMsg = pushMsg(session, 'grok', grokReply);
   newMessages.push(grokMsg);
   console.log(`    ✅ Grok完了 (${grokReply.length}文字)`);
+
+  // ── スコア解析 ──
+  const roundScores = parseGrokScores(grokReply);
+  const newCumulative = roundScores
+    ? { gpt: cumulativeScores.gpt + roundScores.gpt, claude: cumulativeScores.claude + roundScores.claude }
+    : cumulativeScores;
+  if (roundScores) {
+    console.log(`    📊 採点 R${round}: o3=${roundScores.gpt} Claude=${roundScores.claude} (累積 o3=${newCumulative.gpt} Claude=${newCumulative.claude})`);
+  }
+
+  // ── 最終ラウンド: Grok裁定を自動保存 ──
+  let grokDirective: MeetingDirective | undefined;
+  if (round >= TOTAL_ROUNDS) {
+    const directiveText = extractGrokDirective(grokReply);
+    if (directiveText) {
+      const winner = newCumulative.gpt >= newCumulative.claude ? 'o3' : 'Claude';
+      const finalText = `[Grok裁定・${winner}案採用] ${directiveText}`;
+      grokDirective = await addDirective(
+        finalText,
+        'content',
+        'high',
+        `AI会議 自律裁定 (${session.title})`,
+        'ai',
+        'x',
+      );
+      console.log(`    🏆 Grok裁定ディレクティブ自動保存: ${finalText.slice(0, 80)}`);
+    }
+  }
 
   await saveData();
   return {
@@ -575,6 +629,9 @@ export async function runTrialogueRound(
     round,
     totalRounds: TOTAL_ROUNDS,
     isLastRound: round >= TOTAL_ROUNDS,
+    roundScores,
+    cumulativeScores: newCumulative,
+    grokDirective,
   };
 }
 
@@ -582,13 +639,17 @@ export async function runTrialogueRound(
 export async function runTrialogue(
   sessionId: string,
   userMessage: string,
-): Promise<{ messages: MeetingMessage[] }> {
+): Promise<{ messages: MeetingMessage[]; grokDirective?: MeetingDirective }> {
   const allMessages: MeetingMessage[] = [];
   let lastGptReply = '', lastClaudeReply = '', lastGrokReply = '';
+  let cumul = { gpt: 0, claude: 0 };
+  let finalGrokDirective: MeetingDirective | undefined;
 
   for (let round = 1; round <= TOTAL_ROUNDS; round++) {
-    const result = await runTrialogueRound(sessionId, userMessage, round, lastGptReply, lastClaudeReply, lastGrokReply);
+    const result = await runTrialogueRound(sessionId, userMessage, round, lastGptReply, lastClaudeReply, lastGrokReply, cumul);
     allMessages.push(...result.messages);
+    cumul = result.cumulativeScores;
+    if (result.grokDirective) finalGrokDirective = result.grokDirective;
     const grok = result.messages.find(m => m.speaker === 'grok');
     const claude = result.messages.find(m => m.speaker === 'claude');
     const gpt = result.messages.find(m => m.speaker === 'gpt');
@@ -597,7 +658,8 @@ export async function runTrialogue(
     if (grok) lastGrokReply = grok.content;
   }
 
-  return { messages: allMessages };
+  console.log(`  📊 [会議完了] 最終スコア o3:${cumul.gpt} / Claude:${cumul.claude}`);
+  return { messages: allMessages, grokDirective: finalGrokDirective };
 }
 
 // ─── 決定事項自動抽出 ────────────────────────────────────────────────────────

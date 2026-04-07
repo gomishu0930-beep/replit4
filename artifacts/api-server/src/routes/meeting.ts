@@ -100,13 +100,22 @@ router.post('/bot/meeting/sessions/:id/chat/claude', async (req, res) => {
 // 3者会議モード（2ラウンドディベート: GPT→Claude→GPT→Claude）
 // 1ラウンドずつ実行（タイムアウト回避。フロントが round=1〜TOTAL_ROUNDS を順番に呼ぶ）
 router.post('/bot/meeting/sessions/:id/trialogue', async (req, res) => {
-  const { message, round = 1, lastGptReply = '', lastClaudeReply = '', lastGrokReply = '' } = req.body ?? {};
+  const {
+    message, round = 1,
+    lastGptReply = '', lastClaudeReply = '', lastGrokReply = '',
+    cumulativeScores = { gpt: 0, claude: 0 },
+  } = req.body ?? {};
   if (!message?.trim()) { res.status(400).json({ error: 'message は必須です' }); return; }
   const roundNum = Math.max(1, Math.min(Number(round) || 1, TOTAL_ROUNDS));
+  const cumul = {
+    gpt: Number(cumulativeScores?.gpt) || 0,
+    claude: Number(cumulativeScores?.claude) || 0,
+  };
   try {
     const result = await runTrialogueRound(
       req.params.id, message.trim(), roundNum,
       String(lastGptReply), String(lastClaudeReply), String(lastGrokReply),
+      cumul,
     );
     res.json(result);
   } catch (e: any) {

@@ -854,6 +854,9 @@ function Dashboard() {
   const [qaRoundsLeft, setQaRoundsLeft] = useState(2);
   const [qaInput, setQaInput] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
+  // Grokスコア採点（会議ごとにリセット）
+  const [cumulativeScores, setCumulativeScores] = useState<{ gpt: number; claude: number }>({ gpt: 0, claude: 0 });
+  const [grokVerdict, setGrokVerdict] = useState<{ directive?: any; winner?: string } | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -3157,15 +3160,19 @@ function Dashboard() {
 
             try {
               if (sendMode === "trialogue") {
+                // スコアをリセット
+                setCumulativeScores({ gpt: 0, claude: 0 });
+                setGrokVerdict(null);
                 // 1ラウンドずつ5回呼び出し（タイムアウト回避）
                 const ROUNDS = 5;
                 let lastGptReply = "", lastClaudeReply = "", lastGrokReply = "";
+                let cumul = { gpt: 0, claude: 0 };
                 for (let round = 1; round <= ROUNDS; round++) {
                   setTrialoguRound(round);  // ← 進捗インジケーター更新
                   const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: msg, round, lastGptReply, lastClaudeReply, lastGrokReply }),
+                    body: JSON.stringify({ message: msg, round, lastGptReply, lastClaudeReply, lastGrokReply, cumulativeScores: cumul }),
                   });
                   let data: any;
                   try { data = await res.json(); } catch { data = {}; }
@@ -3181,6 +3188,11 @@ function Dashboard() {
                     ...s,
                     messages: [...s.messages, ...(data.messages ?? [])],
                   } : s);
+                  // スコアを更新
+                  if (data.cumulativeScores) {
+                    cumul = data.cumulativeScores;
+                    setCumulativeScores(cumul);
+                  }
                   // 次ラウンドへ引き継ぐ最終発言
                   const msgs: MeetingMessage[] = data.messages ?? [];
                   const gpt = msgs.find((m: MeetingMessage) => m.speaker === "gpt");
@@ -3189,6 +3201,11 @@ function Dashboard() {
                   if (gpt) lastGptReply = gpt.content;
                   if (claude) lastClaudeReply = claude.content;
                   if (grok) lastGrokReply = grok.content;
+                  // 最終ラウンド: Grok裁定ディレクティブを記録
+                  if (data.isLastRound && data.grokDirective) {
+                    const winner = cumul.gpt >= cumul.claude ? "o3" : "Claude";
+                    setGrokVerdict({ directive: data.grokDirective, winner });
+                  }
                 }
                 // 5ラウンド完了 → Q&Aフェーズへ
                 setDebateCompleted(true);
@@ -3520,11 +3537,36 @@ function Dashboard() {
                                 style={{ width: `${(trialoguRound / 5) * 100}%` }}
                               />
                             </div>
+                            {/* ライブスコアバー */}
+                            {(cumulativeScores.gpt > 0 || cumulativeScores.claude > 0) && (() => {
+                              const maxS = 5 * 10;
+                              const gPct = Math.round((cumulativeScores.gpt / maxS) * 100);
+                              const cPct = Math.round((cumulativeScores.claude / maxS) * 100);
+                              return (
+                                <div className="mb-3 p-2 rounded-lg bg-white/5 border border-white/8">
+                                  <p className="text-[9px] text-orange-400 font-bold mb-1.5">🦅 Grok採点 — 累積スコア</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[9px] text-blue-300 w-12">🤖 o3</span>
+                                    <div className="flex-1 h-1.5 bg-white/10 rounded-full">
+                                      <div className="h-1.5 rounded-full bg-blue-400 transition-all duration-700" style={{ width: `${gPct}%` }} />
+                                    </div>
+                                    <span className="text-[9px] text-blue-300 font-mono">{cumulativeScores.gpt}pt</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] text-violet-300 w-12">🧠 Claude</span>
+                                    <div className="flex-1 h-1.5 bg-white/10 rounded-full">
+                                      <div className="h-1.5 rounded-full bg-violet-400 transition-all duration-700" style={{ width: `${cPct}%` }} />
+                                    </div>
+                                    <span className="text-[9px] text-violet-300 font-mono">{cumulativeScores.claude}pt</span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                             <div className="space-y-1">
                               {[
                                 { icon: "🤖", label: "o3 Thinking が立論中..." },
                                 { icon: "🧠", label: "Claude が応答中..." },
-                                { icon: "🦅", label: "Grok がファクトチェック中..." },
+                                { icon: "🦅", label: "Grok が採点中..." },
                               ].map((step, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                   <span className="text-xs">{step.icon}</span>
@@ -3644,6 +3686,63 @@ function Dashboard() {
                       </button>
                       <p className="text-[10px] text-white/20 text-center mt-1">会議の内容からClaudeが実行可能な決定候補を3〜6件提案します</p>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Grok最終裁定パネル（5ラウンド完了後）── */}
+              {debateCompleted && meetingSession && (cumulativeScores.gpt > 0 || cumulativeScores.claude > 0) && (
+                <div className="rounded-xl border border-orange-500/30 bg-gradient-to-b from-orange-500/8 to-transparent p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-base">🦅</span>
+                    <div>
+                      <h2 className="text-xs font-bold text-orange-300">Grok 最終採点結果</h2>
+                      <p className="text-[10px] text-white/30">5ラウンド合計スコアによる自律裁定</p>
+                    </div>
+                    {grokVerdict && (
+                      <span className="ml-auto px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-[9px] text-orange-300 font-bold">
+                        🏆 {grokVerdict.winner}案採用
+                      </span>
+                    )}
+                  </div>
+                  {/* スコアバー */}
+                  {(() => {
+                    const maxS = 50;
+                    const gPct = Math.round((cumulativeScores.gpt / maxS) * 100);
+                    const cPct = Math.round((cumulativeScores.claude / maxS) * 100);
+                    const gWin = cumulativeScores.gpt > cumulativeScores.claude;
+                    const cWin = cumulativeScores.claude > cumulativeScores.gpt;
+                    return (
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] w-16 font-bold ${gWin ? "text-blue-300" : "text-white/40"}`}>🤖 o3 {gWin ? "👑" : ""}</span>
+                          <div className="flex-1 h-2 bg-white/10 rounded-full">
+                            <div className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-1000" style={{ width: `${gPct}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono text-blue-300">{cumulativeScores.gpt} / 50</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] w-16 font-bold ${cWin ? "text-violet-300" : "text-white/40"}`}>🧠 Claude {cWin ? "👑" : ""}</span>
+                          <div className="flex-1 h-2 bg-white/10 rounded-full">
+                            <div className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all duration-1000" style={{ width: `${cPct}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono text-violet-300">{cumulativeScores.claude} / 50</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {/* Grok裁定ディレクティブ */}
+                  {grokVerdict?.directive && (
+                    <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/25 p-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">✅ 自律実行指令 — 自動保存済み</span>
+                      </div>
+                      <p className="text-xs text-emerald-200/80 leading-relaxed">{grokVerdict.directive.text}</p>
+                      <p className="text-[9px] text-white/25 mt-1.5">翌07:30 cronが自動実行します • assignee: ai • priority: high</p>
+                    </div>
+                  )}
+                  {!grokVerdict?.directive && (
+                    <p className="text-[10px] text-white/25 text-center py-1">Grokのスコアフォーマット解析中... 発言内容を確認してください</p>
                   )}
                 </div>
               )}
