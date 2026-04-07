@@ -141,9 +141,10 @@ export async function initStorage(): Promise<void> {
   recoverySnapshotsCache = await readJson<RecoverySnapshotsData>('recovery-snapshots.json', { snapshots: [] });
   schedulerStateCache    = await readJson<SchedulerStateData>('scheduler-state.json', { celebPostedDate: '' });
   manualFeedbackCache    = await readJson<ManualFeedbackData>('manual-feedback.json', { feedbacks: [] });
+  rebrandlyCache         = await readJson<RebrandlyData>('rebrandly.json', { links: [], lastSyncedAt: null });
   initialized = true;
   console.log(
-    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件)`,
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件 / Rebrandlyリンク: ${rebrandlyCache.links.length}件)`,
   );
 }
 
@@ -479,6 +480,44 @@ export function getManualFeedbacks(limit = 10): ManualPostFeedback[] {
 
 export function getLatestManualFeedback(): ManualPostFeedback | null {
   return manualFeedbackCache.feedbacks[0] ?? null;
+}
+
+// ─── Rebrandly クリック数追跡 ──────────────────────────────────────────────
+
+export interface RebrandlyLink {
+  id: string;
+  slashtag: string;
+  destination: string;   // FANZAアフィリエイトURL
+  title: string;
+  clicks: number;
+  lastSyncedAt: string;  // ISO timestamp
+}
+
+interface RebrandlyData {
+  links: RebrandlyLink[];
+  lastSyncedAt: string | null;
+}
+
+let rebrandlyCache: RebrandlyData = { links: [], lastSyncedAt: null };
+
+function saveRebrandlyAsync() {
+  writeJson('rebrandly.json', rebrandlyCache).catch((e: any) =>
+    console.warn('  ⚠ rebrandly.json 保存失敗:', e.message),
+  );
+}
+
+export function upsertRebrandlyLinks(links: RebrandlyLink[]): void {
+  rebrandlyCache.links = links;
+  rebrandlyCache.lastSyncedAt = new Date().toISOString();
+  saveRebrandlyAsync();
+}
+
+export function getRebrandlyData(): RebrandlyData {
+  return rebrandlyCache;
+}
+
+export function getRebrandlyTotalClicks(): number {
+  return rebrandlyCache.links.reduce((s, l) => s + l.clicks, 0);
 }
 
 // サーバー再起動後もリセットされないようにGCSに永続化する

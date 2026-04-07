@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
+import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
@@ -217,6 +218,25 @@ router.post('/bot/campaign-ids/discover', async (_req, res) => {
       console.warn('  ⚠ 手動探索失敗:', e.message),
     );
     res.json({ status: 'started', message: 'キャンペーンID探索を開始しました（バックグラウンド実行中）' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Rebrandly ────────────────────────────────────────────────────────────────
+
+router.get('/bot/rebrandly', (_req, res) => {
+  res.json(getRebrandlyData());
+});
+
+router.post('/bot/rebrandly/sync', async (_req, res) => {
+  try {
+    const result = await syncRebrandlyClicks();
+    if (result === null) {
+      res.status(400).json({ error: 'REBRANDLY_API_KEY が設定されていません' });
+    } else {
+      res.json({ ok: true, synced: result.synced, totalClicks: result.totalClicks });
+    }
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

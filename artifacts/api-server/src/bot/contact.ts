@@ -177,6 +177,36 @@ export const contact = {
       ].join('\n'),
     }),
 
+  /** フォロワー数 有意な変動アラート（日次 09:00 JST） */
+  followerChange: (current: number, previous: number, delta: number) =>
+    notifyAlert({
+      level: delta >= 0 ? 'INFO' : 'WARN',
+      title: `${delta >= 0 ? '📈' : '📉'} フォロワー変動: ${delta >= 0 ? '+' : ''}${delta}人`,
+      body: [
+        `昨日比: ${delta >= 0 ? '+' : ''}${delta}人`,
+        `現在: ${current}人 / 前日: ${previous}人`,
+        '',
+        delta <= -10
+          ? '⚠️ 10人以上の減少 → シャドウバン悪化の可能性があります。投稿スタイルを確認してください。'
+          : delta >= 10
+          ? '✅ 10人以上の増加 → 回復兆候の可能性があります。'
+          : '通常範囲の変動です。',
+      ].join('\n'),
+    }),
+
+  /** Rebrandlyクリック数 週次サマリー（月曜 08:00 JST に追加） */
+  rebrandlyWeeklySummary: (totalClicks: number, topLinks: Array<{ title: string; clicks: number }>) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `🔗 Rebrandly週次クリックサマリー: ${totalClicks}クリック`,
+      body: [
+        `累計総クリック数: ${totalClicks}`,
+        '',
+        '【クリック数TOP3】',
+        ...topLinks.slice(0, 3).map((l, i) => `${i + 1}. ${l.title}: ${l.clicks}クリック`),
+      ].join('\n'),
+    }),
+
   /** 手動投稿週次フィードバック（月曜 08:00 JST） */
   manualPostFeedback: (fb: {
     weekStart: string;

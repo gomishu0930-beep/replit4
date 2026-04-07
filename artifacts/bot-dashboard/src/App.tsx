@@ -752,7 +752,7 @@ function ManualFeedbackPanel({ feedbacks, onRun }: { feedbacks: ManualPostFeedba
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb">("overview");
+  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb" | "rebrandly">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -896,6 +896,15 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/manual-feedback`).then((r) => r.json()),
     refetchInterval: 300000,
   });
+
+  const { data: rebrandlyData, refetch: refetchRebrandly, isRefetching: rebrandlySyncing } = useQuery<{
+    links: Array<{ id: string; slashtag: string; destination: string; title: string; clicks: number; lastSyncedAt: string }>;
+    lastSyncedAt: string | null;
+  }>({
+    queryKey: ["rebrandly"],
+    queryFn: () => fetch(`${API}/api/bot/rebrandly`).then((r) => r.json()),
+    refetchInterval: 600000,
+  });
   const activeDirectives = (directivesData?.directives ?? []).filter((d) => d.status === "active");
 
   const posts = postsData?.posts ?? [];
@@ -919,6 +928,7 @@ function Dashboard() {
     { id: "patterns",   label: "外部データ" },
     { id: "research",   label: "🔬 回復研究" },
     { id: "manual-fb",  label: "📝 手動投稿FB" },
+    { id: "rebrandly",  label: "🔗 Rebrandly" },
     { id: "tasks",      label: "✅ タスク" },
     { id: "meeting",    label: "🤝 会議室" },
   ] as const;
@@ -3206,6 +3216,98 @@ function Dashboard() {
             feedbacks={manualFbData?.feedbacks ?? []}
             onRun={() => refetchManualFb()}
           />
+        </div>
+      )}
+
+      {tab === "rebrandly" && (
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold">🔗 Rebrandly クリック追跡</h2>
+              <p className="text-xs text-white/40 mt-0.5">毎日 06:00 JST に自動同期 / 短縮URLのクリック数を追跡</p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`${API}/api/bot/rebrandly/sync`, { method: "POST" });
+                  const data = await res.json();
+                  if (data.error) {
+                    alert(`同期エラー: ${data.error}`);
+                  } else {
+                    await refetchRebrandly();
+                  }
+                } catch (e) {
+                  alert("同期失敗");
+                }
+              }}
+              disabled={rebrandlySyncing}
+              className="text-xs bg-blue-600/20 border border-blue-500/30 rounded px-3 py-1.5 hover:bg-blue-600/30 disabled:opacity-50"
+            >
+              {rebrandlySyncing ? "同期中..." : "🔄 今すぐ同期"}
+            </button>
+          </div>
+
+          {(!rebrandlyData?.links || rebrandlyData.links.length === 0) ? (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-semibold text-yellow-400">⚠️ データなし</p>
+              <p className="text-xs text-white/60">
+                <code className="bg-white/10 rounded px-1">REBRANDLY_API_KEY</code> を環境変数に設定すると自動同期が有効になります。
+              </p>
+              <p className="text-xs text-white/40">
+                Rebrandly → Account Settings → API Keys からキーを取得してください。
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* サマリー */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-blue-400">
+                    {rebrandlyData.links.reduce((s, l) => s + l.clicks, 0).toLocaleString()}
+                  </div>
+                  <div className="text-xs text-white/50 mt-1">総クリック数</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-purple-400">{rebrandlyData.links.length}</div>
+                  <div className="text-xs text-white/50 mt-1">追跡リンク数</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3 text-center">
+                  <div className="text-sm font-bold text-white/70">
+                    {rebrandlyData.lastSyncedAt
+                      ? new Date(rebrandlyData.lastSyncedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </div>
+                  <div className="text-xs text-white/50 mt-1">最終同期</div>
+                </div>
+              </div>
+
+              {/* リンク一覧 */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wide">リンク別クリック数</h3>
+                {[...rebrandlyData.links].sort((a, b) => b.clicks - a.clicks).map((link) => {
+                  const maxClicks = Math.max(...rebrandlyData.links.map((l) => l.clicks), 1);
+                  const pct = Math.round((link.clicks / maxClicks) * 100);
+                  return (
+                    <div key={link.id} className="bg-white/5 rounded-lg p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">{link.title || link.slashtag}</p>
+                          <p className="text-[11px] text-white/40">re.bndly/{link.slashtag}</p>
+                        </div>
+                        <div className="text-right ml-3 flex-shrink-0">
+                          <span className="text-lg font-bold text-blue-400">{link.clicks.toLocaleString()}</span>
+                          <span className="text-xs text-white/40 ml-1">clicks</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

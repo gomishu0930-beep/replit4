@@ -3,7 +3,8 @@ import cron from 'node-cron';
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback } from './storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
+import { syncRebrandlyClicks } from './rebrandly.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -378,6 +379,50 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
+  // 17:00 JST — インプ狙い投稿②（通常週のみ）
+  cron.schedule('0 17 * * *', async () => {
+    const week = getABTestWeek();
+    if (week === 'W1' || week === 'W2') {
+      console.log(`  ℹ️  [17:00インプ] ${week}期間中 → スキップ (アフィリ専念)`);
+      return;
+    }
+    await postImpressionSlot('17:00 インプ');
+    autoCompleteTask('daily-imp2-post', 'daily').catch(() => {});
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 09:00 JST — 日次フォロワースナップショット + 増減アラート
+  cron.schedule('0 9 * * *', async () => {
+    try {
+      const prev = getLatestSnapshot();
+      const info = await getAccountInfo();
+      if (!info) return;
+      recordAccountSnapshot({ followersCount: info.followersCount, followingCount: info.followingCount, tweetCount: info.tweetCount, note: '日次自動記録' });
+      if (prev) {
+        const delta = info.followersCount - prev.followersCount;
+        const hoursSince = (Date.now() - new Date(prev.recordedAt).getTime()) / 3600000;
+        // 直近24±4時間以内のスナップと比較したときのみアラート
+        if (hoursSince < 28 && Math.abs(delta) >= 5) {
+          await contact.followerChange(info.followersCount, prev.followersCount, delta);
+        }
+        console.log(`  📊 [日次スナップ] フォロワー: ${info.followersCount}人 (${delta >= 0 ? '+' : ''}${delta}人)`);
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ 日次スナップ失敗:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 06:00 JST — Rebrandlyクリック数自動同期
+  cron.schedule('0 6 * * *', async () => {
+    try {
+      const result = await syncRebrandlyClicks();
+      if (result) {
+        console.log(`  🔗 [Rebrandly] 同期完了: ${result.synced}件 / 総クリック ${result.totalClicks}`);
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ Rebrandly同期失敗:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
   // 毎日 23:00 JST — シャドウバン回復自動チェック（③）
   cron.schedule('0 23 * * *', async () => {
     try {
@@ -419,10 +464,20 @@ export function startScheduler() {
       console.warn('  ⚠ フォロワースナップショット失敗:', e.message);
     }
 
+    // Rebrandlyサマリーを週次レポートに追加
+    const rbData = getRebrandlyData();
+    const rbTotalClicks = rbData.links.reduce((s, l) => s + l.clicks, 0);
+    if (rbData.links.length > 0) {
+      const topLinks = [...rbData.links].sort((a, b) => b.clicks - a.clicks).slice(0, 3)
+        .map(l => ({ title: l.title, clicks: l.clicks }));
+      await contact.rebrandlyWeeklySummary(rbTotalClicks, topLinks);
+    }
+
     await contact.weeklyReport({
       投稿統計: stats,
       外部パターン: { 総数: extInfo.count, 最終更新: extInfo.lastRefreshedAt },
       動的テンプレート: { 総数: dynInfo.count, 進化回数: dynInfo.evolutionCount, 最終進化: dynInfo.lastEvolvedAt },
+      Rebrandly: { リンク数: rbData.links.length, 総クリック: rbTotalClicks, 最終同期: rbData.lastSyncedAt },
     });
 
     // 手動投稿の週次フィードバック生成

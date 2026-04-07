@@ -1,0 +1,80 @@
+/**
+ * rebrandly.ts — Rebrandly短縮URLクリック数自動同期
+ *
+ * 環境変数 REBRANDLY_API_KEY が未設定の場合はスキップ（サイレント動作）。
+ * 毎日 06:00 JST にスケジューラーから呼び出す。
+ */
+
+import { upsertRebrandlyLinks, RebrandlyLink } from './storage.js';
+
+const REBRANDLY_BASE = 'https://api.rebrandly.com/v1';
+
+interface RebrandlyApiLink {
+  id: string;
+  slashtag: string;
+  destination: string;
+  title: string;
+  clicks: number;
+  createdAt: string;
+}
+
+export async function syncRebrandlyClicks(): Promise<{
+  synced: number;
+  totalClicks: number;
+} | null> {
+  const apiKey = process.env.REBRANDLY_API_KEY;
+  if (!apiKey) {
+    console.log('  ℹ️  [Rebrandly] REBRANDLY_API_KEY 未設定 → スキップ');
+    return null;
+  }
+
+  const headers = {
+    'apikey': apiKey,
+    'Content-Type': 'application/json',
+  };
+
+  let allLinks: RebrandlyApiLink[] = [];
+  let last = 0;
+  const limit = 25;
+
+  // ページネーション（最大200件）
+  for (let page = 0; page < 8; page++) {
+    const url = `${REBRANDLY_BASE}/links?limit=${limit}&last=${last}&orderBy=createdAt&orderDir=desc`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Rebrandly API エラー (${res.status}): ${body.slice(0, 200)}`);
+    }
+    const data: RebrandlyApiLink[] = await res.json();
+    if (data.length === 0) break;
+    allLinks = allLinks.concat(data);
+    if (data.length < limit) break;
+    last = allLinks.length;
+  }
+
+  // FANZA系のみフィルタ（オプション: destination に al.dmm.co.jp を含む）
+  const fanzaLinks = allLinks.filter(l =>
+    l.destination.includes('al.dmm.co.jp') ||
+    l.destination.includes('dmm.co.jp') ||
+    l.destination.includes('fanza'),
+  );
+
+  // 全リンク（FANZAフィルタがゼロの場合は全て対象）
+  const targetLinks = fanzaLinks.length > 0 ? fanzaLinks : allLinks;
+
+  const now = new Date().toISOString();
+  const links: RebrandlyLink[] = targetLinks.map(l => ({
+    id: l.id,
+    slashtag: l.slashtag,
+    destination: l.destination,
+    title: l.title || l.slashtag,
+    clicks: l.clicks,
+    lastSyncedAt: now,
+  }));
+
+  upsertRebrandlyLinks(links);
+
+  const totalClicks = links.reduce((s, l) => s + l.clicks, 0);
+  console.log(`  ✅ [Rebrandly] ${links.length}件同期完了 / 合計クリック: ${totalClicks}`);
+  return { synced: links.length, totalClicks };
+}
