@@ -353,7 +353,7 @@
       "retweet_count": 2,
       "reply_count": 0,
       "bookmark_count": 7,
-      "impression_count": 7264,
+      "impression_count": 7354,
       "createdAt": "2026-04-07T00:00:00.000Z",
       "tweetId": "2041304951457235068",
       "score": 64,
@@ -623,7 +623,7 @@
       "retweet_count": 1,
       "reply_count": 0,
       "bookmark_count": 2,
-      "impression_count": 5653,
+      "impression_count": 5712,
       "createdAt": "2026-04-07T00:47:21.000Z",
       "tweetId": "2041316865759482085",
       "score": 35,
@@ -1501,7 +1501,7 @@
       "savedAt": "2026-04-06T05:37:39.003Z"
     }
   ],
-  "lastRefreshedAt": "2026-04-07T08:58:36.533Z",
+  "lastRefreshedAt": "2026-04-07T09:09:34.620Z",
   "queries": [
     "#FANZA",
     "#DMM",

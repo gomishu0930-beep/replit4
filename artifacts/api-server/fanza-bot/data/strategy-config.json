@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 2,
+  "monitorIntervalHours": 1,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 195,
-    "avgNewPatterns": 194.86955180048852,
-    "totalCycles": 106
+    "lastNewPatterns": 197,
+    "avgNewPatterns": 195.50868626034196,
+    "totalCycles": 107
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 3h）は最適か？",
+      "question": "外部情報の収集間隔（現在 2h）は最適か？",
       "status": "adjusted",
-      "finding": "106サイクル実績 / 平均新規パターン 194.9件/サイクル",
-      "adjustment": "監視間隔を 3h → 2h に短縮（平均新規パターン 194.9件/サイクル）",
-      "testedAt": "2026-04-07T08:58:41.976Z"
+      "finding": "107サイクル実績 / 平均新規パターン 195.5件/サイクル",
+      "adjustment": "監視間隔を 2h → 1h に短縮（平均新規パターン 195.5件/サイクル）",
+      "testedAt": "2026-04-07T09:09:40.286Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "confirmed",
       "finding": "直近 12件の平均スコア 1.2 vs 以前 1.0 (+16.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-07T08:58:41.977Z"
+      "testedAt": "2026-04-07T09:09:40.287Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 12時 (avg 1.3) / 最低スロット: 20時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-07T08:58:41.977Z"
+      "testedAt": "2026-04-07T09:09:40.287Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-07T09:09:40.287Z",
+      "cycle": 107,
+      "decisions": [
+        "監視間隔を 2h → 1h に短縮（平均新規パターン 195.5件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-07T08:58:41.977Z",
       "cycle": 106,
@@ -447,20 +454,8 @@
         "投稿重み[sale]: 0 → 0.8",
         "投稿重み[random]: 0 → 0.8"
       ]
-    },
-    {
-      "at": "2026-04-06T11:28:34.265Z",
-      "cycle": 64,
-      "decisions": [
-        "[会議決定] buzzコンテンツの投稿重みを現在より1.5倍に引き上げる。話題性が高い時間帯（19-21時）に重点配分する",
-        "投稿重み[buzz]: 1 → 5",
-        "投稿重み[amateur]: 1 → 0",
-        "投稿重み[rank]: 1 → 0",
-        "投稿重み[sale]: 0.8 → 0",
-        "投稿重み[random]: 0.8 → 0"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-07T08:58:41.977Z",
-  "version": 108
+  "lastEvaluatedAt": "2026-04-07T09:09:40.287Z",
+  "version": 109
 }
