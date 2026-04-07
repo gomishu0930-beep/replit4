@@ -3268,9 +3268,18 @@ function Dashboard() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: msg }),
               });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error ?? "エラー");
-              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, data.gptMsg, data.claudeMsg] } : s);
+              let data: any;
+              try { data = await res.json(); } catch { data = {}; }
+              if (!res.ok) {
+                const rawMsg = data?.error ?? `Q&Aエラー (HTTP ${res.status})`;
+                if (res.status === 429 || (typeof rawMsg === "string" && rawMsg.includes("429"))) {
+                  throw new Error("AIクォータ制限です。数分後に再試行してください。");
+                }
+                throw new Error(rawMsg);
+              }
+              // o3・Claude・Grokの回答をまとめて表示（undefinedはスキップ）
+              const newMsgs = [data.gptMsg, data.claudeMsg, data.grokMsg].filter(Boolean);
+              setMeetingSession((s) => s ? { ...s, messages: [...s.messages, ...newMsgs] } : s);
               setQaRoundsLeft((n) => n - 1);
             } catch (e: any) {
               const errMsg: MeetingMessage = { role: "assistant", speaker: "system", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() };
@@ -3680,12 +3689,15 @@ function Dashboard() {
                         </button>
                       </div>
                       {qaLoading && (
-                        <div className="flex gap-3 mt-2">
+                        <div className="flex gap-2 mt-2 flex-wrap">
                           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
                             <p className="text-[10px] text-blue-400 animate-pulse">🤖 o3 回答中...</p>
                           </div>
                           <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-2">
                             <p className="text-[10px] text-violet-400 animate-pulse">🧠 Claude 回答中...</p>
+                          </div>
+                          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2">
+                            <p className="text-[10px] text-orange-400 animate-pulse">🦅 Grok 回答中...</p>
                           </div>
                         </div>
                       )}

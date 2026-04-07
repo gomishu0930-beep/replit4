@@ -755,7 +755,7 @@ export async function saveDirectiveExecution(
 export async function runQARound(
   sessionId: string,
   userMessage: string,
-): Promise<{ gptMsg: MeetingMessage; claudeMsg: MeetingMessage }> {
+): Promise<{ gptMsg: MeetingMessage; claudeMsg: MeetingMessage; grokMsg: MeetingMessage }> {
   const session = cache.meetings.find((m) => m.id === sessionId);
   if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
 
@@ -779,8 +779,16 @@ export async function runQARound(
   );
   const claudeMsg = pushMsg(session, 'claude', claudeReply);
 
+  // Grok がXリアルタイムデータの観点でユーザーの質問に回答
+  const grokReply = await speakAsGrok(
+    session,
+    `ユーザーの質問：\n${userMessage}\n\no3の回答：\n${gptReply.slice(0, 400)}\nClaudeの回答：\n${claudeReply.slice(0, 400)}\n\n---\nX上のリアルタイムデータを根拠にしながら、ユーザーの質問に回答してください。`,
+    `【Q&Aラウンド - Grok】X上の現状データで他2者の回答を検証・補強してください。「現時点のXでは〜」という形式で実態を示し、実行すべき優先順位を1つ断言して終わること。`,
+  );
+  const grokMsg = pushMsg(session, 'grok', grokReply);
+
   await saveData();
-  return { gptMsg, claudeMsg };
+  return { gptMsg, claudeMsg, grokMsg };
 }
 
 // ─── データ取得 ────────────────────────────────────────────────────────────
