@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
+import { runAlgoAnalysis, computeAlgoStats } from '../bot/algo.js';
 import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
@@ -218,6 +219,23 @@ router.post('/bot/campaign-ids/discover', async (_req, res) => {
       console.warn('  ⚠ 手動探索失敗:', e.message),
     );
     res.json({ status: 'started', message: 'キャンペーンID探索を開始しました（バックグラウンド実行中）' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── アルゴリズム解析 ──────────────────────────────────────────────────────────
+
+router.get('/bot/algo-insights', (_req, res) => {
+  const latest = getLatestAlgoInsight();
+  const stats  = computeAlgoStats();
+  res.json({ latest, stats: { byType: stats.byType, byHour: stats.byHour, byDayOfWeek: stats.byDayOfWeek, correlations: stats.correlations, topPosts: stats.topPosts, sampleSize: stats.sampleSize } });
+});
+
+router.post('/bot/algo-insights/run', async (_req, res) => {
+  try {
+    const insight = await runAlgoAnalysis();
+    res.json({ ok: true, briefing: insight.briefing, generatedAt: insight.generatedAt });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

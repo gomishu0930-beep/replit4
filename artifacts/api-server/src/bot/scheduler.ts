@@ -5,6 +5,7 @@ import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
+import { runAlgoAnalysis } from './algo.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -425,6 +426,19 @@ export function startScheduler() {
       }
     } catch (e: any) {
       console.warn('  ⚠ 日次スナップ失敗:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 日曜 23:30 JST — Xアルゴリズム週次自動解析（月曜朝のレポート前に完了）
+  cron.schedule('30 23 * * 0', async () => {
+    console.log('\n  🔬 [アルゴ解析] 週次自動実行開始');
+    try {
+      const insight = await runAlgoAnalysis();
+      console.log('  ✅ [アルゴ解析] 完了');
+      // ブリーフィングを通知
+      await contact.algoWeeklyBriefing(insight.briefing, insight.sampleSize);
+    } catch (e: any) {
+      console.error(`  ❌ [アルゴ解析] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

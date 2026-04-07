@@ -142,9 +142,10 @@ export async function initStorage(): Promise<void> {
   schedulerStateCache    = await readJson<SchedulerStateData>('scheduler-state.json', { celebPostedDate: '' });
   manualFeedbackCache    = await readJson<ManualFeedbackData>('manual-feedback.json', { feedbacks: [] });
   rebrandlyCache         = await readJson<RebrandlyData>('rebrandly.json', { links: [], lastSyncedAt: null });
+  algoInsightCache       = await readJson<AlgoInsightData>('algo-insights.json', { insights: [] });
   initialized = true;
   console.log(
-    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件 / Rebrandlyリンク: ${rebrandlyCache.links.length}件)`,
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件 / Rebrandlyリンク: ${rebrandlyCache.links.length}件 / アルゴ解析: ${algoInsightCache.insights.length}件)`,
   );
 }
 
@@ -480,6 +481,53 @@ export function getManualFeedbacks(limit = 10): ManualPostFeedback[] {
 
 export function getLatestManualFeedback(): ManualPostFeedback | null {
   return manualFeedbackCache.feedbacks[0] ?? null;
+}
+
+// ─── アルゴリズム解析インサイト ────────────────────────────────────────────
+
+export interface AlgoInsight {
+  generatedAt: string;
+  sampleSize: number;
+  stats: {
+    byType: Array<{ type: string; avgImp: number; avgEng: number; count: number }>;
+    byHour: Array<{ hour: number; avgImp: number; count: number }>;
+    byDayOfWeek: Array<{ day: number; label: string; avgImp: number; count: number }>;
+    correlations: { textLength: number; emojiCount: number; lineCount: number; hasQuestion: number; hasNumber: number };
+    topPosts: Array<{ tweetId: string; postedAt: string; type: string; impressions: number; engScore: number }>;
+    bottomPosts: Array<{ tweetId: string; postedAt: string; type: string; impressions: number; engScore: number }>;
+  };
+  discussion: {
+    claudeHypothesis: string;
+    o3Challenge: string;
+    claudeSynthesis: string;
+  };
+  briefing: string;
+}
+
+interface AlgoInsightData {
+  insights: AlgoInsight[];
+}
+
+let algoInsightCache: AlgoInsightData = { insights: [] };
+
+function saveAlgoInsightAsync() {
+  writeJson('algo-insights.json', algoInsightCache).catch((e: any) =>
+    console.warn('  ⚠ algo-insights.json 保存失敗:', e.message),
+  );
+}
+
+export function saveAlgoInsight(insight: AlgoInsight): void {
+  algoInsightCache.insights.unshift(insight);
+  if (algoInsightCache.insights.length > 12) algoInsightCache.insights = algoInsightCache.insights.slice(0, 12);
+  saveAlgoInsightAsync();
+}
+
+export function getAlgoInsights(limit = 5): AlgoInsight[] {
+  return algoInsightCache.insights.slice(0, limit);
+}
+
+export function getLatestAlgoInsight(): AlgoInsight | null {
+  return algoInsightCache.insights[0] ?? null;
 }
 
 // ─── Rebrandly クリック数追跡 ──────────────────────────────────────────────

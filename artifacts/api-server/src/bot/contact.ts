@@ -194,6 +194,14 @@ export const contact = {
       ].join('\n'),
     }),
 
+  /** Xアルゴリズム週次解析ブリーフィング（日曜 23:30 JST 自動） */
+  algoWeeklyBriefing: (briefing: string, sampleSize: number) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `📡 Xアルゴリズム週次解析レポート (n=${sampleSize}件)`,
+      body: briefing,
+    }),
+
   /** Rebrandlyクリック数 週次サマリー（月曜 08:00 JST に追加） */
   rebrandlyWeeklySummary: (totalClicks: number, topLinks: Array<{ title: string; clicks: number }>) =>
     notifyAlert({

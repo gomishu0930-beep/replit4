@@ -752,7 +752,7 @@ function ManualFeedbackPanel({ feedbacks, onRun }: { feedbacks: ManualPostFeedba
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb" | "rebrandly">("overview");
+  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb" | "rebrandly" | "algo">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -897,6 +897,33 @@ function Dashboard() {
     refetchInterval: 300000,
   });
 
+  const [algoRunning, setAlgoRunning] = useState(false);
+  const { data: algoData, refetch: refetchAlgo } = useQuery<{
+    latest: {
+      generatedAt: string;
+      sampleSize: number;
+      briefing: string;
+      stats: {
+        byType: Array<{ type: string; avgImp: number; avgEng: number; count: number }>;
+        byHour: Array<{ hour: number; avgImp: number; count: number }>;
+        correlations: { textLength: number; emojiCount: number; lineCount: number; hasQuestion: number; hasNumber: number };
+        topPosts: Array<{ tweetId: string; postedAt: string; type: string; impressions: number; engScore: number }>;
+      };
+      discussion: { claudeHypothesis: string; o3Challenge: string; claudeSynthesis: string };
+    } | null;
+    stats: {
+      byType: Array<{ type: string; avgImp: number; avgEng: number; count: number }>;
+      byHour: Array<{ hour: number; avgImp: number; count: number }>;
+      correlations: { textLength: number; emojiCount: number; lineCount: number; hasQuestion: number; hasNumber: number };
+      topPosts: Array<{ tweetId: string; postedAt: string; type: string; impressions: number; engScore: number }>;
+      sampleSize: number;
+    };
+  }>({
+    queryKey: ["algo-insights"],
+    queryFn: () => fetch(`${API}/api/bot/algo-insights`).then((r) => r.json()),
+    refetchInterval: 600000,
+  });
+
   const { data: rebrandlyData, refetch: refetchRebrandly, isRefetching: rebrandlySyncing } = useQuery<{
     links: Array<{ id: string; slashtag: string; destination: string; title: string; clicks: number; lastSyncedAt: string }>;
     lastSyncedAt: string | null;
@@ -929,6 +956,7 @@ function Dashboard() {
     { id: "research",   label: "🔬 回復研究" },
     { id: "manual-fb",  label: "📝 手動投稿FB" },
     { id: "rebrandly",  label: "🔗 Rebrandly" },
+    { id: "algo",       label: "📡 アルゴ解析" },
     { id: "tasks",      label: "✅ タスク" },
     { id: "meeting",    label: "🤝 会議室" },
   ] as const;
@@ -3216,6 +3244,135 @@ function Dashboard() {
             feedbacks={manualFbData?.feedbacks ?? []}
             onRun={() => refetchManualFb()}
           />
+        </div>
+      )}
+
+      {tab === "algo" && (
+        <div className="p-4 space-y-4">
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold">📡 Xアルゴリズム解析</h2>
+              <p className="text-xs text-white/40 mt-0.5">実投稿データのみ分析 / Claude(分析) × o3(批判) 議論形式 / 日曜23:30 JST 自動実行</p>
+            </div>
+            <button
+              onClick={async () => {
+                setAlgoRunning(true);
+                try {
+                  const res = await fetch(`${API}/api/bot/algo-insights/run`, { method: "POST" });
+                  const d = await res.json();
+                  if (d.error) alert(`エラー: ${d.error}`);
+                  else await refetchAlgo();
+                } catch { alert("実行失敗"); }
+                setAlgoRunning(false);
+              }}
+              disabled={algoRunning}
+              className="text-xs bg-purple-600/20 border border-purple-500/30 rounded px-3 py-1.5 hover:bg-purple-600/30 disabled:opacity-50"
+            >
+              {algoRunning ? "⏳ 解析中... (1〜2分)" : "🔬 今すぐ解析"}
+            </button>
+          </div>
+
+          {/* 統計サマリー（常に表示） */}
+          {algoData?.stats && (
+            <div className="space-y-3">
+              <p className="text-xs text-white/50">サンプル数: <span className="text-white font-bold">{algoData.stats.sampleSize}件</span>（サンプルが少ないため仮説レベル）</p>
+
+              {/* タイプ別 */}
+              <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                <h3 className="text-xs font-semibold text-purple-400">投稿タイプ別 平均インプレッション</h3>
+                {algoData.stats.byType.map((t) => {
+                  const max = Math.max(...algoData.stats.byType.map(x => x.avgImp), 1);
+                  return (
+                    <div key={t.type} className="space-y-0.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/70">{t.type} <span className="text-white/30">n={t.count}</span></span>
+                        <span className="font-bold text-white">{t.avgImp.toLocaleString()} imp</span>
+                      </div>
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.round(t.avgImp/max*100)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 相関係数 */}
+              <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                <h3 className="text-xs font-semibold text-blue-400">インプレッションとの相関係数</h3>
+                <p className="text-[11px] text-white/30">|r|: &lt;0.2=無相関 / 0.2〜0.4=弱 / 0.4〜0.6=中 / &gt;0.6=強</p>
+                {Object.entries(algoData.stats.correlations).map(([k, v]) => {
+                  const num = isNaN(Number(v)) ? 0 : Number(v);
+                  const color = Math.abs(num) > 0.4 ? "text-yellow-400" : Math.abs(num) > 0.2 ? "text-blue-400" : "text-white/40";
+                  return (
+                    <div key={k} className="flex items-center justify-between text-xs">
+                      <span className="text-white/60">{k}</span>
+                      <span className={`font-mono font-bold ${color}`}>{isNaN(Number(v)) ? "N/A" : Number(v).toFixed(3)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 時間帯別 */}
+              <div className="bg-white/5 rounded-lg p-3 space-y-1">
+                <h3 className="text-xs font-semibold text-green-400">時間帯別 平均インプレッション</h3>
+                <div className="grid grid-cols-4 gap-1 mt-2">
+                  {algoData.stats.byHour.map((h) => {
+                    const max = Math.max(...algoData.stats.byHour.map(x => x.avgImp), 1);
+                    const pct = Math.round(h.avgImp / max * 100);
+                    return (
+                      <div key={h.hour} className="text-center space-y-1">
+                        <div className="h-12 bg-white/10 rounded relative overflow-hidden flex items-end">
+                          <div className="w-full bg-green-500/70 rounded" style={{ height: `${pct}%` }} />
+                        </div>
+                        <div className="text-[10px] text-white/50">{String(h.hour).padStart(2,"0")}時</div>
+                        <div className="text-[10px] text-white/70">{h.avgImp}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI議論結果 */}
+          {algoData?.latest ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-white/60">最新AI解析結果</h3>
+                <span className="text-[11px] text-white/30">
+                  {new Date(algoData.latest.generatedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+
+              {/* ブリーフィング */}
+              <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-lg p-3">
+                <p className="text-xs font-semibold text-purple-300 mb-2">📋 今週のブリーフィング</p>
+                <p className="text-xs text-white/80 whitespace-pre-wrap leading-relaxed">{algoData.latest.briefing}</p>
+              </div>
+
+              {/* 議論 */}
+              {[
+                { label: "🧠 Claude — 仮説・分析", key: "claudeHypothesis", color: "blue" },
+                { label: "🤖 o3 — 批判的検証", key: "o3Challenge", color: "orange" },
+                { label: "🧠 Claude — 統合・アクションプラン", key: "claudeSynthesis", color: "purple" },
+              ].map(({ label, key, color }) => (
+                <details key={key} className={`bg-${color}-500/5 border border-${color}-500/20 rounded-lg`}>
+                  <summary className={`text-xs font-semibold text-${color}-400 p-3 cursor-pointer`}>{label}</summary>
+                  <div className="px-3 pb-3">
+                    <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed">
+                      {algoData.latest.discussion[key as keyof typeof algoData.latest.discussion]}
+                    </p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
+              <p className="text-sm text-white/50">まだ解析データがありません</p>
+              <p className="text-xs text-white/30 mt-1">「🔬 今すぐ解析」を押すと Claude × o3 の議論が始まります</p>
+            </div>
+          )}
         </div>
       )}
 
