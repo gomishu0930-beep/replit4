@@ -85,3 +85,21 @@ export async function syncRebrandlyClicks(): Promise<{
   console.log(`  ✅ [Rebrandly] ${links.length}件同期完了 / 合計クリック: ${totalClicks}`);
   return { synced: links.length, totalClicks };
 }
+
+/**
+ * アフィリエイトURLに対応するRebrandly短縮URLを返す。
+ * 登録がなければ元のURLをそのまま返す（フォールバック）。
+ */
+export function resolveShortUrl(affiliateUrl: string): string {
+  const { links } = getRebrandlyData();
+  if (links.length === 0) return affiliateUrl;
+
+  // destinationが完全一致するリンクを探す
+  const match = links.find(l => l.destination === affiliateUrl);
+  if (match) {
+    const short = `https://rebrand.ly/${match.slashtag}`;
+    console.log(`  🔗 [Rebrandly] 短縮URL適用: ${match.slashtag}`);
+    return short;
+  }
+  return affiliateUrl;
+}

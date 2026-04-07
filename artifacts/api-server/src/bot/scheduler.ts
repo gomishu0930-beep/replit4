@@ -4,7 +4,7 @@ import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
-import { syncRebrandlyClicks } from './rebrandly.js';
+import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -48,7 +48,7 @@ async function postItem(item: any, type: string, label: string) {
   // ツイート→リプライ間：30〜90秒待機（人間的な間隔）
   await randomSleep(30, 90);
 
-  const affiliateURL = item.affiliateURL ?? '';
+  const affiliateURL = resolveShortUrl(item.affiliateURL ?? '');
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   // リプライ1→2間：20〜60秒待機
@@ -114,7 +114,7 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
 
   // リプライ②：アフィリエイトリンク（20〜60秒後）
   await randomSleep(20, 60);
-  const affiliateURL = item.affiliateURL ?? '';
+  const affiliateURL = resolveShortUrl(item.affiliateURL ?? '');
   await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   recordPost({ tweetId, replyId: introReplyId, item, text: mainText, type: 'celebrity' });
