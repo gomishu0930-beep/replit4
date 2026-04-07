@@ -278,34 +278,46 @@ async function catchUpMissedSlots() {
       console.log(`  ℹ️  [補完チェック] ${week} スロットから4時間超過 → スキップ`);
       return;
     }
-    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${week} スロット → 補完投稿開始`);
+    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${week} スロット → 補完投稿会議開始`);
     setCelebPostedDate(todayKey);
-    await postCelebritySlot(`${week} 補完`);
+    try {
+      const result = await runMeetingAndPost({ bypassDailyLimit: true });
+      if (result.posted) {
+        console.log(`  ✅ [補完投稿会議] 投稿完了: ${result.tweetId}`);
+      } else {
+        console.log(`  ℹ️  [補完投稿会議] スキップ: ${result.reason ?? '不明'}`);
+      }
+    } catch (e: any) {
+      console.error(`  ❌ 補完投稿会議失敗 [${week}スロット]: ${e.message}`);
+    }
     return;
   }
 
-  // 通常週: 芸能人スロット（動的 20:00前後）の取りこぼしチェック
+  // 通常週: 18-22時スロットの取りこぼしチェック
   const celebSlotHour = 20;
   const slotTime = new Date(todayMidnightJst.getTime() + celebSlotHour * 60 * 60 * 1000);
   const slotPastMs = nowUtc - slotTime.getTime();
   if (slotPastMs < 0) {
-    console.log(`  ℹ️  [補完チェック] 芸能人スロットはまだ先 → スキップ`);
+    console.log(`  ℹ️  [補完チェック] 投稿会議スロットはまだ先 → スキップ`);
     return;
   }
   if (slotPastMs > 6 * 60 * 60 * 1000) {
-    console.log(`  ℹ️  [補完チェック] 芸能人スロットから6時間超過 → スキップ`);
+    console.log(`  ℹ️  [補完チェック] 投稿会議スロットから6時間超過 → スキップ`);
     return;
   }
-  const celebPostsAfter = getPostsAfter(slotTime).filter((p: any) => p.type === 'celebrity');
+  const celebPostsAfter = getPostsAfter(slotTime).filter((p: any) => p.type === 'celebrity' || p.type === 'meeting-post');
   if (celebPostsAfter.length > 0) {
-    console.log(`  ✅ [補完チェック] 芸能人スロット投稿済み確認 → スキップ`);
+    console.log(`  ✅ [補完チェック] 本日投稿済み確認 → スキップ`);
     return;
   }
-  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 芸能人スロット → 補完投稿開始`);
+  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 通常週スロット → 補完投稿会議開始`);
   try {
-    await postCelebritySlot('20:00 芸能人（補完）');
+    const result = await runMeetingAndPost();
+    if (result.posted) {
+      console.log(`  ✅ [補完投稿会議] 投稿完了: ${result.tweetId}`);
+    }
   } catch (e: any) {
-    console.error(`  ❌ 補完投稿失敗 [芸能人スロット]: ${e.message}`);
+    console.error(`  ❌ 補完投稿会議失敗: ${e.message}`);
   }
 }
 
@@ -364,54 +376,76 @@ export function startScheduler() {
   //   W3以降:          動的 (18-22 JST) に戻す
   // ※ 合計: 1本/日（A/Bテスト期間）
 
-  // 05:00 JST — W2専用スロット（週次A/Bテスト）
-  cron.schedule('0 5 * * *', async () => {
+  // 04:40 JST — W2専用 投稿会議（05:00投稿目標）
+  // 投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを05:00前後にX投稿
+  cron.schedule('40 4 * * *', async () => {
     const week = getABTestWeek();
     if (week !== 'W2') {
-      console.log(`  ℹ️  [05:00スロット] ${week}期間外 → スキップ`);
+      console.log(`  ℹ️  [04:40 W2投稿会議] ${week}期間外 → スキップ`);
       return;
     }
     const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
     if (getCelebPostedDate() === todayKey) {
-      console.log(`  ℹ️  [05:00スロット] 本日投稿済み → スキップ`);
+      console.log(`  ℹ️  [04:40 W2投稿会議] 本日投稿済み → スキップ`);
       return;
     }
-    setCelebPostedDate(todayKey);
-    await postCelebritySlot('05:00 W2芸能人');
+    setCelebPostedDate(todayKey); // 会議開始前にフラグ立て（重複防止）
+    console.log('\n  🎙 [04:40 W2投稿会議] Phase 1-4 投稿会議開始...');
+    const result = await runMeetingAndPost();
+    if (result.posted) {
+      console.log(`  ✅ [W2投稿会議] 投稿完了: ${result.tweetId}`);
+    } else {
+      console.log(`  ℹ️  [W2投稿会議] スキップ: ${result.reason ?? '不明'}`);
+    }
     autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // 10:30 JST — W1=芸能人アフィリ / 通常週=インプ狙い（人間的な会話・共感ツイート）
-  cron.schedule('30 10 * * *', async () => {
+  // 10:10 JST — W1=投稿会議（10:30投稿目標）/ 通常週=投稿会議①
+  // 投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを10:30前後にX投稿
+  cron.schedule('10 10 * * *', async () => {
     const week = getABTestWeek();
     const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
     if (week === 'W1') {
-      // W1: 10:30に芸能人アフィリポスト
       if (getCelebPostedDate() === todayKey) {
-        console.log(`  ℹ️  [10:30スロット W1] 本日投稿済み → スキップ`);
+        console.log(`  ℹ️  [10:10 W1投稿会議] 本日投稿済み → スキップ`);
         return;
       }
-      setCelebPostedDate(todayKey);
-      await postCelebritySlot('10:30 W1芸能人');
+      setCelebPostedDate(todayKey); // 会議開始前にフラグ立て
+      console.log('\n  🎙 [10:10 W1投稿会議] Phase 1-4 投稿会議開始...');
+      const result = await runMeetingAndPost();
+      if (result.posted) {
+        console.log(`  ✅ [W1投稿会議] 投稿完了: ${result.tweetId}`);
+      } else {
+        console.log(`  ℹ️  [W1投稿会議] スキップ: ${result.reason ?? '不明'}`);
+      }
       autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
     } else if (week === 'W2') {
-      // W2: 10:30は使わない (05:00スロット担当)
-      console.log(`  ℹ️  [10:30スロット] W2期間中 → スキップ (05:00スロット担当)`);
+      // W2: 10:10は使わない (04:40スロット担当)
+      console.log(`  ℹ️  [10:10スロット] W2期間中 → スキップ (04:40スロット担当)`);
     } else {
-      // 通常週: インプ狙い投稿
-      await postImpressionSlot('10:30 インプ');
+      // 通常週: 投稿会議①
+      console.log('\n  🎙 [10:10 投稿会議①] Phase 1-4 投稿会議開始...');
+      const result = await runMeetingAndPost();
+      if (result.posted) {
+        console.log(`  ✅ [投稿会議①] 投稿完了: ${result.tweetId}`);
+      }
       autoCompleteTask('daily-imp-post', 'daily').catch(() => {});
     }
   }, { timezone: 'Asia/Tokyo' });
 
-  // 17:00 JST — インプ狙い投稿②（通常週のみ）
-  cron.schedule('0 17 * * *', async () => {
+  // 16:40 JST — 投稿会議②（通常週のみ、17:00投稿目標）
+  // 投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを17:00前後にX投稿
+  cron.schedule('40 16 * * *', async () => {
     const week = getABTestWeek();
     if (week === 'W1' || week === 'W2') {
-      console.log(`  ℹ️  [17:00インプ] ${week}期間中 → スキップ (アフィリ専念)`);
+      console.log(`  ℹ️  [16:40 投稿会議②] ${week}期間中 → スキップ`);
       return;
     }
-    await postImpressionSlot('17:00 インプ');
+    console.log('\n  🎙 [16:40 投稿会議②] Phase 1-4 投稿会議開始...');
+    const result = await runMeetingAndPost();
+    if (result.posted) {
+      console.log(`  ✅ [投稿会議②] 投稿完了: ${result.tweetId}`);
+    }
     autoCompleteTask('daily-imp2-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
@@ -631,29 +665,36 @@ export function startScheduler() {
     autoCompleteTask('weekly-external-monitor', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // 芸能人アフィリスロット — 18〜22時を毎時チェック（通常週のみ）
-  // A/Bテスト週 (W1/W2) はこのスロットをスキップ（専用スロット担当）
+  // 投稿会議③ — 18〜22時を毎時チェック（通常週のみ）
+  // A/Bテスト週 (W1/W2) はスキップ（専用スロット担当）
+  // 最適投稿時間帯に投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを即投稿
   cron.schedule('0 18,19,20,21,22 * * *', async () => {
     const week = getABTestWeek();
     if (week === 'W1' || week === 'W2') {
-      console.log(`  ℹ️  [18-22スロット] ${week}期間中 → スキップ (専用スロット担当)`);
+      console.log(`  ℹ️  [18-22投稿会議③] ${week}期間中 → スキップ (専用スロット担当)`);
       return;
     }
     const nowJst = new Date(Date.now() + 9 * 3600000);
     const todayKey = nowJst.toISOString().slice(0, 10);
     if (getCelebPostedDate() === todayKey) {
-      console.log(`  ℹ️  [芸能人スロット] 本日投稿済み (${todayKey}) → スキップ`);
+      console.log(`  ℹ️  [18-22投稿会議③] 本日投稿済み (${todayKey}) → スキップ`);
       return;
     }
     const rawBest = getBestPostingHour();
     const bestHour = (rawBest >= 18 && rawBest <= 22) ? rawBest : 20;
     const currentHour = nowJst.getUTCHours();
     if (currentHour !== bestHour) {
-      console.log(`  ℹ️  [芸能人スロット] 現在${currentHour}時 / 最適${bestHour}時 → スキップ`);
+      console.log(`  ℹ️  [18-22投稿会議③] 現在${currentHour}時 / 最適${bestHour}時 → スキップ`);
       return;
     }
-    setCelebPostedDate(todayKey);
-    await postCelebritySlot(`${String(bestHour).padStart(2, '0')}:00 芸能人`);
+    setCelebPostedDate(todayKey); // 会議開始前にフラグ立て（重複防止）
+    console.log(`\n  🎙 [${String(bestHour).padStart(2, '0')}:00 投稿会議③] Phase 1-4 投稿会議開始...`);
+    const result = await runMeetingAndPost();
+    if (result.posted) {
+      console.log(`  ✅ [投稿会議③] 投稿完了: ${result.tweetId}`);
+    } else {
+      console.log(`  ℹ️  [投稿会議③] スキップ: ${result.reason ?? '不明'}`);
+    }
     autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 

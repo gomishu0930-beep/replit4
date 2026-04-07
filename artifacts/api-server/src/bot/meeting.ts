@@ -639,13 +639,14 @@ export async function runTrialogueRound(
 export async function runTrialogue(
   sessionId: string,
   userMessage: string,
+  maxRounds: number = TOTAL_ROUNDS,
 ): Promise<{ messages: MeetingMessage[]; grokDirective?: MeetingDirective }> {
   const allMessages: MeetingMessage[] = [];
   let lastGptReply = '', lastClaudeReply = '', lastGrokReply = '';
   let cumul = { gpt: 0, claude: 0 };
   let finalGrokDirective: MeetingDirective | undefined;
 
-  for (let round = 1; round <= TOTAL_ROUNDS; round++) {
+  for (let round = 1; round <= maxRounds; round++) {
     const result = await runTrialogueRound(sessionId, userMessage, round, lastGptReply, lastClaudeReply, lastGrokReply, cumul);
     allMessages.push(...result.messages);
     cumul = result.cumulativeScores;
