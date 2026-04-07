@@ -28,7 +28,7 @@ import {
   getMeetingById,
 } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
-import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost } from './storage.js';
+import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData } from './storage.js';
 import { getStrategySummary } from './strategy.js';
 import { contact } from './contact.js';
 import { getGrokXBriefing } from './grok.js';
@@ -532,4 +532,202 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
     console.error(`[${jst()}] ❌ [投稿会議] 投稿エラー: ${e.message}`);
     return { meetingId: session.id, directive: directiveText, tweetText, posted: false, reason: `投稿エラー: ${e.message}` };
   }
+}
+
+// ─── 緊急会議（アカウント凍結後・新スタート時）────────────────────────────────
+
+export interface EmergencyMeetingResult {
+  meetingId: string;
+  title: string;
+  runAt: string;
+  totalDecisions: number;
+  autoExecuted: AutoMeetingResult['autoExecuted'];
+  manualItems: AutoMeetingResult['manualItems'];
+  resetData: { cleared: string[] };
+  duration_ms: number;
+}
+
+export async function runEmergencyMeeting(): Promise<EmergencyMeetingResult> {
+  const startAt = Date.now();
+  const runAt = new Date().toISOString();
+  const title = `【緊急戦略会議】アカウント凍結検証・新規スタート ${new Date().toLocaleDateString('ja-JP')}`;
+
+  console.log('\n  🚨 [緊急会議] アカウント凍結対応・新規スタート会議を開始...');
+
+  await contact.systemAlert('🚨 緊急会議開始', '凍結インシデント分析・新アカウント戦略決定会議を開始します。完了まで約10〜15分かかります。');
+
+  // ── 事前リサーチ ──────────────────────────────────────────────────────────
+  console.log('  🔎 [緊急会議] 事前Webリサーチ: 凍結回避・新アカウント成長戦略...');
+  let researchId: string | undefined;
+  try {
+    const researchTopic = `2026年X(Twitter)アカウント凍結回避戦略。成人向けFANZAアフィリエイトアカウントが凍結された後、新アカウント(@gomi_shu_god)でゼロから再スタートする際のベストプラクティス。凍結を避けながらフォロワーを増やし、インプレッションを伸ばす具体的な方法を調査してください。`;
+    const research = await runDeepResearch(researchTopic);
+    researchId = research.id;
+    console.log(`  ✅ [緊急会議] Webリサーチ完了 (${research.result.length}文字取得)`);
+  } catch (e: any) {
+    console.warn('  ⚠ [緊急会議] Webリサーチ失敗:', e.message);
+  }
+
+  // ── 会議セッション作成 ────────────────────────────────────────────────────
+  const session = await createMeetingSession(title, researchId);
+
+  // ── 緊急会議アジェンダ ────────────────────────────────────────────────────
+  const stats = getStats();
+  const topic = `# 緊急戦略会議: アカウント凍結インシデント検証・@gomi_shu_god 新規スタート戦略
+
+あなたたちはFANZAアフィリエイトXボットの戦略チームです（o3=ストラテジスト, Claude=コピーライター, Grok=X専門家）。
+今回は緊急事態が発生したため、通常の週次会議ではなく緊急インシデント対応会議を行います。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 【インシデント概要】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- **凍結アカウント**: @suguhalove0419（フォロワー341人）
+- **凍結推定日時**: 2026年4月7日 21:30 JST頃
+- **推定原因**:
+  - シャドウバン中のアカウントで短時間に複数投稿が発生
+  - bypass=trueフラグで日次制限を無視して2回目の投稿が実行された
+  - 🔞アダルトコンテンツ × シャドウバン中 × 短時間重複投稿が重なった
+- **新アカウント**: @gomi_shu_god（フォロワー数不明・新規）
+- **ボット状態**: 緊急停止済み → 本会議で方針決定後に新規スタート
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Phase 1: インシデント分析（全員でレビュー）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+以下を分析・評価してください:
+1. なぜこのような事態が発生したか？（技術的・運用的な根本原因）
+2. bypass=true機能のリスクをどう評価するか？
+3. シャドウバン中のアカウントに対して取るべき戦略は何だったか？
+4. 過去の投稿実績（累計${stats.totalPosts}件、いいね${stats.totalLikes}件）から学べることは何か？
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Phase 2: Grok — X現状リサーチ（リアルタイム情報を提供）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Grokへの指示:
+- 2026年現在のXにおけるアダルトアフィリエイトアカウントの凍結リスク要因を具体的に報告
+- 新規アカウントが凍結リスクを最小化しながら成長するための実践的戦略を調査
+- FANZAや成人コンテンツ系で凍結を避けつつ成功しているアカウントの特徴を分析
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Phase 3: 新規スタート戦略の策定（重要・具体的に議論）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@gomi_shu_god の新規スタート戦略を以下の観点で議論してください:
+
+**【安全性】凍結リスク最小化**
+- 1日の投稿上限・頻度・時間帯の最適解
+- bypass機能は削除すべきか？代替の緊急対応手段は？
+- センシティブコンテンツの扱い方（何をどこまで書いていいか）
+
+**【成長戦略】ゼロからのフォロワー獲得**
+- 新規アカウントが最初にやるべきことは何か？
+- フォロワーゼロからインプレッションを伸ばすコンテンツ戦略
+- FANZAアフィリエイト収益化に向けた投稿スタイルの見直し
+
+**【コンテンツ戦略】旧アカウントの反省を活かした新テンプレート**
+- 🔞フックの使い方を見直すか？どう変えるか？
+- 日本語アカウントとして効果的な投稿フォーマット
+- バズりやすい時間帯・曜日・テーマ
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Phase 4: 施策の決定（最終ラウンドで必ず合意）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+最終ラウンドでは以下の形式で施策を決定してください:
+
+**【AI実行】ボットが即座に変更・実装するアクション**
+→ 📌 決定候補: [具体的なアクション]（assignee: ai）
+
+**【ユーザー確認】手動対応が必要な事項**
+→ 📌 決定候補: [具体的なアクション]（assignee: user）
+
+**【新規KPI設定】@gomi_shu_god の最初の目標**
+→ 1ヶ月目標: フォロワーXX人 / 平均インプXX / 凍結ゼロ`;
+
+  // ── o3 × Claude × Grok トリアローグ（5ラウンド）────────────────────────
+  console.log('  💬 [緊急会議] 3者議論中（5ラウンド）...');
+  try {
+    await runTrialogue(session.id, topic, 5);
+  } catch (e: any) {
+    console.error('  ❌ [緊急会議] トリアローグ失敗:', e.message);
+    return {
+      meetingId: session.id, title, runAt,
+      totalDecisions: 0, autoExecuted: [], manualItems: [],
+      resetData: { cleared: [] }, duration_ms: Date.now() - startAt,
+    };
+  }
+
+  // ── 決定事項抽出 ──────────────────────────────────────────────────────────
+  console.log('  📋 [緊急会議] 施策決定事項を抽出中...');
+  let candidates: Awaited<ReturnType<typeof extractDecisions>> = [];
+  try {
+    candidates = await extractDecisions(session.id);
+  } catch (e: any) {
+    console.error('  ❌ [緊急会議] 決定事項抽出失敗:', e.message);
+  }
+  console.log(`  → ${candidates.length}件の施策決定事項を検出`);
+
+  const autoExecuted: AutoMeetingResult['autoExecuted'] = [];
+  const manualItems: AutoMeetingResult['manualItems'] = [];
+
+  for (const candidate of candidates) {
+    const sourceLabel = `緊急会議 ${new Date().toLocaleDateString('ja-JP')}`;
+    if (candidate.assignee === 'ai') {
+      const directive = await addDirective(
+        candidate.text, candidate.category, candidate.priority, sourceLabel, 'ai', 'x',
+      );
+      try {
+        const execution = await executeDirective(directive);
+        await saveDirectiveExecution(directive.id, execution);
+        if (execution.success) {
+          await updateDirectiveStatus(directive.id, 'completed');
+          autoExecuted.push({ text: candidate.text.slice(0, 80), result: execution.summary, success: true });
+        } else {
+          autoExecuted.push({ text: candidate.text.slice(0, 80), result: execution.summary, success: false });
+        }
+      } catch (e: any) {
+        autoExecuted.push({ text: candidate.text.slice(0, 80), result: e.message, success: false });
+      }
+    } else {
+      await addDirective(
+        candidate.text, candidate.category, candidate.priority, sourceLabel, 'user', 'x',
+      );
+      manualItems.push({
+        text: candidate.text,
+        category: candidate.category,
+        priority: candidate.priority,
+        rationale: candidate.rationale,
+      });
+    }
+  }
+
+  // ── 会議完了後にデータリセット ────────────────────────────────────────────
+  console.log('  🗑  [緊急会議] 旧アカウントデータをリセット中...');
+  const resetData = await resetBotData();
+
+  const duration_ms = Date.now() - startAt;
+
+  // ── 完了通知 ──────────────────────────────────────────────────────────────
+  const manualLines = manualItems.slice(0, 5).map(m => `• [${m.priority}] ${m.text.slice(0, 60)}`).join('\n');
+  await contact.systemAlert(
+    '✅ 緊急会議完了 → データリセット済み',
+    `凍結インシデント対応会議が完了しました。\n\n` +
+    `📋 施策決定: ${candidates.length}件\n` +
+    `🤖 AI自動実行: ${autoExecuted.filter(r => r.success).length}/${autoExecuted.length}件成功\n` +
+    `👤 要手動確認:\n${manualLines}\n\n` +
+    `🗑 リセット完了:\n${resetData.cleared.join('\n')}\n\n` +
+    `⏱ 所要時間: ${Math.round(duration_ms / 1000)}秒\n\n` +
+    `✨ @gomi_shu_god として新規スタート準備完了`,
+  );
+
+  console.log(`  ✅ [緊急会議] 完了: ${candidates.length}件決定 / データリセット完了 (${Math.round(duration_ms / 1000)}秒)`);
+
+  return {
+    meetingId: session.id, title, runAt,
+    totalDecisions: candidates.length,
+    autoExecuted, manualItems, resetData,
+    duration_ms,
+  };
 }

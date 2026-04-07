@@ -661,3 +661,38 @@ export function getAlgoDiscoveryMeta(): { lastSearchAt: string | null; pendingCo
   };
 }
 
+// ─── データリセット（アカウント切り替え時・緊急会議後）──────────────────────────
+
+export async function resetBotData(): Promise<{ cleared: string[] }> {
+  const cleared: string[] = [];
+
+  // 投稿履歴をクリア
+  postsCache = { posts: [] };
+  await writeJson('posts.json', postsCache);
+  cleared.push('posts.json（投稿履歴）');
+
+  // 日次インプレッションスナップショットをクリア
+  recoverySnapshotsCache = { snapshots: [] };
+  await writeJson('recovery-snapshots.json', recoverySnapshotsCache);
+  cleared.push('recovery-snapshots.json（インプ推移）');
+
+  // アカウントスナップショットをクリア
+  snapshotCache = { snapshots: [] };
+  await writeJson('account-snapshots.json', snapshotCache);
+  cleared.push('account-snapshots.json（フォロワー推移）');
+
+  // 手動観察ログをクリア
+  observationsCache = { observations: [] };
+  await writeJson('observations.json', observationsCache);
+  cleared.push('observations.json（観察ログ）');
+
+  // algo discoveries もリセット（旧アカウントのコンテキスト）
+  algoDiscoveryCache = { discoveries: [], lastSearchAt: null };
+  await writeJson('algo-discoveries.json', algoDiscoveryCache);
+  cleared.push('algo-discoveries.json（アルゴ発見ログ）');
+
+  // ※ external-patterns・dynamic-templates・directives は会議結果に基づき保持
+  console.log('  🗑  [データリセット] 完了:', cleared);
+  return { cleared };
+}
+

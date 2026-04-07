@@ -4,7 +4,7 @@ import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
-import { runMeetingAndPost } from '../bot/auto-meeting.js';
+import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 
@@ -240,6 +240,30 @@ router.post('/trigger/external-patterns', auth, async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ─── 緊急会議（凍結インシデント対応・新規スタート）──────────────────────────────
+
+let isEmergencyMeetingRunning = false;
+
+router.post('/trigger/emergency-meeting', auth, async (_req, res) => {
+  if (isEmergencyMeetingRunning) {
+    res.status(429).json({ ok: false, error: '緊急会議は既に実行中です' });
+    return;
+  }
+  isEmergencyMeetingRunning = true;
+  res.json({ ok: true, message: '緊急会議を開始しました（10〜15分かかります）。完了したら通知されます。' });
+
+  runEmergencyMeeting()
+    .then(result => {
+      console.log(`  ✅ [緊急会議エンドポイント] 完了: ${result.totalDecisions}件決定`);
+    })
+    .catch(e => {
+      console.error('  ❌ [緊急会議エンドポイント] エラー:', e.message);
+    })
+    .finally(() => {
+      isEmergencyMeetingRunning = false;
+    });
 });
 
 // ─── 緊急停止 / 再開 ──────────────────────────────────────────────────────────
