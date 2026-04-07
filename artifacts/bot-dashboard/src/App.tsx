@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -770,6 +770,46 @@ function Dashboard() {
 
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
+
+  // ─── 秘書チャット ──────────────────────────────────────────────────────────
+  const [secOpen, setSecOpen] = useState(false);
+  const [secInput, setSecInput] = useState("");
+  const [secLoading, setSecLoading] = useState(false);
+  const [secSessionId, setSecSessionId] = useState<string | null>(null);
+  const [secMessages, setSecMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const secEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (secOpen && secEndRef.current) {
+      secEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [secMessages, secOpen]);
+
+  const sendSecMessage = async () => {
+    const msg = secInput.trim();
+    if (!msg || secLoading) return;
+    setSecInput("");
+    setSecMessages(prev => [...prev, { role: "user", content: msg }]);
+    setSecLoading(true);
+    try {
+      const res = await fetch(`${API}/api/secretary/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, sessionId: secSessionId }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        setSecMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        if (data.sessionId && !secSessionId) setSecSessionId(data.sessionId);
+      } else {
+        setSecMessages(prev => [...prev, { role: "assistant", content: `エラー: ${data.error ?? "不明"}` }]);
+      }
+    } catch (e: any) {
+      setSecMessages(prev => [...prev, { role: "assistant", content: `通信エラー: ${e.message}` }]);
+    } finally {
+      setSecLoading(false);
+    }
+  };
 
   // 会議室ステート
   const [researchTopic, setResearchTopic] = useState("");
@@ -4721,6 +4761,113 @@ function Dashboard() {
           })}
         </div>
       </nav>
+
+      {/* ════ 秘書チャット フローティングウィジェット ════ */}
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+        {/* チャットパネル */}
+        {secOpen && (
+          <div className="w-80 sm:w-96 h-[480px] bg-[#0f1117] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between px-4 py-3 bg-indigo-900/40 border-b border-white/8">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🤵</span>
+                <div>
+                  <div className="text-xs font-bold text-white">FANZAボット秘書</div>
+                  <div className="text-[10px] text-indigo-300">ボットの状態・会議内容・戦略を把握しています</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setSecMessages([]);
+                    setSecSessionId(null);
+                  }}
+                  className="text-white/30 hover:text-white/70 text-[10px] px-1.5 py-0.5 rounded border border-white/10 hover:border-white/30 transition-colors"
+                  title="会話をリセット"
+                >リセット</button>
+                <button
+                  onClick={() => setSecOpen(false)}
+                  className="text-white/40 hover:text-white transition-colors text-lg leading-none"
+                >×</button>
+              </div>
+            </div>
+
+            {/* メッセージ一覧 */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {secMessages.length === 0 && (
+                <div className="text-center text-white/30 text-xs pt-8 space-y-2">
+                  <div className="text-3xl">🤵</div>
+                  <div>何でもお気軽にどうぞ。</div>
+                  <div className="text-[10px] text-white/20">例: 「今週の投稿状況は？」「会議で何が決まった？」</div>
+                </div>
+              )}
+              {secMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                      m.role === "user"
+                        ? "bg-indigo-600/70 text-white rounded-br-sm"
+                        : "bg-white/8 text-white/85 rounded-bl-sm border border-white/8"
+                    }`}
+                  >
+                    {m.role === "assistant" && (
+                      <span className="inline-block mr-1 opacity-60">🤵</span>
+                    )}
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {secLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white/8 border border-white/8 rounded-xl rounded-bl-sm px-3 py-2 text-xs text-white/50">
+                    <span className="inline-flex gap-1">
+                      <span className="animate-bounce" style={{ animationDelay: "0ms" }}>●</span>
+                      <span className="animate-bounce" style={{ animationDelay: "150ms" }}>●</span>
+                      <span className="animate-bounce" style={{ animationDelay: "300ms" }}>●</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div ref={secEndRef} />
+            </div>
+
+            {/* 入力エリア */}
+            <div className="p-3 border-t border-white/8 bg-black/20">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={secInput}
+                  onChange={e => setSecInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSecMessage(); } }}
+                  placeholder="質問を入力..."
+                  disabled={secLoading}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/60 disabled:opacity-50"
+                />
+                <button
+                  onClick={sendSecMessage}
+                  disabled={secLoading || !secInput.trim()}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg text-white text-xs font-semibold transition-colors"
+                >
+                  送信
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 開閉ボタン */}
+        <button
+          onClick={() => setSecOpen(v => !v)}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl transition-all ${
+            secOpen
+              ? "bg-indigo-700 rotate-0 scale-95"
+              : "bg-indigo-600 hover:bg-indigo-500 hover:scale-110"
+          }`}
+          title="秘書に質問する"
+        >
+          {secOpen ? "×" : "🤵"}
+        </button>
+      </div>
     </div>
   );
 }

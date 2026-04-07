@@ -8,6 +8,7 @@ import tasksRouter from "./tasks";
 import goalsRouter from "./goals";
 import quickConfigRouter from "./quick-config";
 import authRouter from "./auth";
+import secretaryRouter from "./secretary";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(tasksRouter);
 router.use(goalsRouter);
 router.use(quickConfigRouter);
 router.use(authRouter);
+router.use(secretaryRouter);
 
 export default router;
