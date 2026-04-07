@@ -2,8 +2,8 @@ import cron from 'node-cron';
 
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
-import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate } from './storage.js';
+import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback } from './storage.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -424,6 +424,22 @@ export function startScheduler() {
       外部パターン: { 総数: extInfo.count, 最終更新: extInfo.lastRefreshedAt },
       動的テンプレート: { 総数: dynInfo.count, 進化回数: dynInfo.evolutionCount, 最終進化: dynInfo.lastEvolvedAt },
     });
+
+    // 手動投稿の週次フィードバック生成
+    try {
+      console.log('  📝 手動投稿フィードバック生成中...');
+      const fb = await buildManualPostFeedback(7);
+      if (fb) {
+        const saved = recordManualFeedback(fb);
+        await contact.manualPostFeedback(saved);
+        console.log(`  ✅ 手動投稿FB完了: ${fb.tweetCount}件分析, avg ${fb.avgEngagement}pt`);
+      } else {
+        console.log('  ℹ️  手動投稿FB: 対象ツイートなし（スキップ）');
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ 手動投稿FB生成失敗:', e.message);
+    }
+
     autoCompleteTask('weekly-perf-report', 'weekly').catch(() => {});
     autoCompleteTask('weekly-external-monitor', 'weekly').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });

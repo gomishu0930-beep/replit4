@@ -176,4 +176,36 @@ export const contact = {
         '③ さらに2週間様子を見て 8本/日 へ段階的に移行',
       ].join('\n'),
     }),
+
+  /** 手動投稿週次フィードバック（月曜 08:00 JST） */
+  manualPostFeedback: (fb: {
+    weekStart: string;
+    weekEnd: string;
+    tweetCount: number;
+    avgEngagement: number;
+    analysis: string;
+    suggestions: string[];
+    hookVariety: string[];
+    topTweet: { text: string; likes: number; rt: number };
+  }) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `📝 手動投稿週次FB (${fb.weekStart} 〜 ${fb.weekEnd})`,
+      body: [
+        `分析ツイート数: ${fb.tweetCount}件 / 平均エンゲージメント: ${fb.avgEngagement}pt`,
+        '',
+        `【全体評価】`,
+        fb.analysis,
+        '',
+        `【使ったフック型】`,
+        fb.hookVariety.join(' / '),
+        '',
+        `【今週のベスト投稿】`,
+        `${fb.topTweet.text.slice(0, 80)}...`,
+        `❤️${fb.topTweet.likes} 🔁${fb.topTweet.rt}`,
+        '',
+        `【改善提案】`,
+        ...fb.suggestions.map((s, i) => `${i + 1}. ${s}`),
+      ].join('\n'),
+    }),
 };

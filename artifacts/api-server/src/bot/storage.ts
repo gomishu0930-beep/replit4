@@ -140,9 +140,10 @@ export async function initStorage(): Promise<void> {
   observationsCache      = await readJson<ObservationsData>('observations.json', { observations: [] });
   recoverySnapshotsCache = await readJson<RecoverySnapshotsData>('recovery-snapshots.json', { snapshots: [] });
   schedulerStateCache    = await readJson<SchedulerStateData>('scheduler-state.json', { celebPostedDate: '' });
+  manualFeedbackCache    = await readJson<ManualFeedbackData>('manual-feedback.json', { feedbacks: [] });
   initialized = true;
   console.log(
-    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件)`,
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件)`,
   );
 }
 
@@ -433,6 +434,53 @@ export function getDailyImpressionSnapshots(days = 7): DailyImpressionSnapshot[]
 
 // ─── Scheduler State（再起動を跨いで状態を保持）────────────────────────────────
 // celebPostedDate: 今日すでに芸能人スロットを投稿済みかを管理
+// ─── 手動投稿フィードバック履歴 ─────────────────────────────────────────────
+
+export interface ManualPostFeedback {
+  id: string;
+  generatedAt: string;
+  weekStart: string;
+  weekEnd: string;
+  tweetCount: number;
+  avgEngagement: number;
+  topTweet: { text: string; likes: number; rt: number };
+  analysis: string;
+  suggestions: string[];
+  hookVariety: string[];
+}
+
+interface ManualFeedbackData {
+  feedbacks: ManualPostFeedback[];
+}
+
+let manualFeedbackCache: ManualFeedbackData = { feedbacks: [] };
+
+function saveManualFeedbackAsync() {
+  writeJson('manual-feedback.json', manualFeedbackCache).catch((e: any) =>
+    console.warn('  ⚠ manual-feedback.json 保存失敗:', e.message),
+  );
+}
+
+export function recordManualFeedback(fb: Omit<ManualPostFeedback, 'id' | 'generatedAt'>): ManualPostFeedback {
+  const newFb: ManualPostFeedback = {
+    ...fb,
+    id: `fb-${Date.now()}`,
+    generatedAt: new Date().toISOString(),
+  };
+  manualFeedbackCache.feedbacks.unshift(newFb);
+  manualFeedbackCache.feedbacks = manualFeedbackCache.feedbacks.slice(0, 52);
+  saveManualFeedbackAsync();
+  return newFb;
+}
+
+export function getManualFeedbacks(limit = 10): ManualPostFeedback[] {
+  return manualFeedbackCache.feedbacks.slice(0, limit);
+}
+
+export function getLatestManualFeedback(): ManualPostFeedback | null {
+  return manualFeedbackCache.feedbacks[0] ?? null;
+}
+
 // サーバー再起動後もリセットされないようにGCSに永続化する
 
 interface SchedulerStateData {

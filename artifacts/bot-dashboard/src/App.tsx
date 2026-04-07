@@ -155,6 +155,18 @@ interface GoalKPI {
   actual: number | null;
   achieved: boolean | null;
 }
+interface ManualPostFeedback {
+  id: string;
+  generatedAt: string;
+  weekStart: string;
+  weekEnd: string;
+  tweetCount: number;
+  avgEngagement: number;
+  topTweet: { text: string; likes: number; rt: number };
+  analysis: string;
+  suggestions: string[];
+  hookVariety: string[];
+}
 interface WeekGoal {
   week: string;
   start: string;
@@ -615,11 +627,132 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
   );
 }
 
+// ─── 手動投稿フィードバックパネル ────────────────────────────────────────────
+
+function ManualFeedbackPanel({ feedbacks, onRun }: { feedbacks: ManualPostFeedback[]; onRun: () => void }) {
+  const [running, setRunning] = useState(false);
+  const [runMsg, setRunMsg] = useState<string | null>(null);
+  const API = import.meta.env.VITE_API_URL ?? "";
+
+  async function handleRun() {
+    setRunning(true);
+    setRunMsg(null);
+    try {
+      const res = await fetch(`${API}/api/bot/manual-feedback/run`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        setRunMsg("✅ 生成完了！ページを更新してください");
+        onRun();
+      } else {
+        setRunMsg(`⚠ ${data.reason ?? "生成失敗"}`);
+      }
+    } catch (e: any) {
+      setRunMsg(`❌ エラー: ${e.message}`);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-white/80">📝 手動投稿 週次フィードバック</h2>
+          <p className="text-xs text-white/40 mt-0.5">毎週月曜08:00 JSTに自動生成。直近7日の手動ツイートをClaudeが分析します。</p>
+        </div>
+        <button
+          onClick={handleRun}
+          disabled={running}
+          className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 transition-colors disabled:opacity-50"
+        >
+          {running ? "分析中..." : "今すぐ生成"}
+        </button>
+      </div>
+      {runMsg && <p className="text-xs text-yellow-300">{runMsg}</p>}
+
+      {feedbacks.length === 0 ? (
+        <div className="rounded-xl border border-white/8 bg-white/5 p-6 text-center">
+          <p className="text-sm text-white/40">フィードバックはまだありません。</p>
+          <p className="text-xs text-white/25 mt-1">「今すぐ生成」ボタンか、月曜08:00 JSTの自動実行をお待ちください。</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {feedbacks.map((fb) => (
+            <div key={fb.id} className="rounded-xl border border-white/8 bg-white/5 p-4 space-y-3">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-indigo-300">
+                  {fb.weekStart} 〜 {fb.weekEnd}
+                </span>
+                <span className="text-[10px] text-white/30">
+                  生成: {new Date(fb.generatedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} JST
+                </span>
+              </div>
+
+              {/* サマリー数値 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white/5 border border-white/8 p-2 text-center">
+                  <p className="text-[10px] text-white/40">分析ツイート数</p>
+                  <p className="text-lg font-bold text-white">{fb.tweetCount}<span className="text-xs font-normal text-white/40 ml-1">件</span></p>
+                </div>
+                <div className="rounded-lg bg-white/5 border border-white/8 p-2 text-center">
+                  <p className="text-[10px] text-white/40">平均エンゲージメント</p>
+                  <p className="text-lg font-bold text-indigo-300">{fb.avgEngagement}<span className="text-xs font-normal text-white/40 ml-1">pt</span></p>
+                </div>
+              </div>
+
+              {/* フック型 */}
+              {fb.hookVariety.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-white/40 mb-1.5">使ったフック型</p>
+                  <div className="flex flex-wrap gap-1">
+                    {fb.hookVariety.map((h, i) => (
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300">{h}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 全体評価 */}
+              <div className="rounded-lg bg-white/4 border border-white/6 p-3">
+                <p className="text-[10px] text-white/40 mb-1">全体評価</p>
+                <p className="text-xs text-white/75 leading-relaxed">{fb.analysis}</p>
+              </div>
+
+              {/* ベスト投稿 */}
+              <div className="rounded-lg bg-emerald-500/8 border border-emerald-500/20 p-3">
+                <p className="text-[10px] text-emerald-400/70 mb-1">今週のベスト投稿</p>
+                <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed line-clamp-3">{fb.topTweet.text}</p>
+                <p className="text-[10px] text-white/35 mt-1.5">❤️ {fb.topTweet.likes}　🔁 {fb.topTweet.rt}</p>
+              </div>
+
+              {/* 改善提案 */}
+              {fb.suggestions.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-white/40 mb-1.5">改善提案</p>
+                  <ol className="space-y-1">
+                    {fb.suggestions.map((s, i) => (
+                      <li key={i} className="flex gap-2 text-xs text-white/65">
+                        <span className="text-yellow-400/70 shrink-0">{i + 1}.</span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── メインダッシュボード ─────────────────────────────────────────────────────
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals">("overview");
+  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -758,6 +891,11 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/meeting/directives`).then((r) => r.json()),
     refetchInterval: 30000,
   });
+  const { data: manualFbData, refetch: refetchManualFb } = useQuery<{ feedbacks: ManualPostFeedback[] }>({
+    queryKey: ["manual-feedback"],
+    queryFn: () => fetch(`${API}/api/bot/manual-feedback`).then((r) => r.json()),
+    refetchInterval: 300000,
+  });
   const activeDirectives = (directivesData?.directives ?? []).filter((d) => d.status === "active");
 
   const posts = postsData?.posts ?? [];
@@ -772,16 +910,17 @@ function Dashboard() {
     : null;
 
   const TABS = [
-    { id: "overview",  label: "概要" },
-    { id: "features",  label: "🔧 機能一覧" },
-    { id: "goals",     label: "🎯 目標" },
-    { id: "analysis",  label: "📊 分析" },
-    { id: "strategy",  label: "🧠 戦略エンジン" },
-    { id: "posts",     label: "投稿履歴" },
-    { id: "patterns",  label: "外部データ" },
-    { id: "research",  label: "🔬 回復研究" },
-    { id: "tasks",     label: "✅ タスク" },
-    { id: "meeting",   label: "🤝 会議室" },
+    { id: "overview",   label: "概要" },
+    { id: "features",   label: "🔧 機能一覧" },
+    { id: "goals",      label: "🎯 目標" },
+    { id: "analysis",   label: "📊 分析" },
+    { id: "strategy",   label: "🧠 戦略エンジン" },
+    { id: "posts",      label: "投稿履歴" },
+    { id: "patterns",   label: "外部データ" },
+    { id: "research",   label: "🔬 回復研究" },
+    { id: "manual-fb",  label: "📝 手動投稿FB" },
+    { id: "tasks",      label: "✅ タスク" },
+    { id: "meeting",    label: "🤝 会議室" },
   ] as const;
 
   // スケジュール（APIから取得、またはデフォルト）
@@ -3058,6 +3197,15 @@ function Dashboard() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === "manual-fb" && (
+        <div className="p-4">
+          <ManualFeedbackPanel
+            feedbacks={manualFbData?.feedbacks ?? []}
+            onRun={() => refetchManualFb()}
+          />
         </div>
       )}
     </div>

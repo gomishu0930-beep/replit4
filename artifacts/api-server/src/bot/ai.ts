@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getDynamicTemplates, recordDynamicTemplateUsed } from './storage.js';
+import { getDynamicTemplates, recordDynamicTemplateUsed, getPostsAfter } from './storage.js';
+import { getOwnRecentTweets } from './twitter.js';
 
 // ─── バイラル特化テンプレート（ハッシュタグなし）────────────────────────────
 // 構造：フック（止める）→ 作品情報 → 数字の根拠 → CTA
@@ -405,4 +406,137 @@ export async function generateTweetText(
 
   console.log('  📝 テンプレートで文章生成');
   return buildTemplateText(item, type);
+}
+
+// ─── 手動投稿フィードバック生成 ──────────────────────────────────────────────
+
+interface ManualTweetData {
+  id: string;
+  text: string;
+  created_at: string;
+  likes: number;
+  rt: number;
+  replies: number;
+  impressions: number;
+}
+
+export async function buildManualPostFeedback(days = 7): Promise<{
+  tweetCount: number;
+  avgEngagement: number;
+  topTweet: { text: string; likes: number; rt: number };
+  analysis: string;
+  suggestions: string[];
+  hookVariety: string[];
+  weekStart: string;
+  weekEnd: string;
+} | null> {
+  const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+
+  // 1. 直近N日のツイートを取得
+  const allTweets = await getOwnRecentTweets(100);
+  const recentTweets = allTweets.filter(
+    (t: any) => t.created_at && new Date(t.created_at) >= since,
+  );
+
+  // 2. ボット投稿IDを除外して手動投稿だけ残す
+  const botPosts = getPostsAfter(since);
+  const botIds = new Set<string>();
+  botPosts.forEach((p: any) => {
+    if (p.tweetId) botIds.add(p.tweetId);
+    if (p.replyId) botIds.add(p.replyId);
+  });
+
+  const manualTweets: ManualTweetData[] = recentTweets
+    .filter((t: any) => !botIds.has(t.id))
+    .map((t: any) => ({
+      id: t.id,
+      text: t.text,
+      created_at: t.created_at ?? '',
+      likes: t.public_metrics?.like_count ?? 0,
+      rt: t.public_metrics?.retweet_count ?? 0,
+      replies: t.public_metrics?.reply_count ?? 0,
+      impressions: t.public_metrics?.impression_count ?? 0,
+    }));
+
+  // リツイートを除外（自分の投稿のみ）
+  const ownTweets = manualTweets.filter(t => !t.text.startsWith('RT @'));
+
+  if (ownTweets.length === 0) {
+    console.log('  ℹ️  手動投稿FB: 対象ツイートなし（全てRT）');
+    return null;
+  }
+
+  // 3. エンゲージメントスコア計算（RTを除いた自分の投稿のみ）
+  const engScore = (t: ManualTweetData) => t.likes + t.rt * 2 + t.replies * 3;
+  const avgEngagement =
+    Math.round(
+      (ownTweets.reduce((s, t) => s + engScore(t), 0) / ownTweets.length) * 10,
+    ) / 10;
+  const topTweet = ownTweets.reduce((best, t) =>
+    engScore(t) > engScore(best) ? t : best,
+  );
+
+  // 4. Claude分析（claude-sonnet-4-5）
+  const tweetSummary = ownTweets
+    .slice(0, 15)
+    .map(
+      (t, i) =>
+        `[${i + 1}] ${t.text.slice(0, 120)}\n  → ❤️${t.likes} 🔁${t.rt} 💬${t.replies} 👁${t.impressions}`,
+    )
+    .join('\n\n');
+
+  const prompt = `以下はTwitterアカウント(@suguhalove0419)の直近${days}日間の手動投稿一覧です（🔞フック + 恋愛・共感系テーマ）。
+
+${tweetSummary}
+
+以下の形式でJSONのみで回答してください（余計な説明不要）:
+{
+  "analysis": "全体評価（2-3文、日本語）",
+  "suggestions": ["改善提案1", "改善提案2", "改善提案3"],
+  "hookVariety": ["使われたフック型の名称リスト（例: 質問型, 選択肢型, 共感型, あるある型, 告白型）"]
+}
+
+評価観点: フック力、内容の多様性、エンゲージメント誘導の質、🔞 + 恋愛テーマの一貫性、インプレッション効率`;
+
+  let analysisResult: { analysis: string; suggestions: string[]; hookVariety: string[] } = {
+    analysis: '分析データなし',
+    suggestions: [],
+    hookVariety: [],
+  };
+
+  try {
+    const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+    const apiKey  = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    if (!baseUrl || !apiKey) throw new Error('Anthropic env vars not set');
+    const fbClient = new Anthropic({ baseURL: baseUrl, apiKey });
+    const claudeRes = await fbClient.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const content = claudeRes.content[0];
+    if (content.type === 'text') {
+      analysisResult = JSON.parse(content.text.replace(/```json\n?|\n?```/g, '').trim());
+    }
+  } catch (e: any) {
+    console.warn('  ⚠ 手動投稿FB Claude分析失敗:', e.message);
+  }
+
+  // 5. 週の日付計算（JST基準）
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const weekEnd = nowJst.toISOString().slice(0, 10);
+  const weekStart = new Date(nowJst.getTime() - days * 24 * 3600000)
+    .toISOString()
+    .slice(0, 10);
+
+  return {
+    tweetCount: ownTweets.length,
+    avgEngagement,
+    topTweet: { text: topTweet.text, likes: topTweet.likes, rt: topTweet.rt },
+    analysis: analysisResult.analysis,
+    suggestions: analysisResult.suggestions ?? [],
+    hookVariety: analysisResult.hookVariety ?? [],
+    weekStart,
+    weekEnd,
+  };
 }

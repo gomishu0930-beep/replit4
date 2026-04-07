@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback } from '../bot/storage.js';
+import { buildManualPostFeedback } from '../bot/ai.js';
 import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
@@ -187,6 +188,25 @@ router.delete('/bot/observations/:id', (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+// 手動投稿フィードバック履歴取得
+router.get('/bot/manual-feedback', (_req, res) => {
+  res.json({ feedbacks: getManualFeedbacks(10) });
+});
+
+// 手動投稿フィードバック即時生成（手動トリガー）
+router.post('/bot/manual-feedback/run', async (_req, res) => {
+  try {
+    const fb = await buildManualPostFeedback(7);
+    if (!fb) {
+      return res.json({ ok: false, reason: '直近7日間の手動投稿が見つかりませんでした' });
+    }
+    const saved = recordManualFeedback(fb);
+    res.json({ ok: true, feedback: saved });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // キャンペーンID手動再探索（POST）
