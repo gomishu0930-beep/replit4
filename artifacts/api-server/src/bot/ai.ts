@@ -485,7 +485,7 @@ export async function buildManualPostFeedback(days = 7): Promise<{
     )
     .join('\n\n');
 
-  const prompt = `以下はTwitterアカウント(@suguhalove0419)の直近${days}日間の手動投稿一覧です（🔞フック + 恋愛・共感系テーマ）。
+  const prompt = `以下はTwitterアカウント(@gomi_shu_god)の直近${days}日間の手動投稿一覧です（🔞フック + 恋愛・共感系テーマ）。
 
 ${tweetSummary}
 

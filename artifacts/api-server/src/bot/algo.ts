@@ -266,7 +266,7 @@ export const X_ALGO_KB = {
       rule: 'InNetwork (フォロワー) vs OutOfNetwork (フォロワー外) の2段階配信',
       detail: 'まずフォロワーに配信し、そのエンゲージメント率が閾値を超えるとOutOfNetworkに拡張。小アカウントの拡散はこの仕組み次第。',
       source: 'A',
-      implication: 'フォロワー341人のうち何人がエンゲージするかが拡散の起点',
+      implication: 'フォロワーのうち何人がエンゲージするかが拡散の起点',
     },
     {
       rule: 'Blue認証アカウントは配信ブースト',

@@ -130,7 +130,7 @@ async function buildWeeklyAgenda(): Promise<string> {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### アカウント概況
-- @suguhalove0419 / フォロワー${snapshot?.followersCount ?? '不明'}人 / シャドウバン回復中
+- @gomi_shu_god / フォロワー${snapshot?.followersCount ?? '不明'}人
 - A/Bテスト: ${abWeek}（W1=10:30枠 / W2=05:00枠 / W3以降=投稿会議3スロット）
 - 先週の投稿数: ${lastWeekPosts.length}件 / 7日間平均インプ: ${avgImp}（${trend}）
 - 累計投稿数: ${stats.totalPosts}件 / 累計いいね: ${stats.totalLikes}件
@@ -197,7 +197,7 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
   try {
     const now = new Date();
     const weekStr = now >= new Date('2026-04-14') ? 'W2(05:00枠)' : 'W1(10:30枠)';
-    const researchTopic = `2026年最新のX(Twitter)シャドウバン回復戦略・FANZA/成人向けアフィリエイトアカウントのアルゴリズム攻略法。${weekStr}投稿A/Bテスト中（フォロワー341人・日本語アカウント）。インプレッション改善と外部からの流入増加のための具体的手法を調査してください。`;
+    const researchTopic = `2026年最新のX(Twitter) FANZA/成人向けアフィリエイトアカウントのアルゴリズム攻略法。${weekStr}投稿A/Bテスト中（日本語アカウント）。インプレッション改善と外部からの流入増加のための具体的手法を調査してください。`;
     const research = await runDeepResearch(researchTopic);
     researchId = research.id;
     console.log(`  ✅ [週次会議] Webリサーチ完了 (${research.result.length}文字取得)`);
@@ -374,7 +374,7 @@ async function buildPostMeetingTopic(): Promise<string> {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### アカウント概況
-- @suguhalove0419 / フォロワー${snapshot?.followersCount ?? '不明'}人 / シャドウバン回復中
+- @gomi_shu_god / フォロワー${snapshot?.followersCount ?? '不明'}人
 - 今日の投稿数: ${todayCount}件 / A/Bテスト: ${abWeek}
 
 ### 直近10件の投稿実績
