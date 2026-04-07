@@ -753,6 +753,16 @@ function ManualFeedbackPanel({ feedbacks, onRun }: { feedbacks: ManualPostFeedba
 function Dashboard() {
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals" | "manual-fb" | "rebrandly" | "algo">("overview");
+
+  // mainTab は tab から自動導出（既存の setTab 呼び出しをそのまま使える）
+  const mainTab = (() => {
+    if (tab === "overview") return "home";
+    if (tab === "posts" || tab === "manual-fb") return "posts";
+    if (tab === "algo" || tab === "analysis" || tab === "rebrandly") return "analysis";
+    if (tab === "strategy" || tab === "research" || tab === "patterns") return "strategy";
+    return "admin"; // tasks, meeting, goals, features
+  })();
+
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -922,6 +932,7 @@ function Dashboard() {
       category: 'scoring' | 'pipeline' | 'nsfw' | 'other';
       status: 'pending' | 'adopted' | 'rejected';
       reviewNote?: string;
+      reviewedAt?: string;
     }>;
   }>({
     queryKey: ["algo-discoveries"],
@@ -976,21 +987,15 @@ function Dashboard() {
     ? postsWithMetrics.reduce((best, p) => calcScore(p.metrics) > calcScore(best.metrics) ? p : best)
     : null;
 
-  const TABS = [
-    { id: "overview",   label: "概要" },
-    { id: "features",   label: "🔧 機能一覧" },
-    { id: "goals",      label: "🎯 目標" },
-    { id: "analysis",   label: "📊 分析" },
-    { id: "strategy",   label: "🧠 戦略エンジン" },
-    { id: "posts",      label: "投稿履歴" },
-    { id: "patterns",   label: "外部データ" },
-    { id: "research",   label: "🔬 回復研究" },
-    { id: "manual-fb",  label: "📝 手動投稿FB" },
-    { id: "rebrandly",  label: "🔗 Rebrandly" },
-    { id: "algo",       label: "📡 アルゴ解析" },
-    { id: "tasks",      label: "✅ タスク" },
-    { id: "meeting",    label: "🤝 会議室" },
-  ] as const;
+  // セクション別サブタブ（ボトムナビ選択に応じて切替）
+  const SECTION_SUBTABS: Record<string, Array<{ id: string; label: string }>> = {
+    home:     [],
+    posts:    [{ id: "posts", label: "📋 履歴" }, { id: "manual-fb", label: "📝 手動FB" }],
+    analysis: [{ id: "algo", label: "📡 アルゴ解析" }, { id: "analysis", label: "📊 パフォーマンス" }, { id: "rebrandly", label: "🔗 リンク計測" }],
+    strategy: [{ id: "strategy", label: "🧠 戦略エンジン" }, { id: "research", label: "🔬 回復研究" }, { id: "patterns", label: "🌐 外部データ" }],
+    admin:    [{ id: "tasks", label: "✅ タスク" }, { id: "meeting", label: "🤝 会議室" }, { id: "goals", label: "🎯 目標" }, { id: "features", label: "🔧 機能" }],
+  };
+  const currentSubTabs = SECTION_SUBTABS[mainTab] ?? [];
 
   // スケジュール（APIから取得、またはデフォルト）
   const schedule = status?.schedule ?? [
@@ -1009,9 +1014,14 @@ function Dashboard() {
       <header className="border-b border-white/8 bg-[#0d1529]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl">🔞</span>
             <div>
-              <h1 className="text-sm font-bold leading-tight">FANZA X Bot</h1>
+              <h1 className="text-sm font-bold leading-tight">
+                {mainTab === "home"     && "🏠 ホーム"}
+                {mainTab === "posts"    && "📝 投稿管理"}
+                {mainTab === "analysis" && "📊 分析"}
+                {mainTab === "strategy" && "🧠 戦略"}
+                {mainTab === "admin"    && "⚙️ 管理"}
+              </h1>
               <p className="text-[11px] text-white/40">{status?.account ?? "読み込み中..."}</p>
             </div>
           </div>
@@ -1035,25 +1045,27 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        {/* Tabs */}
-        <div className="max-w-5xl mx-auto px-4 flex gap-0 border-t border-white/8 overflow-x-auto scrollbar-none">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                tab === t.id
-                  ? "border-indigo-400 text-indigo-300"
-                  : "border-transparent text-white/40 hover:text-white/70"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {/* セクション内サブタブ（セクションに応じて切替） */}
+        {currentSubTabs.length > 0 && (
+          <div className="max-w-5xl mx-auto px-4 flex gap-1 border-t border-white/8 py-1.5 overflow-x-auto scrollbar-none">
+            {currentSubTabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as any)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${
+                  tab === t.id
+                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-5 space-y-5">
+      <main className="max-w-5xl mx-auto px-4 py-5 pb-24 space-y-5">
 
         {/* ════════════════════ 概要タブ ════════════════════ */}
         {tab === "overview" && (
@@ -3593,7 +3605,7 @@ function Dashboard() {
                   <summary className={`text-xs font-semibold text-${color}-400 p-3 cursor-pointer`}>{label}</summary>
                   <div className="px-3 pb-3">
                     <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed">
-                      {algoData.latest.discussion[key as keyof typeof algoData.latest.discussion]}
+                      {algoData.latest?.discussion[key as keyof typeof algoData.latest.discussion]}
                     </p>
                   </div>
                 </details>
@@ -3699,6 +3711,45 @@ function Dashboard() {
           )}
         </div>
       )}
+
+      {/* ════ ボトムナビゲーション ════ */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0f1e]/95 backdrop-blur-md border-t border-white/10 z-30">
+        <div className="max-w-5xl mx-auto flex">
+          {([
+            { key: "home",     icon: "🏠", label: "ホーム",   setTo: "overview"  },
+            { key: "posts",    icon: "📝", label: "投稿",     setTo: "posts"     },
+            { key: "analysis", icon: "📊", label: "分析",     setTo: "algo"      },
+            { key: "strategy", icon: "🧠", label: "戦略",     setTo: "strategy"  },
+            { key: "admin",    icon: "⚙️", label: "管理",     setTo: "tasks"     },
+          ] as const).map(item => {
+            const isActive = mainTab === item.key;
+            // バッジ計算
+            const badge =
+              item.key === "admin" && tasks
+                ? tasks.daily.filter(t => t.assignee === "user" && !t.completed).length +
+                  tasks.weekly.filter(t => t.assignee === "user" && !t.completed).length
+                : item.key === "analysis" && (discoveryData?.meta?.pendingCount ?? 0) > 0
+                ? (discoveryData?.meta?.pendingCount ?? 0)
+                : 0;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setTab(item.setTo as any)}
+                className="flex-1 relative flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors"
+              >
+                <span className={`text-xl leading-none transition-transform ${isActive ? "scale-110" : "opacity-50"}`}>{item.icon}</span>
+                <span className={`text-[10px] font-semibold tracking-wide transition-colors ${isActive ? "text-indigo-400" : "text-white/40"}`}>{item.label}</span>
+                {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-400 rounded-full" />}
+                {badge > 0 && (
+                  <span className="absolute top-1.5 right-[calc(50%-14px)] min-w-[16px] h-4 px-1 bg-rose-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
