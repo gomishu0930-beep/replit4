@@ -3099,11 +3099,25 @@ function Dashboard() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ topic }),
               });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error ?? "エラー");
+              let data: any;
+              try { data = await res.json(); } catch { data = {}; }
+              if (!res.ok) {
+                const msg = data?.error ?? `リサーチAPIエラー (HTTP ${res.status})`;
+                // 429クォータエラーをわかりやすく表示
+                if (res.status === 429 || (typeof msg === "string" && msg.includes("429"))) {
+                  throw new Error("AIのクォータ制限に達しました。しばらく待ってから再試行してください。");
+                }
+                throw new Error(msg);
+              }
               setResearchResult(data);
             } catch (e: any) {
-              setResearchError(e.message);
+              const msg = e?.message ?? String(e);
+              // iOS Safariの「The string did not match the expected pattern.」など汎用エラーを日本語化
+              if (msg.includes("string did not match") || msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+                setResearchError("ネットワークエラーが発生しました。通信状況を確認して再試行してください。");
+              } else {
+                setResearchError(msg);
+              }
             } finally {
               setResearchLoading(false);
             }
@@ -3153,8 +3167,15 @@ function Dashboard() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: msg, round, lastGptReply, lastClaudeReply, lastGrokReply }),
                   });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error ?? `ラウンド${round}エラー`);
+                  let data: any;
+                  try { data = await res.json(); } catch { data = {}; }
+                  if (!res.ok) {
+                    const rawMsg = data?.error ?? `ラウンド${round}エラー (HTTP ${res.status})`;
+                    if (res.status === 429 || (typeof rawMsg === "string" && rawMsg.includes("429"))) {
+                      throw new Error(`🚦 AIクォータ制限（ラウンド${round}）。数分後に再試行してください。`);
+                    }
+                    throw new Error(rawMsg);
+                  }
                   // ラウンドの発言を即時表示
                   setMeetingSession((s) => s ? {
                     ...s,

@@ -297,16 +297,18 @@ ${extraInstruction}
   return response.choices[0]?.message?.content ?? '（応答なし）';
 }
 
-// Claude Sonnet に発言させる
+// Claude Sonnet に発言させる（429クォータ超過時はフォールバックメッセージで続行）
 async function speakAsClaude(session: MeetingSession, prompt: string, extraInstruction = ''): Promise<string> {
   const botContext = buildBotContext();
   const researchCtx = getResearchContext(session);
   const history = session.messages.length > 0 ? `\n\n## これまでの議論\n${buildHistory(session.messages)}` : '';
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    system: `あなたはシャドウバン回復とXグロースハック専門のストラテジスト（Claude Sonnet）として戦略会議に参加しています。
+  let response;
+  try {
+    response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2000,
+      system: `あなたはシャドウバン回復とXグロースハック専門のストラテジスト（Claude Sonnet）として戦略会議に参加しています。
 
 【あなたの役割・思考スタイル】
 - 「何をしてはいけないか」を最優先に考える。シャドウバン悪化リスクを常に評価する
@@ -324,8 +326,17 @@ async function speakAsClaude(session: MeetingSession, prompt: string, extraInstr
 ${botContext}${researchCtx}${history}
 ${extraInstruction}
 重要な合意点・行動提案は「📌 決定候補:」と明記。日本語で回答してください。`,
-    messages: [{ role: 'user', content: prompt }],
-  });
+      messages: [{ role: 'user', content: prompt }],
+    });
+  } catch (e: any) {
+    // 429クォータ超過は全体を止めず、Claudeをスキップして続行
+    const errStr = String(e?.message ?? e);
+    if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('quota')) {
+      console.warn('  ⚠️  Claude 429 クォータ制限 — このラウンドはスキップ');
+      return '（Claude：APIクォータ制限のため一時的に応答不可。o3とGrokの議論を参照してください。）';
+    }
+    throw e; // 429以外は通常通りスロー
+  }
 
   const block = response.content[0];
   return block.type === 'text' ? block.text : '（応答なし）';
@@ -635,7 +646,7 @@ assignee の分類基準：
   let jsonText = '';
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });
