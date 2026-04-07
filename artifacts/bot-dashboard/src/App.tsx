@@ -619,7 +619,7 @@ function WatchdogPanel({ data }: { data: WatchdogData | undefined }) {
 
 function Dashboard() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState<"overview" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals">("overview");
+  const [tab, setTab] = useState<"overview" | "features" | "analysis" | "strategy" | "posts" | "patterns" | "research" | "meeting" | "tasks" | "goals">("overview");
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
@@ -773,6 +773,7 @@ function Dashboard() {
 
   const TABS = [
     { id: "overview",  label: "概要" },
+    { id: "features",  label: "🔧 機能一覧" },
     { id: "goals",     label: "🎯 目標" },
     { id: "analysis",  label: "📊 分析" },
     { id: "strategy",  label: "🧠 戦略エンジン" },
@@ -1754,6 +1755,190 @@ function Dashboard() {
             })()}
           </div>
         )}
+
+        {/* ════════════════════ 機能一覧タブ ════════════════════ */}
+        {tab === "features" && (() => {
+          const weights = strategy?.typeWeights ?? {};
+          const templates = strategy?.dynamicTemplates;
+          const hypotheses = strategy?.hypotheses ?? [];
+          const directives = activeDirectives;
+
+          type FeatureItem = { name: string; desc: string; value?: string; status: "active" | "passive" | "manual" };
+          type FeatureGroup = { title: string; emoji: string; color: string; features: FeatureItem[] };
+
+          const FEATURE_GROUPS: FeatureGroup[] = [
+            {
+              title: "投稿スケジューラー", emoji: "📅", color: "indigo",
+              features: [
+                { name: "A/Bテストモード", desc: "週単位でスロットを切り替えて効果測定", value: "有効（1日1件）", status: "active" },
+                { name: "W1スロット", desc: "4/7〜4/13: 毎朝10:30 JST に芸能人アフィリ投稿", value: "10:30 JST", status: "active" },
+                { name: "W2スロット", desc: "4/14〜4/20: 毎朝05:00 JST に芸能人アフィリ投稿", value: "05:00 JST", status: "active" },
+                { name: "通常週スロット", desc: "W3以降: 18〜22時の動的スロット（最良時間帯を自動選択）", value: "18-22 JST 動的", status: "active" },
+                { name: "追い投稿（catch-up）", desc: "サーバー再起動後に当日スロットを見逃していれば即補完", status: "active" },
+                { name: "週次キャンペーンID探索", desc: "毎週日曜 03:00 JST に新しい商品IDを自動探索", status: "active" },
+              ],
+            },
+            {
+              title: "コンテンツ生成", emoji: "✍️", color: "pink",
+              features: [
+                { name: "芸能人アフィリツイート", desc: "芸能人名マッピング×フック5種×FANZA商品を組み合わせて生成", status: "active" },
+                { name: "フック5種ローテーション", desc: "「正直に言う」「知らないと損」「これだけは見てほしい」「頭から離れない」「証明してる」", status: "active" },
+                { name: "5型コンテンツ分類", desc: "レビュー/比較/ランキング/失敗回避/共感の型でテンプレを自動選択", status: "active" },
+                { name: "動的テンプレート", desc: `${templates?.count ?? "—"}件管理 / 進化回数 ${templates?.evolutionCount ?? "—"}回`, value: `${templates?.count ?? "?"}件`, status: "active" },
+                { name: "🔞マーク必須バリデーション", desc: "🔞なし・ハッシュタグあり・{{URL}}なしは投稿ブロック", status: "active" },
+                { name: "80〜110字制限", desc: "文字数が範囲外の場合はテンプレ再生成", status: "active" },
+              ],
+            },
+            {
+              title: "戦略エンジン", emoji: "🧠", color: "violet",
+              features: [
+                { name: "コンテンツ重み制御", desc: `buzz:${weights.buzz ?? "?"} / rank:${weights.rank ?? "?"} / amateur:${weights.amateur ?? "?"} / sale:${weights.sale ?? "?"} / random:${weights.random ?? "?"}`, value: `${Object.keys(weights).length}種別`, status: "active" },
+                { name: "仮説検証ループ", desc: `${hypotheses.length}件の仮説を継続検証中`, value: `${hypotheses.filter(h=>h.status==="confirmed").length}件確認済`, status: "active" },
+                { name: "外部パターン分析", desc: "他アカウントの高エンゲージメントツイートを100件収集・パターン抽出", status: "active" },
+                { name: "テンプレート自動進化", desc: "低スコアテンプレを廃棄し、外部パターンから新テンプレを生成", status: "active" },
+                { name: "日次戦略評価", desc: "毎日 03:00 JST にパターン分析・仮説更新・重み調整を自動実行", status: "active" },
+                { name: "週次レポート", desc: "毎週月曜 08:00 JST にアカウントスナップショットとパフォーマンスレポートを記録", status: "active" },
+              ],
+            },
+            {
+              title: "3者会議室", emoji: "🤝", color: "emerald",
+              features: [
+                { name: "リサーチモード (o3)", desc: "o3が市場調査・シャドウバン分析・戦略立案を深堀りリサーチ", status: "active" },
+                { name: "ディベートモード", desc: "GPT-4oとClaude Sonnetが同一議題でそれぞれ独立回答", status: "active" },
+                { name: "3者同時討論 (Trialogue)", desc: "o3 → Claude → GPTの順で互いの回答を参照して討論（5ラウンド）", status: "active" },
+                { name: "Q&Aセッション", desc: "討論後に2ラウンドの追加Q&A（AIが答える）", status: "active" },
+                { name: "決定事項自動抽出", desc: "会議ログからClaude Sonnetが実行可能なDirectiveを自動抽出", status: "active" },
+                { name: "ディレクティブ自動実行", desc: `${directives.length}件のアクティブ決定事項 / AIアサイン分はワンクリック実行`, value: `${directives.length}件`, status: "active" },
+              ],
+            },
+            {
+              title: "監視・回復", emoji: "🔍", color: "amber",
+              features: [
+                { name: "シャドウバン自動チェック", desc: "毎日 23:00 JST に shadowban.eu API で状態確認", status: "active" },
+                { name: "ウォッチドッグ", desc: "投稿失敗・API異常を検知し自動リカバリ試行", status: "active" },
+                { name: "指標自動更新", desc: "投稿後に Twitter API でインプ・いいね・RTを自動取得", status: "active" },
+                { name: "外部パターン監視", desc: "1時間ごとに競合アカウントの高スコアツイートを自動収集", status: "active" },
+              ],
+            },
+            {
+              title: "データ永続化", emoji: "☁️", color: "sky",
+              features: [
+                { name: "GCS永続化", desc: "全データ（投稿・テンプレ・会議・戦略）をGoogle Cloud Storageに自動保存", status: "active" },
+                { name: "アカウントスナップショット", desc: "フォロワー数・ツイート数を週次で記録・推移追跡", status: "active" },
+                { name: "手動観察ログ", desc: "ユーザーが気づいたことをエンゲージメント/商品/safe-post等に分類して記録", status: "active" },
+              ],
+            },
+            {
+              title: "クイック設定", emoji: "⚙️", color: "rose",
+              features: [
+                { name: "自然言語設定変更", desc: "テキスト入力でClaude Sonnetが即時解釈・設定変更を実行（会議室不要）", status: "active" },
+                { name: "プリセット操作", desc: "buzzの重みを上げる・テンプレ追加などよく使う操作をワンタップで入力", status: "active" },
+              ],
+            },
+            {
+              title: "手動タスク（ユーザー担当）", emoji: "👤", color: "gray",
+              features: [
+                { name: "Rebrandly URL短縮・計測", desc: "アフィリリンクをRebrandlyで短縮し、クリック数を計測", status: "manual" },
+                { name: "Googleスプレッドシート記録", desc: "日付/投稿タイプ/IMP/CTRを毎日手動記録", status: "manual" },
+                { name: "shadowban.eu週次チェック", desc: "毎週月曜に手動でSBステータスを確認", status: "manual" },
+                { name: "サブアカウント育成", desc: "4/21以降: サブ垢3体の作成・ウォームアップ・本垢へのいいね", status: "manual" },
+              ],
+            },
+          ];
+
+          const colorMap: Record<string, { badge: string; header: string; icon: string }> = {
+            indigo: { badge: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300", header: "text-indigo-400", icon: "bg-indigo-500/20 text-indigo-300" },
+            pink:   { badge: "border-pink-500/30 bg-pink-500/10 text-pink-300",       header: "text-pink-400",   icon: "bg-pink-500/20 text-pink-300" },
+            violet: { badge: "border-violet-500/30 bg-violet-500/10 text-violet-300", header: "text-violet-400", icon: "bg-violet-500/20 text-violet-300" },
+            emerald:{ badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300", header: "text-emerald-400", icon: "bg-emerald-500/20 text-emerald-300" },
+            amber:  { badge: "border-amber-500/30 bg-amber-500/10 text-amber-300",    header: "text-amber-400",  icon: "bg-amber-500/20 text-amber-300" },
+            sky:    { badge: "border-sky-500/30 bg-sky-500/10 text-sky-300",          header: "text-sky-400",    icon: "bg-sky-500/20 text-sky-300" },
+            rose:   { badge: "border-rose-500/30 bg-rose-500/10 text-rose-300",       header: "text-rose-400",   icon: "bg-rose-500/20 text-rose-300" },
+            gray:   { badge: "border-white/10 bg-white/5 text-white/40",              header: "text-white/50",   icon: "bg-white/10 text-white/40" },
+          };
+
+          const totalActive = FEATURE_GROUPS.flatMap(g => g.features).filter(f => f.status === "active").length;
+          const totalManual = FEATURE_GROUPS.flatMap(g => g.features).filter(f => f.status === "manual").length;
+
+          return (
+            <div className="space-y-4">
+              {/* サマリーヘッダー */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-wrap gap-4 items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-white">FANZA X Bot — 全機能一覧</h2>
+                  <p className="text-xs text-white/40 mt-0.5">現在稼働中の全機能と手動タスクの一覧</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-emerald-400">{totalActive}</p>
+                    <p className="text-[10px] text-white/40">自動稼働中</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-amber-400">{totalManual}</p>
+                    <p className="text-[10px] text-white/40">手動タスク</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-indigo-400">{FEATURE_GROUPS.length}</p>
+                    <p className="text-[10px] text-white/40">カテゴリ</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 機能グループ */}
+              {FEATURE_GROUPS.map((group) => {
+                const c = colorMap[group.color];
+                return (
+                  <div key={group.title} className="rounded-xl border border-white/8 bg-white/5 overflow-hidden">
+                    {/* グループヘッダー */}
+                    <div className="px-4 py-2.5 border-b border-white/8 flex items-center gap-2">
+                      <span className="text-base">{group.emoji}</span>
+                      <h3 className={`text-xs font-semibold uppercase tracking-wider ${c.header}`}>{group.title}</h3>
+                      <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded border ${c.badge}`}>
+                        {group.features.length}件
+                      </span>
+                    </div>
+
+                    {/* 機能リスト */}
+                    <div className="divide-y divide-white/5">
+                      {group.features.map((feat) => (
+                        <div key={feat.name} className="px-4 py-2.5 flex items-start gap-3">
+                          {/* ステータスドット */}
+                          <div className="mt-0.5 shrink-0">
+                            {feat.status === "active"  && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span>}
+                            {feat.status === "passive" && <span className="inline-flex rounded-full h-2 w-2 bg-white/20" />}
+                            {feat.status === "manual"  && <span className="inline-flex rounded-full h-2 w-2 bg-amber-500/60" />}
+                          </div>
+
+                          {/* 説明 */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-medium text-white/85">{feat.name}</span>
+                              {feat.value && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${c.badge}`}>
+                                  {feat.value}
+                                </span>
+                              )}
+                              {feat.status === "manual" && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300 shrink-0">手動</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-white/40 mt-0.5 leading-relaxed">{feat.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* 凡例 */}
+              <div className="flex items-center gap-4 text-[11px] text-white/40 px-1">
+                <span className="flex items-center gap-1.5"><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" /></span> 自動稼働中</span>
+                <span className="flex items-center gap-1.5"><span className="inline-flex rounded-full h-2 w-2 bg-amber-500/60" /> 手動タスク</span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ════════════════════ 目標タブ ════════════════════ */}
         {tab === "goals" && (
