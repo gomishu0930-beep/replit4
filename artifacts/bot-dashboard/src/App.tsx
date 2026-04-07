@@ -130,6 +130,7 @@ interface DecisionCandidate {
   priority: MeetingDirective["priority"];
   rationale: string;
   assignee: Assignee;
+  successCriteria?: string;
 }
 interface MeetingSession {
   id: string;
@@ -3083,9 +3084,13 @@ function Dashboard() {
                         <span className="shrink-0 mt-0.5">{priIcon[c.priority]}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-white/85 leading-relaxed mb-1">{c.text}</p>
-                          <p className="text-[10px] text-white/35 italic mb-2">根拠: {c.rationale}</p>
+                          <p className="text-[10px] text-white/35 italic mb-1">根拠: {c.rationale}</p>
+                          {c.successCriteria && (
+                            <p className="text-[10px] text-emerald-400/60 mb-2">🎯 成功基準: {c.successCriteria}</p>
+                          )}
                           <div className="flex items-center gap-2">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[c.category]}`}>{c.category}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border border-white/10 text-white/30">{c.assignee}</span>
                           </div>
                         </div>
                         <div className="shrink-0 flex flex-col gap-1.5">

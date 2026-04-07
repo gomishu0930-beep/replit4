@@ -15,6 +15,7 @@
 import {
   createMeetingSession,
   runTrialogue,
+  runDeepResearch,
   extractDecisions,
   addDirective,
   saveDirectiveExecution,
@@ -99,9 +100,23 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
 
   console.log('\n  🤝 [自律会議] 自動AI会議を開始...');
 
-  // 1. 会議セッション作成
+  // 1a. 事前Webリサーチ（GPT-4o web search）
+  console.log('  🔎 [自律会議] 事前Webリサーチ実行中...');
+  let researchId: string | undefined;
+  try {
+    const now = new Date();
+    const weekStr = now >= new Date('2026-04-14') ? 'W2(05:00枠)' : 'W1(10:30枠)';
+    const researchTopic = `2026年最新のX(Twitter)シャドウバン回復戦略・FANZA/成人向けアフィリエイトアカウントのアルゴリズム攻略法。${weekStr}投稿A/Bテスト中（フォロワー341人・日本語アカウント）。インプレッション改善と外部からの流入増加のための具体的手法を調査してください。`;
+    const research = await runDeepResearch(researchTopic);
+    researchId = research.id;
+    console.log(`  ✅ [自律会議] Webリサーチ完了 (${research.result.length}文字取得)`);
+  } catch (e: any) {
+    console.warn('  ⚠ [自律会議] Webリサーチ失敗:', e.message);
+  }
+
+  // 1b. 会議セッション作成（リサーチIDを紐付け）
   const title = `【自律】${new Date().toLocaleDateString('ja-JP')} 週次戦略会議`;
-  const session = await createMeetingSession(title);
+  const session = await createMeetingSession(title, researchId);
 
   // 2. GPT × Claude トリアローグ実行（5ラウンド）
   console.log('  💬 [自律会議] GPT/Claude議論中（5ラウンド）...');

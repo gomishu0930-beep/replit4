@@ -353,7 +353,7 @@
       "retweet_count": 2,
       "reply_count": 0,
       "bookmark_count": 7,
-      "impression_count": 7140,
+      "impression_count": 7217,
       "createdAt": "2026-04-07T00:00:00.000Z",
       "tweetId": "2041304951457235068",
       "score": 64,
@@ -623,7 +623,7 @@
       "retweet_count": 1,
       "reply_count": 0,
       "bookmark_count": 2,
-      "impression_count": 5572,
+      "impression_count": 5623,
       "createdAt": "2026-04-07T00:47:21.000Z",
       "tweetId": "2041316865759482085",
       "score": 35,
@@ -653,7 +653,7 @@
       "retweet_count": 1,
       "reply_count": 1,
       "bookmark_count": 2,
-      "impression_count": 5435,
+      "impression_count": 5449,
       "createdAt": "2026-04-06T11:00:35.000Z",
       "tweetId": "2041108805904486436",
       "score": 34,
@@ -674,6 +674,21 @@
       "score": 33,
       "source": "FANZA おすすめ",
       "savedAt": "2026-04-05T08:24:43.957Z"
+    },
+    {
+      "id": "2041408540410323330",
+      "text": "4/7のFANZA通販 アダルトDVD日間ランキングを公開！\n\nhttps://t.co/oJ3NsS446n\n\n#石川澪 #JULIA #北野未奈 #小野坂ゆいか #彩月七緒 #波多野結衣 #九井スナオ #辻井ほのか #西村ニーナ #松井日奈子 #小野六花 #井上もも #美ノ嶋めぐり #朝妃りお #若宮はずき #純白彩永 #葉山さゆり #深月めい #FANZA https://t.co/KT6auyxliB",
+      "authorId": "1179585162020974592",
+      "like_count": 13,
+      "retweet_count": 3,
+      "reply_count": 0,
+      "bookmark_count": 4,
+      "impression_count": 633,
+      "createdAt": "2026-04-07T06:51:38.000Z",
+      "tweetId": "2041408540410323330",
+      "score": 31,
+      "source": "#FANZA",
+      "savedAt": "2026-04-07T07:25:21.041Z"
     },
     {
       "id": "2040957669381480898",
@@ -824,21 +839,6 @@
       "score": 24,
       "source": "#DMM",
       "savedAt": "2026-04-05T13:27:44.815Z"
-    },
-    {
-      "id": "2041408540410323330",
-      "text": "4/7のFANZA通販 アダルトDVD日間ランキングを公開！\n\nhttps://t.co/oJ3NsS446n\n\n#石川澪 #JULIA #北野未奈 #小野坂ゆいか #彩月七緒 #波多野結衣 #九井スナオ #辻井ほのか #西村ニーナ #松井日奈子 #小野六花 #井上もも #美ノ嶋めぐり #朝妃りお #若宮はずき #純白彩永 #葉山さゆり #深月めい #FANZA https://t.co/KT6auyxliB",
-      "authorId": "1179585162020974592",
-      "like_count": 11,
-      "retweet_count": 2,
-      "reply_count": 0,
-      "bookmark_count": 3,
-      "impression_count": 604,
-      "createdAt": "2026-04-07T06:51:38.000Z",
-      "tweetId": "2041408540410323330",
-      "score": 24,
-      "source": "#FANZA",
-      "savedAt": "2026-04-07T07:25:21.041Z"
     },
     {
       "id": "2040546337515802896",
@@ -1501,7 +1501,7 @@
       "savedAt": "2026-04-06T05:37:39.003Z"
     }
   ],
-  "lastRefreshedAt": "2026-04-07T08:44:37.268Z",
+  "lastRefreshedAt": "2026-04-07T08:53:22.004Z",
   "queries": [
     "#FANZA",
     "#DMM",

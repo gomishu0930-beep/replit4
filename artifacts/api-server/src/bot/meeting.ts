@@ -54,6 +54,7 @@ export interface DecisionCandidate {
   priority: MeetingDirective['priority'];
   rationale: string;
   assignee: Assignee;
+  successCriteria?: string;
 }
 
 export interface MeetingSession {
@@ -166,14 +167,28 @@ export function buildBotContext(): string {
   ).join('\n') || '  なし';
 
   const dirSummary = activeDirectives.length > 0
-    ? activeDirectives.map((d) => `  【${d.priority}/${d.category}】${d.text}`).join('\n')
+    ? activeDirectives.map((d) => `  【${d.priority}/${d.category}/${d.assignee ?? '?'}】${d.text}`).join('\n')
     : '  なし';
+
+  // 前回会議の決定事項と進捗
+  const prevMeeting = cache.meetings.find(m => m.decisionCandidates && m.decisionCandidates.length > 0 && m.id !== cache.meetings[0]?.id);
+  const prevMeetingCtx = prevMeeting
+    ? `\n### 前回会議決定事項（${new Date(prevMeeting.createdAt).toLocaleDateString('ja-JP')} / ${prevMeeting.title}）\n${(prevMeeting.decisionCandidates ?? []).slice(0, 5).map(c => {
+        const matchingDir = cache.directives.find(d => d.text === c.text);
+        const status = matchingDir ? `[${matchingDir.status}]` : '[未追跡]';
+        return `  ${status} [${c.priority}/${c.assignee}] ${c.text}`;
+      }).join('\n')}`
+    : '';
+
+  // 今週の A/B テスト進捗
+  const now = new Date();
+  const weekStr = now >= new Date('2026-04-14') ? 'W2(05:00枠)実施中' : 'W1(10:30枠)実施中';
 
   return `## ボット現状（${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}）
 
 ### アカウント
 - @suguhalove0419 / シャドウバン回復中 / フォロワー約341人
-- 投稿モード: 1日2件（10:30 インプ狙い / 20:00 芸能人アフィリ）
+- 投稿モード: 1日1件・${weekStr}（A/Bテスト）
 - 統計: 総投稿${stats.totalPosts}件 / 直近7日${stats.postsLast7Days}件 / いいね${stats.totalLikes}
 
 ### インプレッション推移（直近14日）
@@ -191,8 +206,9 @@ ${hypotheses}
 ### 観察ログ
 ${obsSummary}
 
-### アクティブ決定事項
-${dirSummary}`.trim();
+### アクティブ決定事項（AI担当/user担当を区別）
+${dirSummary}
+${prevMeetingCtx}`.trim();
 }
 
 // ─── Deep Research (GPT-4o + web search) ────────────────────────────────────
@@ -248,12 +264,24 @@ async function speakAsGPT(session: MeetingSession, prompt: string, extraInstruct
   const researchCtx = getResearchContext(session);
   const history = session.messages.length > 0 ? `\n\n## これまでの議論\n${buildHistory(session.messages)}` : '';
 
-  const systemContent = `あなたはFANZA XボットのAI戦略アドバイザー（o3 Thinking）として3者会議に参加しています。
-役割：リサーチ・データ分析・外部トレンドの視点から論理的かつ具体的に意見を述べる。
-Claudeとは対等な議論パートナーとして、相手の意見に合意・反論・修正を明確に示してください。
+  const systemContent = `あなたはXアルゴリズムとデータ分析の鬼才（o3 Thinking）として戦略会議に参加しています。
+
+【あなたの役割・思考スタイル】
+- 感情より数字。根拠のない提案には必ず「それを裏付けるデータは？」と迫る
+- Xのアルゴリズム変化・インプレッション推移・外部ベンチマークを主な論拠とする
+- シャドウバン回復において「今週何をすべきか」を1〜3個の具体的行動に絞る
+- Claudeが楽観的すぎたり曖昧な提案をした場合は容赦なく反論する
+- 合意する場合も「なぜそれが正しいか」を数字で補強する
+- 決して「様子を見ましょう」では終わらせない。必ず具体的な仮説と検証方法を示す
+
+【禁止事項】
+- 「どちらも大切」「バランスが重要」などの曖昧な結論
+- データなしの感覚的主張
+- Claudeへの過度な同意（3回以上連続で同意しない）
+
 ${botContext}${researchCtx}${history}
 ${extraInstruction}
-重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答してください。`;
+重要な合意点・行動提案は「📌 決定候補:」と明記。日本語で回答してください。`;
 
   const response = await openai.chat.completions.create({
     model: 'o3',
@@ -276,12 +304,24 @@ async function speakAsClaude(session: MeetingSession, prompt: string, extraInstr
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
-    system: `あなたはFANZA XボットのAIアドバイザー（Claude Sonnet）として3者会議に参加しています。
-役割：実装可能性・リスク評価・具体的な実行プランの視点から意見を述べる。
-o4-miniとは対等な議論パートナーとして、相手の意見に合意・反論・修正を明確に示してください。
+    system: `あなたはシャドウバン回復とXグロースハック専門のストラテジスト（Claude Sonnet）として戦略会議に参加しています。
+
+【あなたの役割・思考スタイル】
+- 「何をしてはいけないか」を最優先に考える。シャドウバン悪化リスクを常に評価する
+- GPTのデータ分析を「現場視点」でチェックし、机上の空論になっていないか監視する
+- 実装コスト・副作用・タイミングリスクを具体的に指摘する
+- 「これをやると何が壊れるか」を必ず考える。楽観論には冷水を浴びせる
+- 前回会議の決定事項が守られているか・効果が出ているかを検証する
+- 最終ラウンドでは必ず「今週のNo.1優先事項」を1つ断言して終わる
+
+【禁止事項】
+- GPTへの過度な賛同（「おっしゃる通り」で始まる発言を3回以上繰り返さない）
+- 「さらなる情報収集が必要」などの先送り結論
+- リスク指摘だけして代替案を示さないこと
+
 ${botContext}${researchCtx}${history}
 ${extraInstruction}
-重要な合意点や提案は「📌 決定候補:」と明記してください。日本語で回答してください。`,
+重要な合意点・行動提案は「📌 決定候補:」と明記。日本語で回答してください。`,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -345,20 +385,63 @@ const TOTAL_ROUNDS = 5;
 // ラウンドごとのGPT指示
 function gptRoundInstruction(round: number, total: number): string {
   if (round === 1) {
-    return `【ラウンド${round}/${total} - 立論】あなたが最初に発言します。データと外部事例を根拠に明確な立場を示してください。論点を箇条書きで整理し、Claudeが反論しやすいよう構造化してください。`;
+    return `【ラウンド${round}/${total} - データ立論】最初の発言です。
+①現在のインプレッション推移データから読める「最大の課題」を1つ断言してください。
+②外部ベンチマーク・アルゴ動向を根拠に「今週試すべき仮説」を具体的に1〜2個提案してください。
+③Claudeへの挑戦的な問いかけで終わらせてください（例：「あなたはリスクと言うが、やらないリスクは？」）。
+数字・根拠なしの主張は禁止。`;
+  }
+  if (round === 2) {
+    return `【ラウンド${round}/${total} - 反証検討】Claudeの反論を真剣に検討してください。
+①Claudeが正しい部分を1つ認め、なぜそれが正しいかを説明する（ただし全面撤退は禁止）。
+②あなたの仮説のうち「絶対に譲れない核心」を絞り込んで再主張する。
+③シャドウバン回復という文脈でClaudeの懸念に反論する具体的根拠を示す。`;
+  }
+  if (round === 3) {
+    return `【ラウンド${round}/${total} - 深掘り】議論が深まってきました。
+①これまでの議論で「まだ掘り下げていない盲点」を1つ指摘してください。
+②A/Bテストという実験フレームを使って、あなたの仮説をどう検証するか具体的に示してください。
+③Claudeに「週次で測定すべき指標」を1つ提案し、合意を迫ってください。`;
   }
   if (round === total) {
-    return `【ラウンド${round}/${total} - 最終立場】これが最後の発言です。これまでの議論を経て修正された立場を簡潔に示してください。Claudeへの最終的な問いかけや提案があれば添えてください。`;
+    return `【ラウンド${round}/${total} - 最終立場表明】
+①この議論で変わった点と変わらなかった点を明確に区別してください。
+②「今週月曜日にAIが実行すべき1つの具体的アクション」を断言してください（曖昧不可）。
+③Claudeの最終統合への布石として、最重要の未解決論点を1つ残してください。`;
   }
-  return `【ラウンド${round}/${total} - 再論】Claudeの指摘を受けて立場を再検討してください。認める点は明示し、譲れない点は根拠を補強して主張してください。論点を絞って簡潔に。`;
+  return `【ラウンド${round}/${total} - 再論・強化】Claudeの最新の指摘を受けて。
+認める点は認めた上で、あなたのコアとなる主張をより強い根拠で再強化してください。
+「前回会議からの進捗」の文脈で、この提案の緊急性を訴えてください。`;
 }
 
 // ラウンドごとのClaude指示
 function claudeRoundInstruction(round: number, total: number): string {
-  if (round === total) {
-    return `【ラウンド${round}/${total} - 最終統合】${total}ラウンドの議論全体を総括してください。①合意した点、②残る対立点、③ユーザーへの選択肢（A案/B案など）、④推奨案と根拠 を必ず含めてください。「📌 決定候補:」を使って実行項目を3〜5件提案してください。`;
+  if (round === 1) {
+    return `【ラウンド${round}/${total} - リスク評価・反論】GPTの立論を受けて。
+①GPTの仮説の「最も危険な前提」を1つ特定し、シャドウバン悪化リスクの観点から反論してください。
+②ただし全否定は禁止。代替案または修正案を必ず出してください。
+③前回会議の決定事項に照らして「すでにやっていること・まだやっていないこと」を確認してください。`;
   }
-  return `【ラウンド${round}/${total} - 反論/補完】GPTの主張を批判的に検討してください。同意できる点を明示しつつ、実装リスク・現実的制約・見落としの観点から反論してください。新たな論点があれば提示してください。`;
+  if (round === 2) {
+    return `【ラウンド${round}/${total} - 現場視点】GPTが仮説を修正してきました。
+①修正後の提案について「実装したら何が起きるか」を時系列で予測してください（Week1→Week2→Week3）。
+②最悪シナリオを1つ明示し、それへの対処策も提案してください。
+③あなたが今最も重要と考える行動を1つ、根拠とともに主張してください。`;
+  }
+  if (round === total) {
+    return `【ラウンド${round}/${total} - 最終統合・決断】${total}ラウンドの議論を締めてください。
+
+必須構成（この順で）：
+1. 【合意事項】両者が同意した点を箇条書き（最低2点）
+2. 【残る対立】まだ見解が分かれている点（あれば）
+3. 【今週のNo.1優先事項】1つだけ断言（「〜すべき」形式）
+4. 【📌 決定候補】AI実行可能なアクションを3〜5件、"📌 決定候補:" から始めて列挙
+
+決して「様子を見る」「情報収集が必要」で終わらないこと。`;
+  }
+  return `【ラウンド${round}/${total} - 反論・補完】GPTの主張を批判的に検討してください。
+同意できる点を1つ明示した上で、実装リスク・シャドウバン悪化リスク・タイミングの観点から反論してください。
+「データがそう言っているからやる」ではなく「アカウントの現状に照らして本当に正しいか」を問い続けてください。`;
 }
 
 export async function runTrialogue(
@@ -410,7 +493,7 @@ export async function extractDecisions(sessionId: string): Promise<DecisionCandi
   const transcript = buildHistory(session.messages);
   const botContext = buildBotContext();
 
-  const prompt = `以下はFANZA Xボット運営に関する3者会議（o3 Thinking・Claude・ユーザー）の議事録です。
+  const prompt = `以下はFANZA Xボット運営に関する戦略会議（o3 Thinking・Claude Sonnet）の議事録です。
 
 ${botContext}
 
@@ -418,21 +501,28 @@ ${botContext}
 ${transcript}
 
 ---
-この会議で合意・提案された「具体的な行動決定事項」を3〜6件抽出し、以下のJSON配列形式で返してください。
+この会議で合意・提案された「具体的な行動決定事項」を4〜8件抽出し、以下のJSON配列形式で返してください。
 必ず有効なJSONのみ返し、コードブロックやコメントは含めないでください。
+
+抽出基準（厳格に守ること）：
+- 「様子を見る」「情報収集する」などの曖昧な内容は除外
+- 「📌 決定候補:」として明記された提案を優先的に含める
+- 誰が・いつ・何をするかが明確な事項のみ採用
+- 両者が合意した事項は必ず含める（対立中の事項でも合意点があれば含める）
 
 assignee の分類基準：
 - "user"   : ユーザー本人（アカウントオーナー）が手動で行うこと
-- "others" : 外部の人・サービス・パートナーが行うこと（または外部環境の変化に依存）
+- "others" : 外部の人・サービス・パートナーが行うこと
 - "ai"     : ボット（AI）が自動で実行・監視・生成すること
 
 [
   {
-    "text": "決定事項の本文（具体的に・実行可能な形で）",
+    "text": "決定事項の本文（主語＋動詞＋目的語の形式で・抽象表現禁止）",
     "category": "strategy|content|timing|recovery|other のいずれか",
     "priority": "high|medium|low のいずれか",
-    "rationale": "この決定の根拠（1〜2文）",
-    "assignee": "user|others|ai のいずれか"
+    "rationale": "この決定の根拠（会議での論点を引用して1〜2文）",
+    "assignee": "user|others|ai のいずれか",
+    "successCriteria": "この決定が成功したと判断する具体的な指標（例：週平均インプ150以上）"
   }
 ]`;
 
@@ -461,6 +551,7 @@ assignee の分類基準：
       rationale: String(item.rationale ?? ''),
       assignee: (['user', 'others', 'ai'].includes(item.assignee)
         ? item.assignee : 'user') as Assignee,
+      successCriteria: item.successCriteria ? String(item.successCriteria) : undefined,
     })).filter((c) => c.text.length > 0);
 
     // セッションに保存
