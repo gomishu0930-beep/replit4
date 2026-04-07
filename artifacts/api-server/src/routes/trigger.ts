@@ -1,16 +1,12 @@
 import { Router } from 'express';
-import OpenAI from 'openai';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
-import { runAutonomousMeeting } from '../bot/auto-meeting.js';
-import { getMeetingById } from '../bot/meeting.js';
+import { runMeetingAndPost } from '../bot/auto-meeting.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const router = Router();
 
@@ -206,115 +202,16 @@ router.post('/trigger/celebrity', auth, async (_req, res) => {
   }
 });
 
-// ─── 会議→投稿：AI3者会議の裁定に基づき実際にツイートを投稿 ───────────────────
-const MEETING_POST_TOPIC = `【AI自律決定投稿テスト】インプレッション最大化投稿を3AIが決定・即実行する会議
-
-## 現状
-- @suguhalove0419 はシャドウバン回復中（フォロワー341人）
-- A/Bテスト W1期間中（投稿内容・スタイルを実験中）
-
-## 投稿内容は完全自由
-ジャンル・形式・スタイルに一切制限なし。
-FANZAアフィリ・インプ型・共感型・時事ネタ・挑発フック・Pollなど何でもOK。
-**具体的なツイート本文（日本語140文字以内）を生成して決定すること。**
-
-## 議論してほしいこと
-1. 今夜のXリアルタイムトレンドでシャドウバン中でも最大インプが狙えるジャンルは？（Grokがリアルタイム判断）
-2. o3とClaudeが「今夜最強の投稿」を1本ずつ具体的に提案（ツイート本文まで作ること）
-3. GrokがXデータを根拠に勝者を決定し、そのツイート本文を🎯指令に含めること
-
-## 裁定フォーマット（必須）
-📊 最終総合スコア: [o3合計: X/50] [Claude合計: Y/50]
-🏆 最終裁定: [o3|Claude]案採用 — 理由1行
-🎯 自律実行指令: 以下のツイート本文をそのまま投稿せよ→「[ここに実際のツイート本文140文字以内]」
-AIがこの本文をそのままXに投稿します。`;
-
-async function runMeetingAndPostDirective(): Promise<void> {
-  const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-  console.log(`\n[${jst()}] 🎙 [会議投稿] 自律会議を開始します`);
-
-  let meetingId: string;
-  try {
-    const result = await runAutonomousMeeting(MEETING_POST_TOPIC);
-    meetingId = result.meetingId;
-    console.log(`\n[${jst()}] ✅ [会議投稿] 会議完了 (ID: ${meetingId})`);
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [会議投稿] 会議エラー: ${e.message}`);
-    return;
-  }
-
-  // 会議セッションから最終ラウンドのGrokメッセージを取得
-  const session = getMeetingById(meetingId);
-  if (!session) {
-    console.error(`[${jst()}] ❌ [会議投稿] セッションが見つかりません: ${meetingId}`);
-    return;
-  }
-
-  const grokMessages = session.messages.filter((m) => m.speaker === 'grok');
-  const lastGrokMsg = grokMessages[grokMessages.length - 1];
-  if (!lastGrokMsg) {
-    console.error(`[${jst()}] ❌ [会議投稿] Grokメッセージが見つかりません`);
-    return;
-  }
-
-  console.log(`\n[${jst()}] 📋 [会議投稿] Grok最終裁定:\n${lastGrokMsg.content.slice(0, 600)}`);
-
-  // 🎯 自律実行指令からツイート本文を抽出
-  const directiveMatch = lastGrokMsg.content.match(/🎯\s*自律実行指令[：:]\s*(.+?)(?:\n|$)/s);
-  if (!directiveMatch) {
-    console.error(`[${jst()}] ❌ [会議投稿] 指令が見つかりません`);
-    return;
-  }
-  const directiveText = directiveMatch[1].trim();
-  console.log(`\n[${jst()}] 🎯 [会議投稿] 指令: ${directiveText}`);
-
-  // 指令から「」内のツイート本文を直接抽出、なければOpenAIで変換
-  let tweetText: string;
-  const quoteMatch = directiveText.match(/[「『""](.{10,140})[」』""]/) ||
-                     directiveText.match(/→\s*[「『""]?(.{10,140})[」』""]?/);
-  if (quoteMatch) {
-    tweetText = quoteMatch[1].trim();
-    console.log(`[${jst()}] ✅ [会議投稿] 指令から本文を直接抽出: ${tweetText.slice(0, 60)}...`);
-  } else {
-    console.log(`[${jst()}] 🤖 [会議投稿] OpenAIで指令をツイート本文に変換中...`);
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: `以下はXボット運営AI会議でGrokが出した自律実行指令です。この指令に従い、実際にXに投稿するツイート本文（日本語、140文字以内、🔞表現可）を1つだけ出力してください。ツイート本文だけを出力し、それ以外は何も書かないこと。\n\n指令: ${directiveText}`,
-        },
-      ],
-      max_tokens: 200,
-    });
-    tweetText = completion.choices[0]?.message?.content?.trim() ?? '';
-    console.log(`[${jst()}] ✅ [会議投稿] 生成ツイート: ${tweetText}`);
-  }
-
-  if (!tweetText || tweetText.length < 5) {
-    console.error(`[${jst()}] ❌ [会議投稿] ツイート本文が空です`);
-    return;
-  }
-
-  // ツイート投稿
-  console.log(`\n[${jst()}] 🚀 [会議投稿] ツイート投稿実行: "${tweetText.slice(0, 60)}..."`);
-  try {
-    const tweetId = await postTweet(tweetText, []);
-    console.log(`\n[${jst()}] 🏁 [会議投稿] 投稿完了！ tweetId: ${tweetId}`);
-    console.log(`[${jst()}] 📝 [会議投稿] 投稿内容:\n${tweetText}`);
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [会議投稿] ツイート投稿エラー: ${e.message}`);
-  }
-}
+// ─── 会議→投稿：AI3者会議→Grok裁定→ツイート生成→X投稿（頭→手サイクル）─────────
 
 // 会議→裁定投稿トリガー（バックグラウンド実行・即202を返す）
-router.post('/trigger/meeting-post', auth, (_req, res) => {
+router.post('/trigger/meeting-post', auth, (req, res) => {
+  const bypass = req.query.bypass === 'true' || req.body?.bypassDailyLimit === true;
   res.status(202).json({
     ok: true,
-    message: '✅ AI3者会議を開始しました。会議完了後（約15分）にGrokの裁定に基づいて自動投稿されます。ログで進捗を確認できます。',
+    message: `✅ AI3者会議（頭→手サイクル）を開始しました。会議完了後にGrokの裁定に基づき自動投稿されます（約15〜20分）。${bypass ? '※日次制限バイパスモード' : ''}`,
   });
-  // バックグラウンドで実行（レスポンス返却後）
-  runMeetingAndPostDirective().catch((e: any) =>
+  runMeetingAndPost({ bypassDailyLimit: bypass }).catch((e: any) =>
     console.error(`[会議投稿] 予期せぬエラー: ${e.message}`),
   );
 });

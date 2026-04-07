@@ -8,7 +8,7 @@ import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
 import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision } from './auto-execute.js';
-import { runAutonomousMeeting } from './auto-meeting.js';
+import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -437,6 +437,7 @@ export function startScheduler() {
   }, { timezone: 'Asia/Tokyo' });
 
   // 月曜 04:00 JST — 🤝 週次自律AI会議（GPT×Claude議論→決定→自動実行）
+  // 【頭】週次戦略会議: 情報収集 → 議論 → strategy/template更新
   cron.schedule('0 4 * * 1', async () => {
     console.log('\n  🤝 [自律会議] 週次AI会議を自動実行中...');
     try {
@@ -444,6 +445,39 @@ export function startScheduler() {
       console.log(`  ✅ [自律会議] 完了: 自動実行${result.autoExecuted.length}件 / 手動確認${result.manualItems.length}件`);
     } catch (e: any) {
       console.error(`  ❌ [自律会議] エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 火・木 20:00 JST — 🎙→🚀 会議→投稿サイクル（頭→手）
+  // W1/W2期間（本日投稿済み）→ 会議＋情報収集のみ・投稿スキップ
+  // W3以降 or 本日未投稿       → 会議 → Grok裁定ツイート → X即時投稿
+  cron.schedule('0 20 * * 2,4', async () => {
+    console.log('\n  🎙 [会議→投稿] 火/木 自律フルサイクル開始...');
+    try {
+      const result = await runMeetingAndPost();
+      if (result.posted) {
+        console.log(`  ✅ [会議→投稿] 投稿完了: ${result.tweetId}`);
+      } else {
+        console.log(`  ℹ️  [会議→投稿] 情報収集完了（投稿スキップ: ${result.reason ?? '制限'}）`);
+      }
+    } catch (e: any) {
+      console.error(`  ❌ [会議→投稿] エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 土曜 21:00 JST — 🎙→🚀 週末会議→投稿サイクル（頭→手）
+  // 週末のXアクティブ時間帯に合わせた自律投稿
+  cron.schedule('0 21 * * 6', async () => {
+    console.log('\n  🎙 [会議→投稿] 土曜 自律フルサイクル開始...');
+    try {
+      const result = await runMeetingAndPost();
+      if (result.posted) {
+        console.log(`  ✅ [会議→投稿] 投稿完了: ${result.tweetId}`);
+      } else {
+        console.log(`  ℹ️  [会議→投稿] 情報収集完了（投稿スキップ: ${result.reason ?? '制限'}）`);
+      }
+    } catch (e: any) {
+      console.error(`  ❌ [会議→投稿] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 
