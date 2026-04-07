@@ -1,12 +1,12 @@
 /**
  * auto-meeting.ts — 自律AI会議エンジン
  *
- * GPT × Claude が自動的に会議を開き、決定事項を抽出・実行する。
+ * GPT × Claude × Grok が自動的に会議を開き、決定事項を抽出・実行する。
  * ユーザーへは「手動でしかできないこと」だけを通知する。
  *
  * フロー:
- *   1. 現在のパフォーマンスデータからアジェンダを自動生成
- *   2. createMeetingSession → runTrialogue (GPT/Claude 5ラウンド議論)
+ *   1. GrokでリアルタイムXデータ取得 → アジェンダ自動生成
+ *   2. createMeetingSession → runTrialogue (o3→Claude→Grok 5ラウンド3者議論)
  *   3. extractDecisions → 決定事項を分類
  *   4. ai担当 → 即時 executeDirective → completed
  *      user担当 → directive保存のみ → ユーザーへ通知
@@ -118,8 +118,8 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
   const title = `【自律】${new Date().toLocaleDateString('ja-JP')} 週次戦略会議`;
   const session = await createMeetingSession(title, researchId);
 
-  // 2. GPT × Claude トリアローグ実行（5ラウンド）
-  console.log('  💬 [自律会議] GPT/Claude議論中（5ラウンド）...');
+  // 2. o3 × Claude × Grok トリアローグ実行（5ラウンド）
+  console.log('  💬 [自律会議] o3/Claude/Grok 3者議論中（5ラウンド）...');
   try {
     await runTrialogue(session.id, topic);
   } catch (e: any) {

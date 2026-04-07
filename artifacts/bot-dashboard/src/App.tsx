@@ -1682,7 +1682,7 @@ function Dashboard() {
                     }}
                     disabled={meetingRunning || autoExecRunning}
                     className="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-500/30 transition-colors disabled:opacity-50"
-                    title="GPT×Claudeが自動的に会議を開き、決定を実行します（約5分）"
+                    title="GPT×Claude×Grokが自動的に会議を開き、決定を実行します（約5分）"
                   >
                     {meetingRunning ? "会議中..." : "🤝 AI会議"}
                   </button>
@@ -1727,7 +1727,7 @@ function Dashboard() {
                 <div className="mt-1 bg-indigo-900/20 rounded-lg p-3 border border-indigo-500/20">
                   <div className="flex items-center gap-2 text-xs text-indigo-300">
                     <span className="animate-spin">⚙️</span>
-                    <span>GPT × Claude が会議中です（約5分かかります）...</span>
+                    <span>GPT × Claude × Grok が会議中です（約5分かかります）...</span>
                   </div>
                 </div>
               )}
@@ -2763,8 +2763,8 @@ function Dashboard() {
               title: "3者会議室", emoji: "🤝", color: "emerald",
               features: [
                 { name: "リサーチモード (o3)", desc: "o3が市場調査・シャドウバン分析・戦略立案を深堀りリサーチ", status: "active" },
-                { name: "ディベートモード", desc: "GPT-4oとClaude Sonnetが同一議題でそれぞれ独立回答", status: "active" },
-                { name: "3者同時討論 (Trialogue)", desc: "o3 → Claude → GPTの順で互いの回答を参照して討論（5ラウンド）", status: "active" },
+                { name: "ディベートモード", desc: "o3 Thinkingと Claude Sonnetが同一議題でそれぞれ独立回答", status: "active" },
+                { name: "3者同時討論 (Trialogue)", desc: "o3 → Claude → Grok の順で互いの回答を参照して討論（5ラウンド）", status: "active" },
                 { name: "Q&Aセッション", desc: "討論後に2ラウンドの追加Q&A（AIが答える）", status: "active" },
                 { name: "決定事項自動抽出", desc: "会議ログからClaude Sonnetが実行可能なDirectiveを自動抽出", status: "active" },
                 { name: "ディレクティブ自動実行", desc: `${directives.length}件のアクティブ決定事項 / AIアサイン分はワンクリック実行`, value: `${directives.length}件`, status: "active" },
@@ -3449,7 +3449,7 @@ function Dashboard() {
                       <div className="text-center py-8">
                         <p className="text-2xl mb-2">🎙</p>
                         <p className="text-xs text-white/40">議題を入力して「3者会議」を押してください</p>
-                        <p className="text-[10px] text-white/25 mt-1">GPT-4oが調査観点、Claudeが実装観点で続けて発言します</p>
+                        <p className="text-[10px] text-white/25 mt-1">o3(立論) → Claude(反論) → Grok(X情報・裁定)の順で5ラウンド討論します</p>
                       </div>
                     )}
                     {meetingSession.messages.map((m, i) => {
@@ -3551,9 +3551,9 @@ function Dashboard() {
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                       placeholder={
                         sendMode === "trialogue"
-                          ? "議題を入力... GPT→Claudeの順で議論します (Enter送信)"
+                          ? "議題を入力... o3→Claude→Grokの順で5ラウンド討論 (Enter送信)"
                           : sendMode === "gpt"
-                          ? "GPT-4oへの質問... (Enter送信)"
+                          ? "o3 Thinkingへの質問... (Enter送信)"
                           : "Claudeへの質問... (Enter送信)"
                       }
                       rows={2}
@@ -3627,7 +3627,7 @@ function Dashboard() {
                         💬 Q&Aラウンド — あなたからの質問
                       </h2>
                       <p className="text-[10px] text-white/30 mt-0.5">
-                        o3とClaudeが両方あなたの質問に直接回答します
+                        o3・Claude・Grokがあなたの質問に直接回答します
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
