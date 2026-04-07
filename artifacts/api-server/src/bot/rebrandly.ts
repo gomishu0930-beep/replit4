@@ -87,19 +87,103 @@ export async function syncRebrandlyClicks(): Promise<{
 }
 
 /**
- * アフィリエイトURLに対応するRebrandly短縮URLを返す。
- * 登録がなければ元のURLをそのまま返す（フォールバック）。
+ * 作品IDからRebrandly用のslashtag文字列を生成。
+ * 英数字とハイフンのみ許可（Rebrandly仕様）。
  */
-export function resolveShortUrl(affiliateUrl: string): string {
-  const { links } = getRebrandlyData();
-  if (links.length === 0) return affiliateUrl;
+function toSlashtag(itemId: string): string {
+  return itemId.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().slice(0, 50);
+}
 
-  // destinationが完全一致するリンクを探す
+/**
+ * Rebrandly APIで新しい短縮リンクを作成する。
+ * 作成したリンクはストレージに追加して返す。
+ */
+async function createRebrandlyLink(
+  itemId: string,
+  title: string,
+  affiliateUrl: string,
+): Promise<string | null> {
+  const apiKey = process.env.REBRANDLY_API_KEY;
+  if (!apiKey) return null;
+
+  const slashtag = toSlashtag(itemId);
+
+  try {
+    const res = await fetch(`${REBRANDLY_BASE}/links`, {
+      method: 'POST',
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destination: affiliateUrl,
+        slashtag,
+        title: title.slice(0, 100),
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      // 409 = slashtag重複（すでに存在する）→ そのまま使う
+      if (res.status === 409) {
+        console.log(`  🔗 [Rebrandly] slashtag既存: ${slashtag}`);
+        const short = `https://rebrand.ly/${slashtag}`;
+        return short;
+      }
+      console.warn(`  ⚠ [Rebrandly] リンク作成失敗 (${res.status}): ${body.slice(0, 100)}`);
+      return null;
+    }
+
+    const data: RebrandlyApiLink = await res.json();
+    const now = new Date().toISOString();
+    const newLink: RebrandlyLink = {
+      id: data.id,
+      slashtag: data.slashtag,
+      destination: data.destination,
+      title: data.title || title,
+      clicks: 0,
+      lastSyncedAt: now,
+    };
+
+    // ストレージに追加
+    const current = getRebrandlyData();
+    upsertRebrandlyLinks([...current.links, newLink]);
+
+    const short = `https://rebrand.ly/${data.slashtag}`;
+    console.log(`  ✅ [Rebrandly] 新規リンク作成: ${data.slashtag} → ${short}`);
+    return short;
+  } catch (e: any) {
+    console.warn(`  ⚠ [Rebrandly] リンク作成例外: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * アフィリエイトURLに対応するRebrandly短縮URLを返す。
+ * 未登録の場合は自動作成する。作成失敗時は元のURLを返す（フォールバック）。
+ */
+export async function resolveShortUrl(
+  affiliateUrl: string,
+  itemId?: string,
+  itemTitle?: string,
+): Promise<string> {
+  if (!affiliateUrl) return affiliateUrl;
+
+  const { links } = getRebrandlyData();
+
+  // 既存リンクと照合
   const match = links.find(l => l.destination === affiliateUrl);
   if (match) {
     const short = `https://rebrand.ly/${match.slashtag}`;
-    console.log(`  🔗 [Rebrandly] 短縮URL適用: ${match.slashtag}`);
+    console.log(`  🔗 [Rebrandly] 既存短縮URL使用: ${match.slashtag}`);
     return short;
   }
+
+  // REBRANDLY_API_KEY があり itemId が渡されていれば自動作成
+  if (process.env.REBRANDLY_API_KEY && itemId) {
+    const short = await createRebrandlyLink(itemId, itemTitle ?? itemId, affiliateUrl);
+    if (short) return short;
+  }
+
   return affiliateUrl;
 }

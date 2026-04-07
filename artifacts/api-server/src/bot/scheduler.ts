@@ -48,7 +48,7 @@ async function postItem(item: any, type: string, label: string) {
   // ツイート→リプライ間：30〜90秒待機（人間的な間隔）
   await randomSleep(30, 90);
 
-  const affiliateURL = resolveShortUrl(item.affiliateURL ?? '');
+  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   // リプライ1→2間：20〜60秒待機
@@ -114,7 +114,7 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
 
   // リプライ②：アフィリエイトリンク（20〜60秒後）
   await randomSleep(20, 60);
-  const affiliateURL = resolveShortUrl(item.affiliateURL ?? '');
+  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
   await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   recordPost({ tweetId, replyId: introReplyId, item, text: mainText, type: 'celebrity' });
