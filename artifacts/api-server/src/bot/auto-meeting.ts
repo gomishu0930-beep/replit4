@@ -30,7 +30,7 @@ import {
 import { executeDirective } from './directive-executor.js';
 import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData } from './storage.js';
 import { getStrategySummary } from './strategy.js';
-import { contact } from './contact.js';
+import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing } from './grok.js';
 import { postTweet } from './twitter.js';
 
@@ -277,6 +277,29 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
 
   const duration_ms = Date.now() - startAt;
   await notifyWeeklyMeetingResult({ autoExecuted, manualItems, title, duration_ms });
+
+  // 会議フルログをメール送信
+  try {
+    const fullSession = getMeetingById(session.id);
+    if (fullSession) {
+      const decisionTexts = candidates.map(c => `[${c.assignee}/${c.priority}] ${c.text}`);
+      const summaryLines = [
+        `自動実行: ${autoExecuted.filter(r => r.success).length}/${autoExecuted.length}件成功`,
+        `手動確認: ${manualItems.length}件`,
+        ...autoExecuted.slice(0, 3).map(r => `  ${r.success ? '✅' : '⚠️'} ${r.text.slice(0, 60)}`),
+      ];
+      await sendMeetingFullLog({
+        title,
+        sessionId: session.id,
+        messages: fullSession.messages,
+        summary: summaryLines.join('\n'),
+        decisions: decisionTexts,
+        duration_ms,
+      });
+    }
+  } catch (e: any) {
+    console.warn('  ⚠ [週次会議] フルログメール送信失敗:', e.message);
+  }
 
   console.log(`  ✅ [週次会議] 完了: 自動実行${autoExecuted.length}件 / 手動確認${manualItems.length}件 (${Math.round(duration_ms / 1000)}秒)`);
 
@@ -721,6 +744,35 @@ Grokへの指示:
     `⏱ 所要時間: ${Math.round(duration_ms / 1000)}秒\n\n` +
     `✨ @gomi_shu_god として新規スタート準備完了`,
   );
+
+  // 会議フルログをメールで送信
+  try {
+    const fullSession = getMeetingById(session.id);
+    if (fullSession) {
+      const decisionTexts = candidates.map(c => `[${c.assignee}/${c.priority}/${c.category}] ${c.text}`);
+      const summaryLines = [
+        `【緊急会議完了】凍結インシデント分析・@gomi_shu_god 新規スタート戦略決定`,
+        ``,
+        `📋 施策決定: ${candidates.length}件`,
+        `🤖 AI自動実行: ${autoExecuted.filter(r => r.success).length}/${autoExecuted.length}件成功`,
+        `🗑 リセット: ${resetData.cleared.join(' / ')}`,
+        `⏱ 所要時間: ${Math.round(duration_ms / 1000)}秒`,
+        ``,
+        `【手動確認が必要な事項】`,
+        ...manualItems.map(m => `• [${m.priority}] ${m.text}`),
+      ];
+      await sendMeetingFullLog({
+        title,
+        sessionId: session.id,
+        messages: fullSession.messages,
+        summary: summaryLines.join('\n'),
+        decisions: decisionTexts,
+        duration_ms,
+      });
+    }
+  } catch (e: any) {
+    console.warn('  ⚠ [緊急会議] フルログメール送信失敗:', e.message);
+  }
 
   console.log(`  ✅ [緊急会議] 完了: ${candidates.length}件決定 / データリセット完了 (${Math.round(duration_ms / 1000)}秒)`);
 

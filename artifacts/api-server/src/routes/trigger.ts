@@ -3,6 +3,8 @@ import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmate
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
+import { sendMeetingFullLog } from '../bot/contact.js';
+import { getMeetingById, getMeetings } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
 import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
 
@@ -237,6 +239,37 @@ router.post('/trigger/external-patterns', auth, async (_req, res) => {
     console.log('\n[外部パターン収集] 手動トリガー');
     const added = await refreshExternalPatterns();
     res.json({ ok: true, added });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── 会議ログのメール送信（オンデマンド）──────────────────────────────────────
+
+// POST /api/trigger/send-meeting-log  body: { id?: string }（省略時は最新会議）
+router.post('/trigger/send-meeting-log', auth, async (req, res) => {
+  try {
+    const sessions = getMeetings();
+    const targetId = (req.body?.id as string | undefined);
+    const session = targetId ? getMeetingById(targetId) : sessions[sessions.length - 1];
+
+    if (!session) {
+      res.status(404).json({ ok: false, error: '会議が見つかりません' });
+      return;
+    }
+
+    await sendMeetingFullLog({
+      title: session.title,
+      sessionId: session.id,
+      messages: session.messages,
+      summary: `手動送信リクエスト by /trigger/send-meeting-log`,
+      decisions: (session.decisionCandidates ?? []).map(
+        (c: any) => `[${c.assignee ?? '?'}/${c.priority ?? '?'}] ${c.text ?? ''}`,
+      ),
+      duration_ms: 0,
+    });
+
+    res.json({ ok: true, sessionId: session.id, title: session.title, messageCount: session.messages.length });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
