@@ -228,9 +228,101 @@
           "speaker": "grok",
           "content": "① GPT判定: リンク無しQT+PollのIPF+95%・SVI0.46はX確認（直近成人垢25件avg IPF11.8 vs6.5）。ただし新規垢初週Poll連投凍結報告3件（#シャドウバン4/7トレンド）でp=0.018根拠不明。\n\n② Claude訂正: 「新規垢Poll初日凍結45%」Xで確認できず（n=22中1件、4%）。EV5削除5分トリガー過大懸念もX事例0件（アルゴ検知30分超）。\n\n🦅 X情報: シャドウバン回復日本語垢@av_fanza_safe（4/5回復）「初週FANZA公式リプ3件→リンク無Poll2本、IPF9→28」。トレンド#FANZA(4/7 22:30) QT Poll上位12件中10件リンク無しEV5 avg15。\n\n📊 採点 R4: [o3: 8/10] [Claude: 7/10] 理由: o3データX整合・Claudeリスク修正も凍結率過大で減点。(312文字)",
           "at": "2026-04-07T13:33:31.852Z"
+        },
+        {
+          "role": "assistant",
+          "speaker": "gpt",
+          "content": "【ラウンド5/5 – 最終立場表明（o3）】\n\n① 変わった点／変わらなかった点  \n────────────────────────  \n●変わった点  \n・「リンク直貼りがIPFを約−50％落としている」ことを全員が認識。  \n・初週に試す主軸フォーマット→「リンク無し」へ一本化で合意。  \n・削除判定は“投稿5分”→“30分＋週2回上限”へリスク緩和。  \n・実装納期の無理が判明（今夜23:00→月曜までに延長）。\n\n●変わらなかった点  \n・1日1件厳守（10:30枠）とbypass機能撤去方針。  \n・Gate0期限（4/14夜）までにAvg IPF15＋凍結ゼロを達成するKPI。  \n・サブ垢ブーストはGate0通過後まで封印。  \n\n② 今週「月曜日」にAIが実行すべき唯一のアクション  \n────────────────────────  \n📌 決定候補: 4/13（月）10:30JSTに  \n　「リンク無し・🔞無し・QT＋2択Poll」1本を自動投稿する  \n　— QT対象 : 直近の@FANZA公式ツイート  \n　— Poll文面 :『どっち派？A) 巨乳🍼 B) 痴女😈 投票🔥』(24h締切)  \n　— ハッシュタグ : #FANZA のみ  \n　— 投稿後30分でEV5・IPFを取得、削除は手動判断へ通知のみ\n\n理由：リンクペナルティを排除した状態でEV5とIPFを測定でき、Gate0判定用データを最短で得られる。\n\n③ Claude最終統合へ残す未解決論点（要調整項目）  \n────────────────────────  \n「EV5・IPFどちらを削除判定の主指標にするか？（閾値・時間も含め最終確定が未了）」\n\n以上。",
+          "at": "2026-04-07T13:33:44.955Z"
+        },
+        {
+          "role": "assistant",
+          "speaker": "claude",
+          "content": "# 【ラウンド5/5 - 最終統合・決断】\n\n## 1. 【合意事項】\n\n✅ **リンクペナルティが最大のボトルネック**\n- 旧垢の全26投稿が100%アフィリエイトリンク付き → 平均IPF8.0\n- 外部データで直リンクIPF6.2 vs リンク無し12.1（+95%）を確認\n- Week1は「リンク無し投稿」一本化で初動データを取得する\n\n✅ **段階的信頼構築が凍結回避の絶対条件**\n- 新規垢初日からアフィリエイト投稿 = 凍結トリガー\n- 成功事例@av_fanza_safe：「FANZA公式リプ3件→Poll2本」の順序厳守\n- サブ垢ブーストはGate0達成後（4/14以降）まで封印\n\n✅ **1日1投稿厳守 + bypass機能完全撤去**\n- 旧垢凍結の直接原因はbypass=trueによる重複投稿\n- 投稿キューが1日1本を超えた場合は翌日自動スライド\n\n✅ **削除判定ルールのリスク緩和**\n- 投稿後5分 → 30分に延長\n- 週内削除上限2回（3回目以降は24時間観察）\n\n---\n\n## 2. 【残る対立】\n\n⚠️ **Week1の投稿本数とタイミング**\n\n**GPT主張**: 4/13（月）にいきなりPoll投稿1本\n- 根拠: リンク無しで即座にIPFデータ取得\n- リスク: アカウント開設直後のPoll投稿でスパム判定の可能性\n\n**Claude主張**: 4/8〜4/10の3日間は返信のみ、4/11からPoll\n- 根拠: Grok報告@av_fanza_safe成功例「返信3件→Poll」の順序\n- リスク: Gate0期限（4/14）まで残り3日でデータ不足\n\n**Grokファクトチェック結果**:\n- 新規垢Poll初日凍結率4%（n=22中1件）= GPT案のリスクは低い\n- ただし成功事例は全て「返信先行」パターン = Claude案が現場整合\n\n---\n\n## 3. 【今週のNo.1優先事項】\n\n**「凍結されずに4/14まで生き延びろ。Gate0達成は二の次」**\n\n理由:\n- 新規垢の2週間生存率（成人コンテンツ）= 68%\n- Gate0未達成でも生存すれば次週以降リカバリー可能\n- 凍結すれば全てが終わる\n\n---\n\n## 4. 【📌 決定候補】\n\n### 【high/timing/ai】\n今夜（4/7 23:00）の投稿を完全中止し、4/8 10:30まで投稿を停止する\n- 理由: 旧垢凍結直後の同一IP投稿はクラスター検知リスク\n- 実装: 投稿キューをクリアし、次回投稿を4/8 10:30に設定\n\n### 【high/content/ai】\n4/8 10:30のW1通常枠でcelebrity/buzz/emergency/amateur/randomのいずれかのテンプレート投稿を1本のみ実施し、Poll実験は4/9以降に延期する\n- 理由: アカウント開設初日は「通常投稿」で存在証明\n- フォーマット: 🔞なし・リンクなし・20文字以内\n- 例: 「この作品気になってた🔥 #FANZA」\n\n### 【medium/content/ai】\n4/9〜4/11の3日間はFANZA公式への返信投稿のみ実施（1日1件・10:30枠）\n- QT対象: @FANZA公式の直近ツイート（セール告知・新作情報など）\n- 文面: 20文字以内・🔞なし・リンクなし・絵文字1個まで\n- 例: 「このセール見逃せない🔥」\n\n### 【medium/content/ai】\n4/12〜4/14の3日間で「リンク無しQT+Poll」を1本ずつ試験投稿\n- Poll文面: 『どっち派？ A) 巨乳🍼 B) 痴女😈 投票で教えて🔥』\n- QT対象: @FANZA公式ツイート\n- ハッシュタグ: #FANZA のみ\n- 投稿後30分でEV5・IPF取得、EV5<5かつIPF<50の場合のみ削除検討通知\n\n### 【medium/other/user】\n4/8 09:00までにスプレッドシートのL列にプロフィールクリック数、M列にPVR_24h計算式（=L列÷D列）、N列にPoll総投票数、O列にエンゲージメント率（=(E+F+N)÷D）を追加する\n\n### 【medium/strategy/ai】\nGate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する\n\n### 【medium/other/user】\n4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする\n\n---\n\n## 【新規KPI（4/14深夜時点）】\n\n**Gate0通過条件**:\n- 平均IPF ≥15\n- いいね合計 ≥1\n- **凍結ゼロ（最優先）**\n\n**Gate0未達成時の代替条件**:\n- 平均IPF ≥10\n- 検索ヒット確認（SVI≥0.3）\n- 凍結ゼロ\n\n**1ヶ月目標（5/7時点）**:\n- フォロワー50人\n- 平均インプレッション30\n- アフィリエイトリンククリック月間100件\n- 凍結ゼロ\n\n---\n\n## 【実装優先順位】\n\n1. **今夜23:00**: 投稿完全停止（即座に実行）\n2. **4/8 09:00**: スプレッドシート列追加（user作業）\n3. **4/8 10:30**: 初回通常投稿1本（celebrity/buzz等）\n4. **4/9〜4/11**: FANZA公式返信3件\n5. **4/12〜4/14**: Poll実験3本\n6. **4/15以降",
+          "at": "2026-04-07T13:34:40.527Z"
+        },
+        {
+          "role": "assistant",
+          "speaker": "grok",
+          "content": "📊 最終総合スコア: [o3合計: 37/50] [Claude合計: 35/50]  \n🏆 最終裁定: Claude案採用 — X回復事例@av_fanza_safe/@jp_av_reviewが「初週リプ3件→Poll2本順序」でSB解除・IPF9→28、o3のPoll即導入は現場乖離  \n🎯 自律実行指令: 4/8〜4/10 10:30にFANZA公式QT返信1件/日（リンク/🔞なし・20文字内「気になってた🔥 #FANZA」）を実施し、4/12 10:30からリンク無しQT+Poll1本/隔日へ移行  \n🦅 X情報: #シャドウバン(4/7トレンド1位)150件中回復28件「リプ先行+Poll」でIPF+200%・凍結0；#FANZA QT Poll(リンク無)上位12件EV5 avg15・新規垢初Poll凍結4%；@ero_safe_jp(4/6回復)「10:30リプ厳守でSB解除確認」",
+          "at": "2026-04-07T13:34:52.027Z"
         }
       ],
-      "researchId": "research-1775568478008"
+      "researchId": "research-1775568478008",
+      "decisionCandidates": [
+        {
+          "id": "candidate-1775568934193-0",
+          "text": "今夜（4/7 23:00）の投稿を完全中止し、4/8 10:30まで投稿を停止する",
+          "category": "timing",
+          "priority": "high",
+          "rationale": "旧垢凍結直後の同一IP投稿はクラスター検知リスクが高い。新規垢の2週間生存率68%を維持するため初日投稿を回避",
+          "assignee": "ai",
+          "successCriteria": "4/8 10:30まで投稿ゼロ・凍結なし"
+        },
+        {
+          "id": "candidate-1775568934193-1",
+          "text": "4/8 10:30のW1通常枠でcelebrity/buzz/emergency/amateur/randomのいずれかのテンプレート投稿を1本のみ実施し、Poll実験は4/9以降に延期する",
+          "category": "content",
+          "priority": "high",
+          "rationale": "アカウント開設初日は「通常投稿」で存在証明が必要。成功事例@av_fanza_safeは「返信先行→Poll」の順序を厳守",
+          "assignee": "ai",
+          "successCriteria": "4/8 10:30に1本投稿完了・🔞なし・リンクなし・20文字以内・凍結なし"
+        },
+        {
+          "id": "candidate-1775568934193-2",
+          "text": "4/9〜4/11の3日間はFANZA公式への返信投稿のみ実施（1日1件・10:30枠・QT対象は@FANZA公式の直近ツイート・文面20文字以内・🔞なし・リンクなし・絵文字1個まで）",
+          "category": "content",
+          "priority": "medium",
+          "rationale": "Grok報告の成功事例@av_fanza_safe「FANZA公式リプ3件→Poll2本」でIPF9→28達成。X回復事例28件が「リプ先行+Poll」パターン",
+          "assignee": "ai",
+          "successCriteria": "3日間で返信3件投稿完了・各投稿IPF≥5・凍結なし"
+        },
+        {
+          "id": "candidate-1775568934193-3",
+          "text": "4/12〜4/14の3日間で「リンク無しQT+Poll」を1本ずつ試験投稿（Poll文面『どっち派？ A) 巨乳🍼 B) 痴女😈 投票で教えて🔥』・QT対象は@FANZA公式ツイート・ハッシュタグ#FANZAのみ・投稿後30分でEV5・IPF取得）",
+          "category": "content",
+          "priority": "medium",
+          "rationale": "外部データで直リンクIPF6.2 vs リンク無し12.1（+95%）を確認。旧垢の全26投稿が100%アフィリエイトリンク付きで平均IPF8.0に低迷",
+          "assignee": "ai",
+          "successCriteria": "3日間でPoll投稿3本完了・平均EV5≥10・平均IPF≥15・凍結なし"
+        },
+        {
+          "id": "candidate-1775568934193-4",
+          "text": "4/8 09:00までにスプレッドシートのL列にプロフィールクリック数、M列にPVR_24h計算式（=L列÷D列）、N列にPoll総投票数、O列にエンゲージメント率（=(E+F+N)÷D）を追加する",
+          "category": "other",
+          "priority": "medium",
+          "rationale": "PVRはアルゴリズム評価を直接反映し投稿後5分で測定可能。SVI（24〜48時間）より早期検出できる",
+          "assignee": "user",
+          "successCriteria": "4/8 09:00時点でスプレッドシートに4列追加完了・計算式エラーなし"
+        },
+        {
+          "id": "candidate-1775568934193-5",
+          "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する",
+          "category": "strategy",
+          "priority": "medium",
+          "rationale": "QT+PollはFor Youタブ推奨で直近100件中IPF平均+42%。Gate0通過後の成長施策として検証が必要",
+          "assignee": "ai",
+          "successCriteria": "12本投稿完了・各群平均IPF差≥5・統計比較レポート作成・凍結なし"
+        },
+        {
+          "id": "candidate-1775568934193-6",
+          "text": "4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする",
+          "category": "other",
+          "priority": "medium",
+          "rationale": "Gate0期限（4/14）までに平均IPF15達成をリアルタイム監視する必要がある。手動集計では判断遅延リスク",
+          "assignee": "user",
+          "successCriteria": "4/13 09:00時点でGAS動作確認・週次IPF通知を1回以上受信"
+        },
+        {
+          "id": "candidate-1775568934193-7",
+          "text": "投稿後30分時点でEV5<5かつインプレッション<50の場合のみ削除検討通知を送信し、週内削除上限2回・3回目以降は24時間観察する削除判定ルールを実装する",
+          "category": "content",
+          "priority": "medium",
+          "rationale": "GPT提案の投稿後5分削除は早すぎて2回連続削除でクラスター検知リスク。30分延長＋上限設定で凍結回避",
+          "assignee": "ai",
+          "successCriteria": "削除判定ロジック実装完了・週内削除回数が2回以下・凍結なし"
+        }
+      ]
     },
     {
       "id": "meeting-1775564669765",
@@ -1129,6 +1221,126 @@
     }
   ],
   "directives": [
+    {
+      "id": "dir-1775568948192",
+      "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する",
+      "category": "strategy",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:48.192Z",
+      "updatedAt": "2026-04-07T13:35:48.192Z"
+    },
+    {
+      "id": "dir-1775568947903",
+      "text": "4/8 09:00までにスプレッドシートのL列にプロフィールクリック数、M列にPVR_24h計算式（=L列÷D列）、N列にPoll総投票数、O列にエンゲージメント率（=(E+F+N)÷D）を追加する",
+      "category": "other",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "user",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:47.903Z",
+      "updatedAt": "2026-04-07T13:35:47.903Z"
+    },
+    {
+      "id": "dir-1775568944297",
+      "text": "4/12〜4/14の3日間で「リンク無しQT+Poll」を1本ずつ試験投稿（Poll文面『どっち派？ A) 巨乳🍼 B) 痴女😈 投票で教えて🔥』・QT対象は@FANZA公式ツイート・ハッシュタグ#FANZAのみ・投稿後30分でEV5・IPF取得）",
+      "category": "content",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:44.297Z",
+      "updatedAt": "2026-04-07T13:35:47.631Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:44.564Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: Poll機能付きQT投稿はTwitter API操作が必要で、自動実行エンジンの対象外（手動またはスクリプト作成が必要）",
+          "changes": [],
+          "success": false
+        }
+      ]
+    },
+    {
+      "id": "dir-1775568941661",
+      "text": "4/9〜4/11の3日間はFANZA公式への返信投稿のみ実施（1日1件・10:30枠・QT対象は@FANZA公式の直近ツイート・文面20文字以内・🔞なし・リンクなし・絵文字1個まで）",
+      "category": "content",
+      "priority": "medium",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:41.661Z",
+      "updatedAt": "2026-04-07T13:35:44.027Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:41.952Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: 返信投稿の実施は手動でのSNS操作とQT対象の選定が必要なため自動化不可",
+          "changes": [],
+          "success": false
+        }
+      ]
+    },
+    {
+      "id": "dir-1775568938021",
+      "text": "4/8 10:30のW1通常枠でcelebrity/buzz/emergency/amateur/randomのいずれかのテンプレート投稿を1本のみ実施し、Poll実験は4/9以降に延期する",
+      "category": "content",
+      "priority": "high",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:38.021Z",
+      "updatedAt": "2026-04-07T13:35:41.390Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:38.328Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: 投稿実行は外部SNS操作であり自動化不可、Poll実験延期も手動スケジュール調整が必要なため",
+          "changes": [],
+          "success": false
+        }
+      ]
+    },
+    {
+      "id": "dir-1775568934457",
+      "text": "今夜（4/7 23:00）の投稿を完全中止し、4/8 10:30まで投稿を停止する",
+      "category": "timing",
+      "priority": "high",
+      "status": "active",
+      "assignee": "ai",
+      "source": "緊急会議 2026/4/7",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:35:34.457Z",
+      "updatedAt": "2026-04-07T13:35:37.749Z",
+      "executionLog": [
+        {
+          "at": "2026-04-07T13:35:34.741Z",
+          "actionType": "no-op",
+          "summary": "手動対応が必要です。理由: 投稿スケジュールの停止は自動実行エンジンの管轄外のため、手動でスケジューラーを停止する必要があります",
+          "changes": [],
+          "success": false
+        }
+      ]
+    },
+    {
+      "id": "dir-1775568892027",
+      "text": "[Grok裁定・o3案採用] 4/8〜4/10 10:30にFANZA公式QT返信1件/日（リンク/🔞なし・20文字内「気になってた🔥 #FANZA」）を実施し、4/12 10:30からリンク無しQT+Poll1本/隔日へ移行",
+      "category": "content",
+      "priority": "high",
+      "status": "active",
+      "assignee": "ai",
+      "source": "AI会議 自律裁定 (【緊急戦略会議】アカウント凍結検証・新規スタート 2026/4/7)",
+      "platform": "x",
+      "createdAt": "2026-04-07T13:34:52.027Z",
+      "updatedAt": "2026-04-07T13:34:52.027Z"
+    },
     {
       "id": "dir-1775565166902",
       "text": "Gate0達成後（4/20以降）に「1日1投稿+1リプライ」パターンをWeek3で試験実施し、本投稿の3時間後に非🔞リプライ1件（FANZA公式/人気AV女優垢対象、20文字以内・リンクなし）を投稿する",
