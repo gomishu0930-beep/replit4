@@ -1291,74 +1291,213 @@ function Dashboard() {
               </div>
             )}
 
-            {/* ── Threads 管理（セットアップガイド） ── */}
+            {/* ── Threads 管理（API取得ロードマップ） ── */}
             {mainTab === "admin" && (
               <>
-                <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
-                  <h2 className="text-xs font-semibold text-orange-300 uppercase tracking-wider mb-4">⚙️ Threads 接続セットアップ</h2>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        step: 1, title: "Meta開発者アカウント作成 + Threads APIアクセス申請",
-                        detail: "developers.facebook.com → アプリ作成 → Threads APIを追加 → アクセストークン取得",
-                        link: "https://developers.facebook.com/",
-                        status: "未完了",
-                      },
-                      {
-                        step: 2, title: "Amazon アソシエイト登録（3%〜10%報酬）",
-                        detail: "affiliate.amazon.co.jp → 審査申請 → トラッキングID取得（審査: 約1週間）",
-                        link: "https://affiliate.amazon.co.jp/",
-                        status: "未完了",
-                      },
-                      {
-                        step: 3, title: "楽天アフィリエイト登録（1%〜3%報酬）",
-                        detail: "affiliate.rakuten.co.jp → 無料登録 → APIキー取得（即日開始可）",
-                        link: "https://affiliate.rakuten.co.jp/",
-                        status: "未完了",
-                      },
-                    ].map(s => (
-                      <div key={s.step} className="p-3 rounded-lg bg-white/5 border border-white/8">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[10px] font-bold flex items-center justify-center shrink-0">{s.step}</span>
-                            <p className="text-xs font-semibold text-white/80">{s.title}</p>
-                          </div>
-                          <span className="text-[10px] text-red-400/80 shrink-0">{s.status}</span>
+                {/* ── タイムライン俯瞰 ── */}
+                <div className="rounded-xl border border-white/10 bg-white/3 p-4">
+                  <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">🗺️ API取得ロードマップ — 全体タイムライン</h2>
+                  <div className="relative">
+                    {/* タイムラインバー */}
+                    <div className="flex items-center gap-0 mb-2 text-[9px] text-white/30 pl-[72px]">
+                      {["今日", "D3", "W1", "W2", "W3", "W4", "M2", "M3"].map(d => (
+                        <div key={d} className="flex-1 text-center">{d}</div>
+                      ))}
+                    </div>
+                    <div className="space-y-2.5">
+                      {/* 楽天 */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-[68px] shrink-0 text-right">
+                          <span className="text-[10px] font-semibold text-emerald-400">楽天</span>
                         </div>
-                        <p className="text-[10px] text-white/40 ml-7 mb-2">{s.detail}</p>
-                        <a
-                          href={s.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-7 text-[10px] text-indigo-400 hover:text-indigo-300 underline"
-                        >
-                          {s.link} →
-                        </a>
+                        <div className="flex-1 h-5 relative rounded-full bg-white/5 overflow-hidden">
+                          <div className="absolute left-0 top-0 h-full w-[12%] bg-emerald-500/60 rounded-full flex items-center pl-2">
+                            <span className="text-[9px] text-white/90 whitespace-nowrap">登録</span>
+                          </div>
+                          <div className="absolute left-[12%] top-0 h-full w-[25%] bg-emerald-500/30 rounded-r-full flex items-center pl-2">
+                            <span className="text-[9px] text-white/60 whitespace-nowrap">即日承認</span>
+                          </div>
+                          <div className="absolute left-[37%] top-0 h-full w-[63%] bg-emerald-500/15 flex items-center pl-2">
+                            <span className="text-[9px] text-white/40 whitespace-nowrap">✅ 運用開始（今日から可能）</span>
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                      {/* Amazon */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-[68px] shrink-0 text-right">
+                          <span className="text-[10px] font-semibold text-yellow-400">Amazon</span>
+                        </div>
+                        <div className="flex-1 h-5 relative rounded-full bg-white/5 overflow-hidden">
+                          <div className="absolute left-0 top-0 h-full w-[12%] bg-yellow-500/60 rounded-full flex items-center pl-2">
+                            <span className="text-[9px] text-white/90 whitespace-nowrap">申請</span>
+                          </div>
+                          <div className="absolute left-[12%] top-0 h-full w-[26%] bg-yellow-500/30 flex items-center pl-2">
+                            <span className="text-[9px] text-white/60 whitespace-nowrap">審査 1〜2週</span>
+                          </div>
+                          <div className="absolute left-[38%] top-0 h-full w-[62%] bg-yellow-500/15 flex items-center pl-2">
+                            <span className="text-[9px] text-white/40 whitespace-nowrap">✅ 運用開始（90日以内に3件売上必須）</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Threads */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-[68px] shrink-0 text-right">
+                          <span className="text-[10px] font-semibold text-purple-400">Threads</span>
+                        </div>
+                        <div className="flex-1 h-5 relative rounded-full bg-white/5 overflow-hidden">
+                          <div className="absolute left-0 top-0 h-full w-[12%] bg-purple-500/60 rounded-full flex items-center pl-2">
+                            <span className="text-[9px] text-white/90 whitespace-nowrap">Dev登録</span>
+                          </div>
+                          <div className="absolute left-[12%] top-0 h-full w-[13%] bg-purple-500/40 flex items-center pl-2">
+                            <span className="text-[9px] text-white/60 whitespace-nowrap">アプリ</span>
+                          </div>
+                          <div className="absolute left-[25%] top-0 h-full w-[37%] bg-purple-500/25 flex items-center pl-2">
+                            <span className="text-[9px] text-white/50 whitespace-nowrap">API申請〜承認（最長M2）</span>
+                          </div>
+                          <div className="absolute left-[62%] top-0 h-full w-[38%] bg-purple-500/15 flex items-center pl-2">
+                            <span className="text-[9px] text-white/40 whitespace-nowrap">✅ 自動投稿開始</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">🔑 APIキー入力（取得後に設定）</h2>
-                  <div className="space-y-2.5">
+                {/* ── 楽天アフィリエイト ── */}
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center justify-center">1</span>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300">楽天アフィリエイト — 今日から開始</p>
+                        <p className="text-[10px] text-emerald-300/50">審査なし・即日承認・報酬1〜3%（書籍・DVD・グッズ）</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[9px] font-bold">最優先</span>
+                  </div>
+                  <div className="space-y-2 mb-3">
                     {[
-                      { label: "Threads Access Token", placeholder: "Meta開発者コンソールから取得" },
-                      { label: "Amazon Associate Tag", placeholder: "例: yourname-22" },
-                      { label: "楽天アフィリエイト ID", placeholder: "楽天アフィリエイト管理画面から取得" },
-                    ].map(f => (
-                      <div key={f.label}>
-                        <p className="text-[10px] text-white/50 mb-1">{f.label}</p>
-                        <input
-                          type="password"
-                          placeholder={f.placeholder}
-                          className="w-full text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50"
-                          disabled
-                        />
+                      { day: "今日", action: "楽天会員アカウントでログイン", url: "https://affiliate.rakuten.co.jp/", note: "既存アカウントでOK", done: false },
+                      { day: "今日", action: "「新規登録」→ サイト/SNS情報を入力（Threadsアカウント登録）", url: "", note: "Threads URLを入力", done: false },
+                      { day: "即日", action: "承認メール受信 → 管理画面でトラッキングIDを確認", url: "", note: "通常数時間以内", done: false },
+                      { day: "D1〜", action: "商品リンク生成ツールで芸能人写真集・DVDのリンクを生成", url: "https://affiliate.rakuten.co.jp/tools/", note: "1リンク＝1アフィリリンク", done: false },
+                      { day: "D2〜", action: "AIが自動でリンク挿入して投稿生成（API連携）", url: "", note: "楽天API: affiliateId設定後", done: false },
+                    ].map((s, i) => (
+                      <div key={i} className="flex gap-3 p-2.5 rounded-lg bg-white/4 border border-white/6">
+                        <span className="text-[10px] font-mono text-emerald-400/80 w-10 shrink-0 mt-0.5">{s.day}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/80">{s.action}</p>
+                          {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-400 hover:text-indigo-300 underline">{s.url}</a>}
+                          <p className="text-[10px] text-white/35 mt-0.5">{s.note}</p>
+                        </div>
+                        <span className="text-sm shrink-0">{s.done ? "✅" : "⬜"}</span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-white/25 mt-3">※ 取得後にシステムに組み込みます。現在は表示のみ（保存不可）</p>
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <p className="text-[10px] font-semibold text-emerald-300 mb-1">⚠️ 重要: 90日以内に1件成立が必要</p>
+                    <p className="text-[10px] text-emerald-300/60">楽天は90日以内に成約がないと審査落ちの場合あり。最初の1件を早期に取ることが重要。</p>
+                  </div>
+                </div>
+
+                {/* ── Amazon アソシエイト ── */}
+                <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-yellow-500/30 border border-yellow-500/40 text-yellow-300 text-[10px] font-bold flex items-center justify-center">2</span>
+                      <div>
+                        <p className="text-xs font-bold text-yellow-300">Amazon アソシエイト — 今日申請開始</p>
+                        <p className="text-[10px] text-yellow-300/50">審査1〜2週間・報酬3〜10%・Kindle/写真集/グッズ対応</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-[9px] font-bold">要申請</span>
+                  </div>
+                  <div className="space-y-2 mb-3">
+                    {[
+                      { day: "今日", action: "Amazonアカウントでサインイン → アソシエイト申請開始", url: "https://affiliate.amazon.co.jp/", note: "既存Amazonアカウントでログイン", done: false },
+                      { day: "今日", action: "サイト情報入力: ThreadsアカウントURLを「プロモーション先サイト」に登録", url: "", note: "SNSアカウントURLでOK", done: false },
+                      { day: "今日", action: "収益化の方法: 「SNSで商品を紹介して収益を得る」と記入", url: "", note: "具体的に記述するほど承認率UP", done: false },
+                      { day: "D1〜14", action: "審査期間（Amazonからメール連絡待ち）", url: "", note: "平均3〜7日・最長2週間", done: false },
+                      { day: "承認後", action: "トラッキングID（例: suguha-22）取得 → システムに設定", url: "", note: "Amazon PA-API 5.0キーも申請", done: false },
+                      { day: "承認後", action: "承認後180日以内に3件の売上が必要（失効防止）", url: "", note: "早期の成約が重要", done: false },
+                    ].map((s, i) => (
+                      <div key={i} className="flex gap-3 p-2.5 rounded-lg bg-white/4 border border-white/6">
+                        <span className="text-[10px] font-mono text-yellow-400/80 w-14 shrink-0 mt-0.5">{s.day}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/80">{s.action}</p>
+                          {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-400 hover:text-indigo-300 underline">{s.url}</a>}
+                          <p className="text-[10px] text-white/35 mt-0.5">{s.note}</p>
+                        </div>
+                        <span className="text-sm shrink-0">{s.done ? "✅" : "⬜"}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                      <p className="text-[10px] font-semibold text-yellow-300 mb-1">💰 高報酬カテゴリ</p>
+                      <p className="text-[10px] text-yellow-300/60">ファッション: 10%<br/>デジタル書籍: 8%<br/>DVD: 5%<br/>家電: 3%</p>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                      <p className="text-[10px] font-semibold text-yellow-300 mb-1">⚠️ 審査落ち防止</p>
+                      <p className="text-[10px] text-yellow-300/60">Threadsが公開状態であること。投稿が数件あること。SNSの説明に活動内容を明記。</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Threads API ── */}
+                <div className="rounded-xl border border-purple-500/25 bg-purple-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-purple-500/30 border border-purple-500/40 text-purple-300 text-[10px] font-bold flex items-center justify-center">3</span>
+                      <div>
+                        <p className="text-xs font-bold text-purple-300">Threads API (Meta) — 並行して申請</p>
+                        <p className="text-[10px] text-purple-300/50">承認まで最長2ヶ月・自動投稿に必要・最難関</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[9px] font-bold">並行申請</span>
+                  </div>
+                  <div className="space-y-2 mb-3">
+                    {[
+                      { day: "今日", action: "Meta開発者アカウント登録 (developers.facebook.com)", url: "https://developers.facebook.com/", note: "Facebookアカウント必須", done: false },
+                      { day: "今日", action: "「アプリを作成」→ 種類: 「その他」→ 「ビジネス」→ アプリ名を入力", url: "", note: "例: ThreadsBot", done: false },
+                      { day: "D1", action: "アプリに「Threads API」を追加 → 基本設定を完了", url: "https://developers.facebook.com/docs/threads", note: "Threads APIドキュメントを参照", done: false },
+                      { day: "D1", action: "「高度なアクセス」申請: threads_content_publish 権限をリクエスト", url: "", note: "ユースケースを詳細に記述すること", done: false },
+                      { day: "D2〜", action: "Metaのレビュー待ち（通常1〜8週間）", url: "", note: "却下→再申請も可能。詳細な説明が重要", done: false },
+                      { day: "承認後", action: "アクセストークン発行 → システムに設定 → 自動投稿テスト", url: "", note: "長期トークン（60日有効）を使用", done: false },
+                    ].map((s, i) => (
+                      <div key={i} className="flex gap-3 p-2.5 rounded-lg bg-white/4 border border-white/6">
+                        <span className="text-[10px] font-mono text-purple-400/80 w-14 shrink-0 mt-0.5">{s.day}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/80">{s.action}</p>
+                          {s.url && <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-400 hover:text-indigo-300 underline">{s.url}</a>}
+                          <p className="text-[10px] text-white/35 mt-0.5">{s.note}</p>
+                        </div>
+                        <span className="text-sm shrink-0">{s.done ? "✅" : "⬜"}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <p className="text-[10px] font-semibold text-purple-300 mb-1">📝 Threads API 申請のコツ</p>
+                    <p className="text-[10px] text-purple-300/60">「芸能人・エンターテインメント情報を自動でThreadsに投稿するボットを開発しています。コンテンツはAIが生成し、スパムなし・ユーザーに価値ある情報を提供します」と英語で記入すると承認率が高い。</p>
+                  </div>
+                </div>
+
+                {/* ── 今すぐやること（優先アクション） ── */}
+                <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-4">
+                  <h2 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-3">🚀 今日やること（優先順）</h2>
+                  <div className="space-y-2">
+                    {[
+                      { priority: "1st", label: "楽天アフィリエイト登録（15分・即日承認）", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                      { priority: "2nd", label: "Amazon アソシエイト申請（30分・審査待ち）", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
+                      { priority: "3rd", label: "Meta開発者アカウント作成 + Threads APIアプリ登録（1時間）", color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+                    ].map(a => (
+                      <div key={a.priority} className={`flex items-center gap-3 p-3 rounded-lg border ${a.bg}`}>
+                        <span className={`text-[10px] font-bold ${a.color} w-8 shrink-0`}>{a.priority}</span>
+                        <p className="text-[11px] text-white/80">{a.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-white/30 mt-3 text-center">APIキーが揃い次第、このダッシュボードから自動投稿が開始されます</p>
                 </div>
               </>
             )}
