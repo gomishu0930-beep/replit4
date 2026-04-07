@@ -6,6 +6,7 @@ import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet,
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
+import { collectAlgoNews } from './algo-news.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -439,6 +440,21 @@ export function startScheduler() {
       await contact.algoWeeklyBriefing(insight.briefing, insight.sampleSize);
     } catch (e: any) {
       console.error(`  ❌ [アルゴ解析] エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 月曜 08:30 JST — Xアルゴリズム最新情報収集（週次解析の翌朝）
+  cron.schedule('30 8 * * 1', async () => {
+    console.log('\n  📡 [アルゴニュース] 週次情報収集開始');
+    try {
+      const found = await collectAlgoNews();
+      const pending = found.filter(d => d.status === 'pending').length;
+      console.log(`  ✅ [アルゴニュース] ${found.length}件収集 / 要確認: ${pending}件`);
+      if (pending > 0) {
+        await contact.algoNewsAlert(pending, found.slice(0, 3));
+      }
+    } catch (e: any) {
+      console.error(`  ❌ [アルゴニュース] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

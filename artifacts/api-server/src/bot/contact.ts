@@ -246,4 +246,20 @@ export const contact = {
         ...fb.suggestions.map((s, i) => `${i + 1}. ${s}`),
       ].join('\n'),
     }),
+
+  /** Xアルゴニュース発見通知（月曜 08:30 JST 自動） */
+  algoNewsAlert: (pendingCount: number, topFindings: Array<{ title: string; confidence: string; sourceDesc: string }>) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `📡 Xアルゴ新情報: ${pendingCount}件の発見`,
+      body: [
+        `今週のXアルゴリズム情報収集で ${pendingCount}件の新発見がありました。`,
+        'ダッシュボード「📡 アルゴ解析」→「🆕 新発見」タブで確認・採否をお決めください。',
+        '',
+        '【トップ3 発見】',
+        ...topFindings.slice(0, 3).map((f, i) =>
+          `${i + 1}. [${f.confidence}] ${f.title}\n   出典: ${f.sourceDesc}`
+        ),
+      ].join('\n'),
+    }),
 };

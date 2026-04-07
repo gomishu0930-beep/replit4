@@ -143,9 +143,10 @@ export async function initStorage(): Promise<void> {
   manualFeedbackCache    = await readJson<ManualFeedbackData>('manual-feedback.json', { feedbacks: [] });
   rebrandlyCache         = await readJson<RebrandlyData>('rebrandly.json', { links: [], lastSyncedAt: null });
   algoInsightCache       = await readJson<AlgoInsightData>('algo-insights.json', { insights: [] });
+  algoDiscoveryCache     = await readJson<AlgoDiscoveryData>('algo-discoveries.json', { discoveries: [], lastSearchAt: null });
   initialized = true;
   console.log(
-    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件 / Rebrandlyリンク: ${rebrandlyCache.links.length}件 / アルゴ解析: ${algoInsightCache.insights.length}件)`,
+    `  ✅ ストレージ初期化完了 (投稿: ${postsCache.posts.length}件 / 外部パターン: ${extCache.patterns.length}件 / 動的テンプレート: ${dynTemplatesCache.templates.length}件 / スナップショット: ${snapshotCache.snapshots.length}件 / 観察ログ: ${observationsCache.observations.length}件 / 手動FB: ${manualFeedbackCache.feedbacks.length}件 / Rebrandlyリンク: ${rebrandlyCache.links.length}件 / アルゴ解析: ${algoInsightCache.insights.length}件 / アルゴ発見: ${algoDiscoveryCache.discoveries.length}件)`,
   );
 }
 
@@ -589,5 +590,74 @@ export function getCelebPostedDate(): string {
 export function setCelebPostedDate(date: string): void {
   schedulerStateCache.celebPostedDate = date;
   saveSchedulerStateAsync();
+}
+
+// ─── アルゴリズム発見情報 ───────────────────────────────────────────────────────
+
+export interface AlgoDiscovery {
+  id: string;
+  discoveredAt: string;
+  title: string;
+  detail: string;
+  sourceUrl: string;
+  sourceDesc: string;
+  confidence: 'confirmed' | 'likely' | 'rumored';
+  category: 'scoring' | 'pipeline' | 'nsfw' | 'other';
+  status: 'pending' | 'adopted' | 'rejected';
+  searchQuery: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+}
+
+interface AlgoDiscoveryData {
+  discoveries: AlgoDiscovery[];
+  lastSearchAt: string | null;
+}
+
+let algoDiscoveryCache: AlgoDiscoveryData = { discoveries: [], lastSearchAt: null };
+
+function saveAlgoDiscoveryAsync() {
+  writeJson('algo-discoveries.json', algoDiscoveryCache).catch((e: any) =>
+    console.warn('  ⚠ algo-discoveries.json 保存失敗:', e.message),
+  );
+}
+
+export function saveAlgoDiscovery(discovery: AlgoDiscovery): void {
+  // 重複チェック: 同じtitleが既にある場合はスキップ
+  const exists = algoDiscoveryCache.discoveries.some(d => d.title === discovery.title);
+  if (exists) return;
+  algoDiscoveryCache.discoveries.unshift(discovery);
+  if (algoDiscoveryCache.discoveries.length > 100) {
+    algoDiscoveryCache.discoveries = algoDiscoveryCache.discoveries.slice(0, 100);
+  }
+  algoDiscoveryCache.lastSearchAt = new Date().toISOString();
+  saveAlgoDiscoveryAsync();
+}
+
+export function getAlgoDiscoveries(status?: AlgoDiscovery['status']): AlgoDiscovery[] {
+  if (!status) return algoDiscoveryCache.discoveries;
+  return algoDiscoveryCache.discoveries.filter(d => d.status === status);
+}
+
+export function updateAlgoDiscoveryStatus(
+  id: string,
+  status: AlgoDiscovery['status'],
+  note?: string,
+): boolean {
+  const d = algoDiscoveryCache.discoveries.find(x => x.id === id);
+  if (!d) return false;
+  d.status = status;
+  d.reviewedAt = new Date().toISOString();
+  if (note) d.reviewNote = note;
+  saveAlgoDiscoveryAsync();
+  return true;
+}
+
+export function getAlgoDiscoveryMeta(): { lastSearchAt: string | null; pendingCount: number; adoptedCount: number } {
+  return {
+    lastSearchAt: algoDiscoveryCache.lastSearchAt,
+    pendingCount: algoDiscoveryCache.discoveries.filter(d => d.status === 'pending').length,
+    adoptedCount: algoDiscoveryCache.discoveries.filter(d => d.status === 'adopted').length,
+  };
 }
 

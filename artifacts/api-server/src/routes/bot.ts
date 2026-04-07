@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
+import { collectAlgoNews } from '../bot/algo-news.js';
 import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
@@ -228,6 +229,34 @@ router.post('/bot/campaign-ids/discover', async (_req, res) => {
 
 router.get('/bot/algo-kb', (_req, res) => {
   res.json(X_ALGO_KB);
+});
+
+// アルゴ発見情報 CRUD
+router.get('/bot/algo-discoveries', (_req, res) => {
+  res.json({
+    meta: getAlgoDiscoveryMeta(),
+    discoveries: getAlgoDiscoveries(),
+  });
+});
+
+router.post('/bot/algo-discoveries/search', async (_req, res) => {
+  try {
+    const found = await collectAlgoNews();
+    res.json({ ok: true, found: found.length, discoveries: found });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.patch('/bot/algo-discoveries/:id', (req, res) => {
+  const { status, note } = req.body as { status: string; note?: string };
+  const validStatuses = ['pending', 'adopted', 'rejected'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'invalid status' });
+  }
+  const ok = updateAlgoDiscoveryStatus(req.params.id, status as any, note);
+  if (!ok) return res.status(404).json({ error: 'not found' });
+  res.json({ ok: true });
 });
 
 router.get('/bot/algo-insights', (_req, res) => {

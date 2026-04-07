@@ -899,6 +899,8 @@ function Dashboard() {
 
   const [algoRunning, setAlgoRunning] = useState(false);
   const [algoKbOpen, setAlgoKbOpen] = useState(false);
+  const [algoNewsSearching, setAlgoNewsSearching] = useState(false);
+  const [algoDiscoveryTab, setAlgoDiscoveryTab] = useState<'pending' | 'adopted' | 'all'>('pending');
   const { data: algoKbData } = useQuery<{
     version: string;
     sources: string[];
@@ -911,6 +913,22 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/algo-kb`).then((r) => r.json()),
     staleTime: Infinity,
   });
+  const { data: discoveryData, refetch: refetchDiscoveries } = useQuery<{
+    meta: { lastSearchAt: string | null; pendingCount: number; adoptedCount: number };
+    discoveries: Array<{
+      id: string; discoveredAt: string; title: string; detail: string;
+      sourceUrl: string; sourceDesc: string;
+      confidence: 'confirmed' | 'likely' | 'rumored';
+      category: 'scoring' | 'pipeline' | 'nsfw' | 'other';
+      status: 'pending' | 'adopted' | 'rejected';
+      reviewNote?: string;
+    }>;
+  }>({
+    queryKey: ["algo-discoveries"],
+    queryFn: () => fetch(`${API}/api/bot/algo-discoveries`).then((r) => r.json()),
+    refetchInterval: 300000,
+  });
+
   const { data: algoData, refetch: refetchAlgo } = useQuery<{
     latest: {
       generatedAt: string;
@@ -3369,6 +3387,123 @@ function Dashboard() {
               )}
             </div>
           )}
+
+          {/* 🆕 新発見管理 */}
+          <div className="border border-white/10 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-white/5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-amber-400">🆕 アルゴ新発見 情報管理</span>
+                {(discoveryData?.meta?.pendingCount ?? 0) > 0 && (
+                  <span className="text-[10px] bg-amber-500 text-black rounded-full px-1.5 py-0.5 font-bold">
+                    {discoveryData!.meta.pendingCount} 件要確認
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {discoveryData?.meta?.lastSearchAt && (
+                  <span className="text-[10px] text-white/30">
+                    最終: {new Date(discoveryData.meta.lastSearchAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+                <button
+                  onClick={async () => {
+                    setAlgoNewsSearching(true);
+                    try {
+                      const res = await fetch(`${API}/api/bot/algo-discoveries/search`, { method: "POST" });
+                      const d = await res.json();
+                      if (d.error) alert(`エラー: ${d.error}`);
+                      else { await refetchDiscoveries(); }
+                    } catch { alert("検索失敗"); }
+                    setAlgoNewsSearching(false);
+                  }}
+                  disabled={algoNewsSearching}
+                  className="text-[10px] bg-amber-600/20 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-600/30 disabled:opacity-50"
+                >
+                  {algoNewsSearching ? "⏳ 検索中..." : "🔍 今すぐ検索"}
+                </button>
+              </div>
+            </div>
+
+            <div className="px-3 pb-3">
+              {/* サブタブ */}
+              <div className="flex gap-2 mt-2 mb-3">
+                {([["pending", "⏳ 未確認"], ["adopted", "✅ 採用済み"], ["all", "📋 全件"]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setAlgoDiscoveryTab(v)}
+                    className={`text-[10px] px-2 py-1 rounded ${algoDiscoveryTab === v ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-white/40 hover:text-white/60"}`}
+                  >
+                    {label}
+                    {v === 'pending' && (discoveryData?.meta?.pendingCount ?? 0) > 0 && ` (${discoveryData!.meta.pendingCount})`}
+                    {v === 'adopted' && (discoveryData?.meta?.adoptedCount ?? 0) > 0 && ` (${discoveryData!.meta.adoptedCount})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* 発見リスト */}
+              {(() => {
+                const all = discoveryData?.discoveries ?? [];
+                const filtered = algoDiscoveryTab === 'all' ? all
+                  : all.filter(d => d.status === algoDiscoveryTab);
+                if (filtered.length === 0) {
+                  return (
+                    <p className="text-xs text-white/30 py-2 text-center">
+                      {algoDiscoveryTab === 'pending' ? "未確認の発見なし（毎週月曜 08:30 自動収集）" : "なし"}
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {filtered.map((d) => {
+                      const confColor = d.confidence === 'confirmed' ? 'text-green-400' : d.confidence === 'likely' ? 'text-yellow-400' : 'text-red-400';
+                      const catLabel = { scoring: '⚖️', pipeline: '🔀', nsfw: '🔞', other: '📌' }[d.category];
+                      return (
+                        <div key={d.id} className={`bg-white/5 border rounded p-2 space-y-1.5 ${d.status === 'adopted' ? 'border-green-500/30' : d.status === 'rejected' ? 'border-white/5 opacity-40' : 'border-amber-500/20'}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <span className="text-[10px]">{catLabel}</span>
+                              <span className={`text-[10px] font-bold ${confColor}`}>[{d.confidence}]</span>
+                              <p className="text-xs text-white/80 font-semibold leading-tight truncate">{d.title}</p>
+                            </div>
+                            {d.status === 'pending' && (
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  onClick={async () => {
+                                    await fetch(`${API}/api/bot/algo-discoveries/${d.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "adopted" }) });
+                                    refetchDiscoveries();
+                                  }}
+                                  className="text-[10px] bg-green-600/20 border border-green-500/30 rounded px-1.5 py-0.5 hover:bg-green-600/40"
+                                >採用</button>
+                                <button
+                                  onClick={async () => {
+                                    await fetch(`${API}/api/bot/algo-discoveries/${d.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "rejected" }) });
+                                    refetchDiscoveries();
+                                  }}
+                                  className="text-[10px] bg-red-600/10 border border-red-500/20 rounded px-1.5 py-0.5 hover:bg-red-600/20"
+                                >棄却</button>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-white/50 leading-relaxed">{d.detail}</p>
+                          {d.sourceUrl ? (
+                            <a href={d.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline block truncate">
+                              🔗 {d.sourceDesc || d.sourceUrl}
+                            </a>
+                          ) : (
+                            <p className="text-[10px] text-white/30">{d.sourceDesc}</p>
+                          )}
+                          <p className="text-[10px] text-white/20">
+                            発見: {new Date(d.discoveredAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric" })}
+                            {d.reviewedAt && ` / 確認: ${new Date(d.reviewedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric" })}`}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
 
           {/* 統計サマリー（常に表示） */}
           {algoData?.stats && (
