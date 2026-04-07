@@ -83,6 +83,7 @@ export interface MeetingDirective {
   status: 'active' | 'completed' | 'cancelled';
   assignee: Assignee;
   source: string;
+  platform: 'x' | 'threads';  // どのプラットフォーム会議で決定されたか
   createdAt: string;
   updatedAt: string;
   executionLog?: DirectiveExecution[];  // 自動実行の履歴
@@ -643,6 +644,7 @@ export async function addDirective(
   priority: MeetingDirective['priority'],
   source: string,
   assignee: Assignee = 'user',
+  platform: 'x' | 'threads' = 'x',
 ): Promise<MeetingDirective> {
   const now = new Date().toISOString();
   const directive: MeetingDirective = {
@@ -651,21 +653,33 @@ export async function addDirective(
     status: 'active',
     assignee,
     source,
+    platform,
     createdAt: now,
     updatedAt: now,
   };
   cache.directives.unshift(directive);
   await saveData();
-  console.log(`  📌 決定事項保存 [${category}/${priority}]: ${text.slice(0, 60)}`);
+  console.log(`  📌 決定事項保存 [${platform}/${category}/${priority}]: ${text.slice(0, 60)}`);
   return directive;
 }
 
 export function getDirectives(): MeetingDirective[] {
-  return cache.directives;
+  // platformフィールドがない旧データは 'x' として扱う（マイグレーション）
+  return cache.directives.map(d => ({ ...d, platform: d.platform ?? 'x' }));
 }
 
 export function getActiveDirectives(): MeetingDirective[] {
-  return cache.directives.filter((d) => d.status === 'active');
+  return getDirectives().filter((d) => d.status === 'active');
+}
+
+/** X専用の自動実行対象 — Threadsの決定事項を誤ってXボットに適用させない */
+export function getXActiveDirectives(): MeetingDirective[] {
+  return getDirectives().filter((d) => d.status === 'active' && (d.platform ?? 'x') === 'x');
+}
+
+/** Threads専用の決定事項 */
+export function getThreadsActiveDirectives(): MeetingDirective[] {
+  return getDirectives().filter((d) => d.status === 'active' && d.platform === 'threads');
 }
 
 export async function updateDirectiveStatus(id: string, status: MeetingDirective['status']): Promise<MeetingDirective | null> {

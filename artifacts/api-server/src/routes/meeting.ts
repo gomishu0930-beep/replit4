@@ -151,16 +151,17 @@ router.get('/bot/meeting/directives', (_req, res) => {
 });
 
 router.post('/bot/meeting/directives', async (req, res) => {
-  const { text, category = 'other', priority = 'medium', source = '会議室', assignee = 'user' } = req.body ?? {};
+  const { text, category = 'other', priority = 'medium', source = '会議室', assignee = 'user', platform = 'x' } = req.body ?? {};
   if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
   const validCats: MeetingDirective['category'][] = ['strategy', 'content', 'timing', 'recovery', 'other'];
   const validPris: MeetingDirective['priority'][] = ['high', 'medium', 'low'];
   const validAssignees: Assignee[] = ['user', 'others', 'ai'];
-  if (!validCats.includes(category) || !validPris.includes(priority) || !validAssignees.includes(assignee)) {
-    res.status(400).json({ error: '無効な category、priority または assignee' }); return;
+  const validPlatforms: Array<'x' | 'threads'> = ['x', 'threads'];
+  if (!validCats.includes(category) || !validPris.includes(priority) || !validAssignees.includes(assignee) || !validPlatforms.includes(platform)) {
+    res.status(400).json({ error: '無効な category、priority、assignee または platform' }); return;
   }
   try {
-    res.json(await addDirective(text.trim(), category, priority, source, assignee));
+    res.json(await addDirective(text.trim(), category, priority, source, assignee, platform));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

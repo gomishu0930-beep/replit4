@@ -156,7 +156,7 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
     if (candidate.assignee === 'ai') {
       // ── AIタスク: 即時実行 ──
       const directive = await addDirective(
-        candidate.text, candidate.category, candidate.priority, sourceLabel, 'ai',
+        candidate.text, candidate.category, candidate.priority, sourceLabel, 'ai', 'x',
       );
       try {
         const execution = await executeDirective(directive);
@@ -174,7 +174,7 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
     } else {
       // ── ユーザー/外部タスク: 保存して通知 ──
       await addDirective(
-        candidate.text, candidate.category, candidate.priority, sourceLabel, 'user',
+        candidate.text, candidate.category, candidate.priority, sourceLabel, 'user', 'x',
       );
       manualItems.push({
         text: candidate.text,

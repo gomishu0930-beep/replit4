@@ -3206,6 +3206,7 @@ function Dashboard() {
                   priority: c.priority,
                   assignee: c.assignee ?? "user",
                   source: meetingSession ? `会議: ${meetingSession.title}` : "会議室",
+                  platform,  // 現在のプラットフォーム（x or threads）を付与
                 }),
               });
               await refetchDirectives();
@@ -3250,7 +3251,7 @@ function Dashboard() {
               const res = await fetch(`${API}/api/bot/meeting/directives`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: dirModal.text, category: dirForm.category, priority: dirForm.priority, assignee: assignee, source: dirModal.source }),
+                body: JSON.stringify({ text: dirModal.text, category: dirForm.category, priority: dirForm.priority, assignee: assignee, source: dirModal.source, platform }),
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "エラー");
@@ -3748,6 +3749,11 @@ function Dashboard() {
                                         <p className="text-[11px] text-white/85 leading-snug">{d.text}</p>
                                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                           <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
+                                          {/* プラットフォームバッジ：X/Threadsの決定事項を視覚的に分離 */}
+                                          {(d.platform ?? "x") === "x"
+                                            ? <span className="text-[9px] px-1.5 py-0.5 rounded border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold">𝕏 X</span>
+                                            : <span className="text-[9px] px-1.5 py-0.5 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 font-bold">🪡 Threads</span>
+                                          }
                                           <span className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/8 text-emerald-400">● 実施中</span>
                                           <span className="text-[9px] text-white/25">{d.source}</span>
                                           {lastExec && (

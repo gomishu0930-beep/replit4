@@ -8,7 +8,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { getActiveDirectives, saveDirectiveExecution, updateDirectiveStatus, addDirective } from './meeting.js';
+import { getXActiveDirectives, saveDirectiveExecution, updateDirectiveStatus, addDirective } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
 import { getStats, getPostsAfter } from './storage.js';
 import { patchStrategyConfig } from './strategy.js';
@@ -46,17 +46,18 @@ export interface AutoExecResult {
  * 毎朝 07:30 JST にスケジューラーから呼び出す
  */
 export async function runAutoDirectiveExecution(): Promise<AutoExecResult> {
-  const allDirectives = getActiveDirectives();
+  // ⚠️ X専用指令のみ取得。Threadsの決定事項はXボットに適用しない（platform分離）
+  const allDirectives = getXActiveDirectives();
   const directives = allDirectives.filter(d => (d.assignee ?? 'ai') === 'ai');
   const userSkipped = allDirectives.filter(d => (d.assignee ?? 'ai') !== 'ai');
   const runAt = new Date().toISOString();
 
   if (directives.length === 0) {
-    console.log(`  ✅ [自律実行] AI担当指令なし — スキップ (user担当: ${userSkipped.length}件は手動確認待ち)`);
+    console.log(`  ✅ [自律実行] X担当AI指令なし — スキップ (user担当: ${userSkipped.length}件は手動確認待ち)`);
     return { runAt, total: allDirectives.length, executed: 0, succeeded: 0, skipped: userSkipped.length, results: [] };
   }
 
-  console.log(`\n  🤖 [自律実行] AI担当 ${directives.length}件を処理開始... (user担当 ${userSkipped.length}件はスキップ)`);
+  console.log(`\n  🤖 [自律実行・X専用] AI担当 ${directives.length}件を処理開始... (user担当 ${userSkipped.length}件はスキップ)`);
 
   const results: AutoExecResult['results'] = [];
   let executed = 0, succeeded = 0, skipped = userSkipped.length;
