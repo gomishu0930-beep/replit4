@@ -105,7 +105,17 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
 
   // 3. 決定事項抽出
   console.log('  📋 [自律会議] 決定事項を抽出中...');
-  const candidates = await extractDecisions(session.id);
+  let candidates: Awaited<ReturnType<typeof extractDecisions>> = [];
+  try {
+    candidates = await extractDecisions(session.id);
+  } catch (e: any) {
+    console.error('  ❌ [自律会議] 決定事項抽出失敗:', e.message);
+    return {
+      meetingId: session.id, title, runAt, topic,
+      totalDecisions: 0, autoExecuted: [], manualItems: [],
+      duration_ms: Date.now() - startAt,
+    };
+  }
   console.log(`  → ${candidates.length}件の決定事項を検出`);
 
   const autoExecuted: AutoMeetingResult['autoExecuted'] = [];

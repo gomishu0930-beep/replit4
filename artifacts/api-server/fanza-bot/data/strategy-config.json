@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 6,
+  "monitorIntervalHours": 5,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 195,
-    "avgNewPatterns": 195.3313277821265,
-    "totalCycles": 102
+    "avgNewPatterns": 195.23192944748854,
+    "totalCycles": 103
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 24h）は最適か？",
+      "question": "外部情報の収集間隔（現在 6h）は最適か？",
       "status": "adjusted",
-      "finding": "102サイクル実績 / 平均新規パターン 195.3件/サイクル",
-      "adjustment": "監視間隔を 24h → 6h に短縮（平均新規パターン 195.3件/サイクル）",
-      "testedAt": "2026-04-07T08:02:26.460Z"
+      "finding": "103サイクル実績 / 平均新規パターン 195.2件/サイクル",
+      "adjustment": "監視間隔を 6h → 5h に短縮（平均新規パターン 195.2件/サイクル）",
+      "testedAt": "2026-04-07T08:17:31.283Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "confirmed",
       "finding": "直近 12件の平均スコア 1.2 vs 以前 1.0 (+16.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-07T08:02:26.461Z"
+      "testedAt": "2026-04-07T08:17:31.383Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 12時 (avg 1.3) / 最低スロット: 20時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-07T08:02:26.461Z"
+      "testedAt": "2026-04-07T08:17:31.383Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-07T08:17:31.383Z",
+      "cycle": 103,
+      "decisions": [
+        "監視間隔を 6h → 5h に短縮（平均新規パターン 195.2件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-07T08:02:26.461Z",
       "cycle": 102,
@@ -452,15 +459,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-06T09:37:53.302Z",
-      "cycle": 61,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-07T08:02:26.461Z",
-  "version": 104
+  "lastEvaluatedAt": "2026-04-07T08:17:31.383Z",
+  "version": 105
 }

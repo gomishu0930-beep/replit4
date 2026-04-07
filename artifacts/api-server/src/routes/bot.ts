@@ -302,14 +302,38 @@ router.get('/bot/autonomy/status', (_req, res) => {
     autonomyGrantedAt: AUTONOMY_GRANTED_AT,
     isAutonomous: true,
     features: [
-      { key: 'directive_auto_exec', label: '会議室決定事項の自動実行', schedule: '毎朝 07:30 JST', enabled: true },
-      { key: 'algo_auto_apply',    label: 'アルゴ推奨の自動戦略適用', schedule: '日曜 23:30 JST（アルゴ解析後）', enabled: true },
-      { key: 'ab_test_decide',     label: 'A/Bテスト自動判定 (W1 vs W2)', schedule: 'W2終了後 月曜 09:00 JST', enabled: true },
+      { key: 'auto_meeting',       label: '週次AI自律会議',             schedule: '月曜 04:00 JST', enabled: true },
+      { key: 'directive_auto_exec', label: 'AI担当指令の自動実行',      schedule: '毎朝 07:30 JST', enabled: true },
+      { key: 'algo_auto_apply',    label: 'アルゴ推奨の自動戦略適用',   schedule: '日曜 23:30 JST', enabled: true },
+      { key: 'ab_test_decide',     label: 'A/Bテスト自動判定',          schedule: 'W2後 月曜 09:00 JST', enabled: true },
     ],
   });
 });
 
-router.post('/bot/autonomy/run-directives', async (_req, res) => {
+// ─── 自律API用: 認証ミドルウェア ─────────────────────────────────────────────
+// 同一ドメイン（ダッシュボード）からのリクエスト、またはx-admin-tokenヘッダーを許可
+function requireAdminToken(req: any, res: any, next: any) {
+  // 1. トークン認証（外部ツール等）
+  const token = req.headers['x-admin-token'] as string | undefined;
+  const secret = process.env.SESSION_SECRET;
+  if (secret && token && token === secret) { return next(); }
+
+  // 2. 同一オリジン確認（ダッシュボードからのブラウザリクエスト）
+  const origin = req.headers.origin as string | undefined;
+  const referer = req.headers.referer as string | undefined;
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DEPLOYMENT_DOMAIN;
+  if (replitDomain) {
+    const isSameOrigin = (origin?.includes(replitDomain) || referer?.includes(replitDomain));
+    if (isSameOrigin) { return next(); }
+  }
+
+  // 3. 開発環境は許可
+  if (process.env.NODE_ENV === 'development') { return next(); }
+
+  res.status(401).json({ error: '認証が必要です' });
+}
+
+router.post('/bot/autonomy/run-directives', requireAdminToken, async (_req, res) => {
   try {
     console.log('  🤖 [API] 手動トリガー: 会議室決定事項の自動実行開始');
     const result = await runAutoDirectiveExecution();
@@ -319,7 +343,7 @@ router.post('/bot/autonomy/run-directives', async (_req, res) => {
   }
 });
 
-router.post('/bot/autonomy/run-meeting', async (req, res) => {
+router.post('/bot/autonomy/run-meeting', requireAdminToken, async (req, res) => {
   try {
     console.log('  🤝 [API] 手動トリガー: 自律AI会議開始');
     const customTopic = req.body?.topic as string | undefined;
@@ -330,7 +354,7 @@ router.post('/bot/autonomy/run-meeting', async (req, res) => {
   }
 });
 
-router.post('/bot/autonomy/run-ab-test', async (_req, res) => {
+router.post('/bot/autonomy/run-ab-test', requireAdminToken, async (_req, res) => {
   try {
     console.log('  🧪 [API] 手動トリガー: A/Bテスト自動判定開始');
     const decision = await runABTestDecision();

@@ -41,22 +41,25 @@ export interface AutoExecResult {
 // ─── 1. 会議室決定事項の完全自動実行 ─────────────────────────────────────────
 
 /**
- * 全アクティブ指令を自動実行（担当者問わず全権委任モード）
+ * AI担当のアクティブ指令のみを自動実行
+ * user/others 担当はスキップ（ユーザーが手動で確認するタスク）
  * 毎朝 07:30 JST にスケジューラーから呼び出す
  */
 export async function runAutoDirectiveExecution(): Promise<AutoExecResult> {
-  const directives = getActiveDirectives();
+  const allDirectives = getActiveDirectives();
+  const directives = allDirectives.filter(d => (d.assignee ?? 'ai') === 'ai');
+  const userSkipped = allDirectives.filter(d => (d.assignee ?? 'ai') !== 'ai');
   const runAt = new Date().toISOString();
 
   if (directives.length === 0) {
-    console.log('  ✅ [自律実行] アクティブ指令なし — スキップ');
-    return { runAt, total: 0, executed: 0, succeeded: 0, skipped: 0, results: [] };
+    console.log(`  ✅ [自律実行] AI担当指令なし — スキップ (user担当: ${userSkipped.length}件は手動確認待ち)`);
+    return { runAt, total: allDirectives.length, executed: 0, succeeded: 0, skipped: userSkipped.length, results: [] };
   }
 
-  console.log(`\n  🤖 [自律実行] ${directives.length}件の指令を処理開始...`);
+  console.log(`\n  🤖 [自律実行] AI担当 ${directives.length}件を処理開始... (user担当 ${userSkipped.length}件はスキップ)`);
 
   const results: AutoExecResult['results'] = [];
-  let executed = 0, succeeded = 0, skipped = 0;
+  let executed = 0, succeeded = 0, skipped = userSkipped.length;
 
   for (const directive of directives) {
     try {
