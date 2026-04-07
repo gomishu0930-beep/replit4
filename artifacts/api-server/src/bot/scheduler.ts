@@ -48,7 +48,16 @@ async function postItem(item: any, type: string, label: string) {
   // ツイート→リプライ間：30〜90秒待機（人間的な間隔）
   await randomSleep(30, 90);
 
-  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
+  // スコア閾値：レビュー平均4.3点以上 かつ 25件以上の場合のみRebrandly自動登録
+  const reviewAvg = parseFloat(item.review?.average ?? '0');
+  const reviewCount = item.review?.count ?? 0;
+  const isHighScore = reviewAvg >= 4.3 && reviewCount >= 25;
+  const affiliateURL = await resolveShortUrl(
+    item.affiliateURL ?? '',
+    isHighScore ? (item.content_id ?? item.id) : undefined,
+    isHighScore ? item.title : undefined,
+  );
+  if (!isHighScore) console.log(`  ℹ️  [Rebrandly] 低スコア (★${reviewAvg}/${reviewCount}件) → 元のURLを使用`);
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   // リプライ1→2間：20〜60秒待機
@@ -114,7 +123,15 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
 
   // リプライ②：アフィリエイトリンク（20〜60秒後）
   await randomSleep(20, 60);
-  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
+  const reviewAvg2 = parseFloat(item.review?.average ?? '0');
+  const reviewCount2 = item.review?.count ?? 0;
+  const isHighScore2 = reviewAvg2 >= 4.3 && reviewCount2 >= 25;
+  const affiliateURL = await resolveShortUrl(
+    item.affiliateURL ?? '',
+    isHighScore2 ? (item.content_id ?? item.id) : undefined,
+    isHighScore2 ? item.title : undefined,
+  );
+  if (!isHighScore2) console.log(`  ℹ️  [Rebrandly] 低スコア (★${reviewAvg2}/${reviewCount2}件) → 元のURLを使用`);
   await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   recordPost({ tweetId, replyId: introReplyId, item, text: mainText, type: 'celebrity' });
