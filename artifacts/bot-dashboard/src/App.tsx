@@ -907,6 +907,22 @@ function Dashboard() {
     refetchInterval: 300000,
   });
 
+  // 自律モードステート
+  const { data: autonomyData } = useQuery<{
+    autonomyGrantedAt: string;
+    isAutonomous: boolean;
+    features: Array<{ key: string; label: string; schedule: string; enabled: boolean }>;
+  }>({
+    queryKey: ["autonomy-status"],
+    queryFn: () => fetch(`${API}/api/bot/autonomy/status`).then((r) => r.json()),
+    staleTime: Infinity,
+  });
+  const [autoExecRunning, setAutoExecRunning] = useState(false);
+  const [autoExecResult, setAutoExecResult] = useState<{
+    total: number; executed: number; succeeded: number; skipped: number;
+    results: Array<{ id: string; text: string; actionType: string; result: string; success: boolean }>;
+  } | null>(null);
+
   const [algoRunning, setAlgoRunning] = useState(false);
   const [algoKbOpen, setAlgoKbOpen] = useState(false);
   const [algoNewsSearching, setAlgoNewsSearching] = useState(false);
@@ -1070,6 +1086,73 @@ function Dashboard() {
         {/* ════════════════════ 概要タブ ════════════════════ */}
         {tab === "overview" && (
           <>
+            {/* 🤖 自律モードパネル */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🤖</span>
+                  <div>
+                    <h2 className="text-sm font-bold text-emerald-300">自律モード: 完全委任</h2>
+                    <p className="text-[10px] text-white/40">
+                      {autonomyData?.autonomyGrantedAt
+                        ? `権限付与: ${new Date(autonomyData.autonomyGrantedAt).toLocaleDateString("ja-JP")}`
+                        : "権限確認中..."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setAutoExecRunning(true);
+                    setAutoExecResult(null);
+                    try {
+                      const res = await fetch(`${API}/api/bot/autonomy/run-directives`, { method: "POST" });
+                      const data = await res.json();
+                      if (data.ok) setAutoExecResult(data.result);
+                    } finally { setAutoExecRunning(false); }
+                  }}
+                  disabled={autoExecRunning}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                >
+                  {autoExecRunning ? "実行中..." : "▶ 今すぐ実行"}
+                </button>
+              </div>
+
+              {/* 自律機能リスト */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(autonomyData?.features ?? [
+                  { label: "会議室決定の自動実行", schedule: "毎朝 07:30 JST", enabled: true },
+                  { label: "アルゴ推奨の自動適用", schedule: "日曜 23:30 JST", enabled: true },
+                  { label: "A/Bテスト自動判定", schedule: "W2終了後 月曜 09:00", enabled: true },
+                ]).map((f) => (
+                  <div key={f.label} className="bg-white/3 rounded-lg p-2.5 border border-white/8">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                      <span className="text-[11px] font-medium text-white/80">{f.label}</span>
+                    </div>
+                    <span className="text-[10px] text-white/35">{f.schedule}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* 実行結果 */}
+              {autoExecResult && (
+                <div className="mt-1 bg-black/20 rounded-lg p-3 space-y-1.5">
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-white/60">処理: <strong className="text-white">{autoExecResult.total}件</strong></span>
+                    <span className="text-emerald-400">成功: <strong>{autoExecResult.succeeded}</strong></span>
+                    <span className="text-white/40">手動: {autoExecResult.skipped}</span>
+                  </div>
+                  {autoExecResult.results.slice(0, 4).map((r, i) => (
+                    <div key={i} className={`text-[10px] flex items-start gap-1.5 ${r.success ? "text-emerald-300" : r.actionType === "no-op" ? "text-white/30" : "text-amber-300"}`}>
+                      <span>{r.success ? "✅" : r.actionType === "no-op" ? "↩" : "⚠"}</span>
+                      <span className="line-clamp-1">{r.text.slice(0, 45)}…</span>
+                      <span className="text-white/30 flex-shrink-0">({r.result.slice(0, 20)})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* アクティブ決定事項バナー */}
             {activeDirectives.length > 0 && (
               <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/8 p-4">

@@ -262,4 +262,12 @@ export const contact = {
         ),
       ].join('\n'),
     }),
+
+  /** 🤖 自律実行エンジン — 汎用システム通知 */
+  systemAlert: (title: string, body: string) =>
+    notifyAlert({
+      level: 'INFO',
+      title: `🤖 ${title}`,
+      body,
+    }),
 };

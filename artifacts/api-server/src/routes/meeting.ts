@@ -185,7 +185,7 @@ router.post('/bot/meeting/directives/:id/execute', async (req, res) => {
   const directives = getDirectives();
   const directive = directives.find((d) => d.id === req.params.id);
   if (!directive) { res.status(404).json({ error: '見つかりません' }); return; }
-  if (directive.assignee !== 'ai') { res.status(400).json({ error: 'ai担当のディレクティブのみ自動実行できます' }); return; }
+  // 全権委任モード: 担当者問わず全ディレクティブ自動実行可能
 
   try {
     const execution = await executeDirective(directive);

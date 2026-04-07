@@ -7,6 +7,7 @@ import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getS
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
+import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision } from './auto-execute.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -430,16 +431,50 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
-  // 日曜 23:30 JST — Xアルゴリズム週次自動解析（月曜朝のレポート前に完了）
+  // 毎朝 07:30 JST — 🤖 会議室決定事項の完全自動実行（全権委任モード）
+  cron.schedule('30 7 * * *', async () => {
+    console.log('\n  🤖 [自律実行] 会議室決定事項の自動実行開始...');
+    try {
+      const result = await runAutoDirectiveExecution();
+      console.log(`  ✅ [自律実行] 完了: ${result.succeeded}/${result.total}件成功 (skip:${result.skipped})`);
+    } catch (e: any) {
+      console.error(`  ❌ [自律実行] エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 日曜 23:30 JST — Xアルゴリズム週次自動解析 + 推奨自動適用
   cron.schedule('30 23 * * 0', async () => {
     console.log('\n  🔬 [アルゴ解析] 週次自動実行開始');
     try {
       const insight = await runAlgoAnalysis();
       console.log('  ✅ [アルゴ解析] 完了');
-      // ブリーフィングを通知
       await contact.algoWeeklyBriefing(insight.briefing, insight.sampleSize);
+
+      // 🤖 アルゴ推奨を自動適用
+      console.log('  🤖 [アルゴ自動適用] 推奨を戦略設定に反映中...');
+      const applyResult = await applyAlgoRecommendations(insight.briefing, insight.discussion);
+      if (applyResult.applied) {
+        console.log(`  ✅ [アルゴ自動適用] ${applyResult.summary}`);
+        await contact.systemAlert('🤖 アルゴ推奨自動適用', applyResult.summary);
+      }
     } catch (e: any) {
       console.error(`  ❌ [アルゴ解析] エラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 4/21 以降 月曜 09:00 JST — 🧪 A/Bテスト自動判定（W1 vs W2）
+  cron.schedule('0 9 * * 1', async () => {
+    const now = new Date();
+    const w2End = new Date('2026-04-20T23:59:59+09:00');
+    if (now <= w2End) return; // W2終了前はスキップ
+    try {
+      console.log('\n  🧪 [A/Bテスト判定] 自動評価開始...');
+      const decision = await runABTestDecision();
+      if (decision) {
+        console.log(`  ✅ [A/Bテスト] 勝者: ${decision.winner} (${decision.winnerTime})`);
+      }
+    } catch (e: any) {
+      console.error(`  ❌ [A/Bテスト判定] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

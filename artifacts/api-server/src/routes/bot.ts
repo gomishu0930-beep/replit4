@@ -8,6 +8,7 @@ import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
+import { runAutoDirectiveExecution, runABTestDecision, AUTONOMY_GRANTED_AT } from '../bot/auto-execute.js';
 
 const router = Router();
 
@@ -287,6 +288,44 @@ router.post('/bot/rebrandly/sync', async (_req, res) => {
       res.status(400).json({ error: 'REBRANDLY_API_KEY が設定されていません' });
     } else {
       res.json({ ok: true, synced: result.synced, totalClicks: result.totalClicks });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── 自律実行エンドポイント ──────────────────────────────────────────────────
+
+router.get('/bot/autonomy/status', (_req, res) => {
+  res.json({
+    autonomyGrantedAt: AUTONOMY_GRANTED_AT,
+    isAutonomous: true,
+    features: [
+      { key: 'directive_auto_exec', label: '会議室決定事項の自動実行', schedule: '毎朝 07:30 JST', enabled: true },
+      { key: 'algo_auto_apply',    label: 'アルゴ推奨の自動戦略適用', schedule: '日曜 23:30 JST（アルゴ解析後）', enabled: true },
+      { key: 'ab_test_decide',     label: 'A/Bテスト自動判定 (W1 vs W2)', schedule: 'W2終了後 月曜 09:00 JST', enabled: true },
+    ],
+  });
+});
+
+router.post('/bot/autonomy/run-directives', async (_req, res) => {
+  try {
+    console.log('  🤖 [API] 手動トリガー: 会議室決定事項の自動実行開始');
+    const result = await runAutoDirectiveExecution();
+    res.json({ ok: true, result });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/autonomy/run-ab-test', async (_req, res) => {
+  try {
+    console.log('  🧪 [API] 手動トリガー: A/Bテスト自動判定開始');
+    const decision = await runABTestDecision();
+    if (!decision) {
+      res.json({ ok: false, message: 'W2期間中のため判定スキップ（4/20以降に実行可能）' });
+    } else {
+      res.json({ ok: true, decision });
     }
   } catch (e: any) {
     res.status(500).json({ error: e.message });

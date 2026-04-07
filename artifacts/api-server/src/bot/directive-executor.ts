@@ -161,7 +161,7 @@ export async function executeDirective(
           text: t.text,
           type: t.type ?? 'random',
           sourceScore: t.sourceScore ?? 100,
-          createdAt: now,
+          generatedAt: now,
         })),
       );
       const changes = valid.map((t) => `[${t.type}] ${t.text.slice(0, 60)}...`);
