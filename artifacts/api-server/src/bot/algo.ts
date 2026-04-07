@@ -412,27 +412,44 @@ ${statsText}
 }
 
 async function o3Challenge(statsText: string, kbText: string, claudeHypothesis: string): Promise<string> {
-  const res = await openai.chat.completions.create({
-    model: 'o3',
-    max_completion_tokens: 1500,
-    messages: [
-      {
-        role: 'system',
-        content: `あなたは統計的批判思考とXアルゴリズムの専門家です。以下の3点を行ってください:
+  // o3はinternal reasoning（推論）に多くのトークンを使うため
+  // max_completion_tokens は reasoning + 出力 合計のため余裕を持たせる
+  // system roleはuser messageに統合（o3でのサポートが不安定なため）
+  const systemContent = `あなたは統計的批判思考とXアルゴリズムの専門家です。以下の3点を行ってください:
 
 ① 【知識ベース検証】 Claudeが「整合」と評価したルールに本当に問題はないか？「不整合」と評価した点は本当に不整合か？知識ベースの出典信頼性自体も批判せよ。
 ② 【統計的批判】 実データ仮説の問題点（サンプルサイズ・シャドウバン交絡・選択バイアス等）を指摘し、代替仮説を提示せよ。
 ③ 【未知リスク】 Claudeが見落としている可能性のある要因を最大2つ指摘せよ。
 
-批判は建設的・反証可能な形で。`,
-      },
-      {
-        role: 'user',
-        content: `${kbText}\n\n---\n\n【実データ】\n${statsText}\n\n【Claudeの仮説・理論評価】\n${claudeHypothesis}\n\n上記を批判的に検証してください。`,
-      },
-    ],
+批判は建設的・反証可能な形で。返答は日本語で。`;
+
+  const userContent = `${systemContent}
+
+===知識ベース===
+${kbText}
+
+===実データ===
+${statsText}
+
+===Claudeの仮説・理論評価===
+${claudeHypothesis}
+
+上記を批判的に検証してください。`;
+
+  const res = await openai.chat.completions.create({
+    model: 'o3',
+    max_completion_tokens: 5000,  // reasoning込みで余裕を持たせる
+    messages: [{ role: 'user', content: userContent }],
   });
-  return res.choices[0].message.content ?? '';
+
+  const content = res.choices[0]?.message?.content ?? '';
+  if (!content) {
+    const finishReason = res.choices[0]?.finish_reason;
+    console.warn(`  ⚠ [o3] content空 (finish_reason=${finishReason}, usage=${JSON.stringify(res.usage)})`);
+    return `[o3応答なし: finish_reason=${finishReason}]`;
+  }
+  console.log(`  ✅ [o3] 完了 (usage: reasoning=${(res.usage as any)?.completion_tokens_details?.reasoning_tokens ?? '?'} / output=${(res.usage as any)?.completion_tokens_details?.accepted_prediction_tokens ?? '?'})`);
+  return content;
 }
 
 async function claudeSynthesize(

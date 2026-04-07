@@ -1,30 +1,6 @@
 {
   "discoveries": [
     {
-      "id": "discovery-1775544721544-hlqq",
-      "discoveredAt": "2026-04-07T06:52:01.544Z",
-      "title": "Community Notes Impact Reach",
-      "detail": "Tweets flagged by Community Notes for misinformation can experience reduced reach for weeks.",
-      "sourceUrl": "https://hashmeta.com/insights/twitter-algorithm-changes-2025",
-      "sourceDesc": "Hashmeta article on Twitter algorithm changes",
-      "confidence": "confirmed",
-      "category": "scoring",
-      "status": "pending",
-      "searchQuery": "X algorithm update impressions reach 2025"
-    },
-    {
-      "id": "discovery-1775544721543-8pln",
-      "discoveredAt": "2026-04-07T06:52:01.543Z",
-      "title": "Consistency Beats Virality for Growth",
-      "detail": "Steady, daily quality content outperforms occasional viral hits for long-term audience growth.",
-      "sourceUrl": "https://hashmeta.com/insights/twitter-algorithm-changes-2025",
-      "sourceDesc": "Hashmeta article on Twitter algorithm changes",
-      "confidence": "confirmed",
-      "category": "other",
-      "status": "pending",
-      "searchQuery": "X algorithm update impressions reach 2025"
-    },
-    {
       "id": "discovery-1775544721542-w19f",
       "discoveredAt": "2026-04-07T06:52:01.542Z",
       "title": "Engagement Rate Over Total Engagement",
@@ -217,5 +193,5 @@
       "searchQuery": "Twitter X algorithm changes 2025 ranking engagement"
     }
   ],
-  "lastSearchAt": "2026-04-07T06:52:01.544Z"
+  "lastSearchAt": "2026-04-07T06:52:01.542Z"
 }
