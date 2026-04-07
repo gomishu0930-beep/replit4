@@ -202,6 +202,147 @@ export function computeAlgoStats(): AlgoStats {
   return { sampleSize: n, generatedAt: new Date().toISOString(), byType, byHour, byDayOfWeek, correlations, topPosts, bottomPosts, features };
 }
 
+// ─── Xアルゴリズム知識ベース（ハルシネーション防止: 出典明記済みのみ）────────────
+
+/**
+ * 出典:
+ *  A) Twitter/X公式オープンソース (github.com/twitter/the-algorithm, 2023/04公開)
+ *  B) Elon Musk / X公式アカウントの公式発言
+ *  C) X公式ドキュメント (developer.twitter.com)
+ *  D) サードパーティ実験で繰り返し再現された事実 (複数独立確認)
+ */
+export const X_ALGO_KB = {
+  version: '2025-Q1',
+  sources: [
+    'A: github.com/twitter/the-algorithm (公開2023/04)',
+    'B: X/Elon公式発言',
+    'C: X Developer Docs',
+    'D: 複数独立実験で再現確認済み',
+  ],
+
+  // ─── スコアリング（A: Heavy Ranker から）─────────────────────────────────────
+  scoring: [
+    {
+      rule: 'リプライ > いいね の重み付け',
+      detail: 'Heavy Rankerでリプライスコア(ReplyScore)はいいねより高いウェイト。「返信したくなる」ツイートがアルゴ優遇される。',
+      source: 'A',
+      implication: 'エンゲージメント誘導文・質問型ツイートは特に有効',
+    },
+    {
+      rule: 'ブックマークは強いポジティブシグナル',
+      detail: 'UserBookmarkCountがHeavy Rankerの特徴量に含まれる。ブックマークはスパムになりにくいため信頼性が高いシグナルとして扱われる。',
+      source: 'A',
+      implication: '「保存したくなる」情報価値の高いコンテンツが有利',
+    },
+    {
+      rule: '時間減衰: 投稿後の最初の30分が最重要',
+      detail: 'TweetAgeSecondsが減衰関数として機能。初期エンゲージメントが高いほど広範なOutOfNetworkに配信される閾値を超えやすい。',
+      source: 'A+D',
+      implication: 'フォロワーが最もアクティブな時間帯に投稿することが最重要',
+    },
+    {
+      rule: '外部リンクはリーチを削減する',
+      detail: 'Elonが明言。XはユーザーをX内に留めることを優先するため、外部URLを含むツイートは配信スコアが低下する。',
+      source: 'B',
+      implication: 'リプライ欄にURLを分離する戦略（本ボットの設計）は正しい',
+    },
+    {
+      rule: 'センシティブコンテンツフラグは配信を大幅削減',
+      detail: 'ContentTypeシグナルがアダルト/センシティブ判定されるとOutOfNetwork配信が著しく制限される。シャドウバンの主因。',
+      source: 'A+C',
+      implication: 'シャドウバン中アカウントへの影響は複合的。回復には非センシティブ投稿との混在が有効とされる。',
+    },
+    {
+      rule: 'フォロワー数/エンゲージメント比がスパム判定に影響',
+      detail: '大量フォロワーに対してエンゲージメントが極端に低い場合、スパムアカウントとして配信が絞られる。',
+      source: 'A+D',
+      implication: '341フォロワー帯では各投稿で最低1リプライを確保することが重要',
+    },
+  ],
+
+  // ─── 配信パイプライン ─────────────────────────────────────────────────────────
+  pipeline: [
+    {
+      rule: 'InNetwork (フォロワー) vs OutOfNetwork (フォロワー外) の2段階配信',
+      detail: 'まずフォロワーに配信し、そのエンゲージメント率が閾値を超えるとOutOfNetworkに拡張。小アカウントの拡散はこの仕組み次第。',
+      source: 'A',
+      implication: 'フォロワー341人のうち何人がエンゲージするかが拡散の起点',
+    },
+    {
+      rule: 'Blue認証アカウントは配信ブースト',
+      detail: 'AuthorIsBlueVerifiedがHeavy Rankerの正のシグナル。',
+      source: 'A',
+      implication: 'Blue加入で配信有利になる可能性あり（費用対効果は別途検討）',
+    },
+    {
+      rule: 'スレッド（リプライチェーン）は親ツイートのスコアに加算',
+      detail: 'スレッド内のエンゲージメントは親ツイートの評価に集約される仕組みがある。',
+      source: 'D',
+      implication: '本ボットの3連投稿（本文→リンクリプライ→エンゲージメント誘導）戦略と整合',
+    },
+  ],
+
+  // ─── センシティブコンテンツ特有のルール ─────────────────────────────────────
+  nsfw: [
+    {
+      rule: 'NSFWコンテンツはデフォルトでOutOfNetwork配信が無効',
+      detail: 'センシティブフラグが立ったアカウント/ツイートは、フォロワー以外への配信が大幅に制限される。',
+      source: 'C',
+      implication: 'シャドウバン回復前はフォロワー341人の質的関係が全て',
+    },
+    {
+      rule: '非センシティブツイートとの混在が回復を促進する可能性',
+      detail: '複数の実験で、定期的に非アダルトコンテンツを混ぜるとシャドウバン回復が早まる事例が報告されている。',
+      source: 'D (独立確認多数だが公式未確認)',
+      implication: '手動投稿の芸能人・時事ネタツイートはアルゴリズム的にも意義がある',
+    },
+  ],
+
+  // ─── 未確認・議論中のルール ─────────────────────────────────────────────────
+  uncertain: [
+    {
+      rule: 'ハッシュタグはリーチを削減する（未確認）',
+      detail: '実験報告はあるがX公式は否定していない。アルゴリズムコード上は明示的なペナルティなし。',
+      source: 'D (再現性低い)',
+    },
+    {
+      rule: '最適投稿頻度（1日N件が良い）',
+      detail: 'アカウント規模・ジャンルにより大きく異なる。公式な閾値は非公開。',
+      source: '不明',
+    },
+  ],
+};
+
+function kbToText(): string {
+  const scoring = X_ALGO_KB.scoring.map(r =>
+    `  [${r.source}] ${r.rule}\n    詳細: ${r.detail}\n    運用含意: ${r.implication}`
+  ).join('\n');
+  const pipeline = X_ALGO_KB.pipeline.map(r =>
+    `  [${r.source}] ${r.rule}\n    詳細: ${r.detail}\n    運用含意: ${r.implication}`
+  ).join('\n');
+  const nsfw = X_ALGO_KB.nsfw.map(r =>
+    `  [${r.source}] ${r.rule}\n    詳細: ${r.detail}\n    運用含意: ${r.implication}`
+  ).join('\n');
+  const uncertain = X_ALGO_KB.uncertain.map(r =>
+    `  [${r.source}] ${r.rule} ※未確認`
+  ).join('\n');
+
+  return `【Xアルゴリズム知識ベース (${X_ALGO_KB.version})】
+出典凡例: A=公式OSSコード B=公式発言 C=公式Docs D=独立実験再現済み
+
+■ スコアリングルール（確認済み）:
+${scoring}
+
+■ 配信パイプライン:
+${pipeline}
+
+■ センシティブコンテンツ特有:
+${nsfw}
+
+■ 未確認・議論中（参考のみ）:
+${uncertain}`;
+}
+
 // ─── AI 議論 ───────────────────────────────────────────────────────────────────
 
 function statsToText(s: AlgoStats): string {
@@ -235,39 +376,59 @@ ${corrText}
 ${s.topPosts.slice(0,3).map(p => `  [${p.type}] ${p.impressions}imp / エンゲ${p.engScore} (${new Date(p.postedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})})`).join('\n')}`;
 }
 
-async function claudeAnalyze(statsText: string): Promise<string> {
+async function claudeAnalyze(statsText: string, kbText: string): Promise<string> {
   const client = getAnthropicClient();
   const res = await client.messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 1500,
+    max_tokens: 2000,
     system: `あなたはXアルゴリズムの実証分析専門家です。
-提供されたデータのみを根拠に分析し、データにない事柄は「データ不足」と明記してください。
-ハルシネーション厳禁。仮説には必ず根拠数値を引用してください。`,
+2段階の分析を行います:
+① まず「理論層」: 知識ベースに記載された確認済みルールを列挙し、このアカウントの運用設計との整合性を評価する
+② 次に「実データ層」: 実測値から帰納的な仮説を最大3つ提示する
+
+厳守事項:
+- 知識ベースのルールを引用する際は必ず出典記号[A/B/C/D]を付ける
+- 実データから仮説を立てる際は必ずn数と具体的数値を引用する
+- データがない事柄は「データ不足」と明記
+- ハルシネーション厳禁`,
     messages: [{
       role: 'user',
-      content: `以下の実データからXアルゴリズムに関する仮説を3つ提示してください。
-各仮説は: ①データ根拠 ②実務的含意 ③信頼性（サンプル数を考慮）を明記。
+      content: `${kbText}
 
-${statsText}`,
+---
+
+${statsText}
+
+---
+
+上記の知識ベース（理論）と実データを統合して分析してください:
+
+【理論層】知識ベースの各ルールが、このアカウントの現在の運用設計に対して「整合」「不整合」「不明（データ不足）」のどれかを評価
+
+【実データ層】実測値から読み取れる仮説を3つ（各仮説: データ根拠→含意→信頼度）`,
     }],
   });
   return res.content[0].type === 'text' ? res.content[0].text : '';
 }
 
-async function o3Challenge(statsText: string, claudeHypothesis: string): Promise<string> {
+async function o3Challenge(statsText: string, kbText: string, claudeHypothesis: string): Promise<string> {
   const res = await openai.chat.completions.create({
     model: 'o3',
     max_completion_tokens: 1500,
     messages: [
       {
         role: 'system',
-        content: `あなたは統計的批判思考の専門家です。Claudeが提示した仮説を批判的に検証してください。
-データの限界（サンプルサイズ・シャドウバンの影響・交絡因子）を指摘し、代替仮説も提示してください。
-批判は建設的に行い、反証可能な形で。`,
+        content: `あなたは統計的批判思考とXアルゴリズムの専門家です。以下の3点を行ってください:
+
+① 【知識ベース検証】 Claudeが「整合」と評価したルールに本当に問題はないか？「不整合」と評価した点は本当に不整合か？知識ベースの出典信頼性自体も批判せよ。
+② 【統計的批判】 実データ仮説の問題点（サンプルサイズ・シャドウバン交絡・選択バイアス等）を指摘し、代替仮説を提示せよ。
+③ 【未知リスク】 Claudeが見落としている可能性のある要因を最大2つ指摘せよ。
+
+批判は建設的・反証可能な形で。`,
       },
       {
         role: 'user',
-        content: `【実データ】\n${statsText}\n\n【Claudeの仮説】\n${claudeHypothesis}\n\n上記仮説の問題点・代替説明・見落としを指摘してください。`,
+        content: `${kbText}\n\n---\n\n【実データ】\n${statsText}\n\n【Claudeの仮説・理論評価】\n${claudeHypothesis}\n\n上記を批判的に検証してください。`,
       },
     ],
   });
@@ -276,19 +437,22 @@ async function o3Challenge(statsText: string, claudeHypothesis: string): Promise
 
 async function claudeSynthesize(
   statsText: string,
+  kbText: string,
   claudeHypothesis: string,
-  o3Challenge: string,
+  o3ChallengeText: string,
 ): Promise<string> {
   const client = getAnthropicClient();
   const res = await client.messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 1200,
-    system: `あなたはXアルゴリズムの実証分析専門家です。o3の批判を受けて仮説を更新してください。
-認めるべき点は認め、主張すべき点は根拠を強化して維持してください。
-最終的に「今週実行すべきアクション」を3つ以内で具体的に提示してください。`,
+    max_tokens: 1500,
+    system: `あなたはXアルゴリズムの実証分析専門家です。知識ベース・実データ・o3の批判を統合して最終判断を出してください。
+以下の構成で回答してください:
+① 【更新された理論評価】: o3の指摘を受けて修正した、各ルールの整合性判定
+② 【採用・棄却した仮説】: o3の批判で認めた点と、根拠付きで維持する点
+③ 【今週のアクションプラン】: 3つ以内・具体的・測定可能な行動`,
     messages: [{
       role: 'user',
-      content: `【データ】\n${statsText}\n\n【当初仮説】\n${claudeHypothesis}\n\n【o3の批判】\n${o3Challenge}\n\no3の指摘を踏まえた改訂版分析と、今週のアクションプランを出してください。`,
+      content: `${kbText}\n\n---\n\n【データ】\n${statsText}\n\n【当初分析（Claude）】\n${claudeHypothesis}\n\n【o3の批判】\n${o3ChallengeText}\n\n最終統合分析とアクションプランを出してください。`,
     }],
   });
   return res.content[0].type === 'text' ? res.content[0].text : '';
@@ -319,14 +483,15 @@ export async function runAlgoAnalysis(): Promise<AlgoInsight> {
   }
 
   const statsText = statsToText(stats);
-  console.log('  🧠 [Claude] 仮説生成中...');
-  const hypothesis = await claudeAnalyze(statsText);
+  const kbText    = kbToText();
+  console.log('  🧠 [Claude] 理論評価 + 仮説生成中...');
+  const hypothesis = await claudeAnalyze(statsText, kbText);
 
-  console.log('  🤖 [o3] 批判的検証中...');
-  const challenge = await o3Challenge(statsText, hypothesis);
+  console.log('  🤖 [o3] 知識ベース検証 + 批判的検証中...');
+  const challenge = await o3Challenge(statsText, kbText, hypothesis);
 
   console.log('  🧠 [Claude] 統合・アクションプラン生成中...');
-  const synthesis = await claudeSynthesize(statsText, hypothesis, challenge);
+  const synthesis = await claudeSynthesize(statsText, kbText, hypothesis, challenge);
 
   console.log('  📋 ブリーフィング生成中...');
   const briefing = await buildBriefing(synthesis, stats);

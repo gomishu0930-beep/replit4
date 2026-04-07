@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
-import { runAlgoAnalysis, computeAlgoStats } from '../bot/algo.js';
+import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
 import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
@@ -225,6 +225,10 @@ router.post('/bot/campaign-ids/discover', async (_req, res) => {
 });
 
 // ─── アルゴリズム解析 ──────────────────────────────────────────────────────────
+
+router.get('/bot/algo-kb', (_req, res) => {
+  res.json(X_ALGO_KB);
+});
 
 router.get('/bot/algo-insights', (_req, res) => {
   const latest = getLatestAlgoInsight();

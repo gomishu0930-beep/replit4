@@ -898,6 +898,19 @@ function Dashboard() {
   });
 
   const [algoRunning, setAlgoRunning] = useState(false);
+  const [algoKbOpen, setAlgoKbOpen] = useState(false);
+  const { data: algoKbData } = useQuery<{
+    version: string;
+    sources: string[];
+    scoring: Array<{ rule: string; detail: string; source: string; implication: string }>;
+    pipeline: Array<{ rule: string; detail: string; source: string; implication: string }>;
+    nsfw: Array<{ rule: string; detail: string; source: string; implication: string }>;
+    uncertain: Array<{ rule: string; detail: string; source: string }>;
+  }>({
+    queryKey: ["algo-kb"],
+    queryFn: () => fetch(`${API}/api/bot/algo-kb`).then((r) => r.json()),
+    staleTime: Infinity,
+  });
   const { data: algoData, refetch: refetchAlgo } = useQuery<{
     latest: {
       generatedAt: string;
@@ -3272,6 +3285,90 @@ function Dashboard() {
               {algoRunning ? "⏳ 解析中... (1〜2分)" : "🔬 今すぐ解析"}
             </button>
           </div>
+
+          {/* 知識ベース（折りたたみ） */}
+          {algoKbData && (
+            <div className="border border-white/10 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setAlgoKbOpen(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 text-xs"
+              >
+                <span className="font-semibold text-amber-400">📚 Xアルゴリズム知識ベース (v{algoKbData.version}) — 出典付き確認済みルール</span>
+                <span className="text-white/40">{algoKbOpen ? "▲ 閉じる" : "▼ 展開"}</span>
+              </button>
+
+              {algoKbOpen && (
+                <div className="p-3 space-y-4">
+                  {/* 出典凡例 */}
+                  <div className="bg-white/5 rounded p-2 space-y-0.5">
+                    <p className="text-[11px] font-semibold text-white/50 mb-1">出典凡例</p>
+                    {algoKbData.sources.map(s => (
+                      <p key={s} className="text-[11px] text-white/40">{s}</p>
+                    ))}
+                  </div>
+
+                  {/* スコアリングルール */}
+                  <div>
+                    <p className="text-xs font-semibold text-purple-400 mb-2">⚖️ スコアリングルール（確認済み）</p>
+                    <div className="space-y-2">
+                      {algoKbData.scoring.map(r => (
+                        <div key={r.rule} className="bg-purple-900/20 border border-purple-500/20 rounded p-2 space-y-1">
+                          <div className="flex items-start gap-2">
+                            <span className="text-[10px] bg-purple-700/50 text-purple-300 rounded px-1 shrink-0 mt-0.5">{r.source}</span>
+                            <p className="text-xs text-white/80 font-semibold">{r.rule}</p>
+                          </div>
+                          <p className="text-[11px] text-white/50 pl-8">{r.detail}</p>
+                          <p className="text-[11px] text-green-400 pl-8">→ {r.implication}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 配信パイプライン */}
+                  <div>
+                    <p className="text-xs font-semibold text-blue-400 mb-2">🔀 配信パイプライン</p>
+                    <div className="space-y-2">
+                      {algoKbData.pipeline.map(r => (
+                        <div key={r.rule} className="bg-blue-900/20 border border-blue-500/20 rounded p-2 space-y-1">
+                          <div className="flex items-start gap-2">
+                            <span className="text-[10px] bg-blue-700/50 text-blue-300 rounded px-1 shrink-0 mt-0.5">{r.source}</span>
+                            <p className="text-xs text-white/80 font-semibold">{r.rule}</p>
+                          </div>
+                          <p className="text-[11px] text-white/50 pl-8">{r.detail}</p>
+                          <p className="text-[11px] text-green-400 pl-8">→ {r.implication}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* NSFW特有 */}
+                  <div>
+                    <p className="text-xs font-semibold text-red-400 mb-2">🔞 センシティブコンテンツ特有</p>
+                    <div className="space-y-2">
+                      {algoKbData.nsfw.map(r => (
+                        <div key={r.rule} className="bg-red-900/20 border border-red-500/20 rounded p-2 space-y-1">
+                          <div className="flex items-start gap-2">
+                            <span className="text-[10px] bg-red-700/50 text-red-300 rounded px-1 shrink-0 mt-0.5">{r.source}</span>
+                            <p className="text-xs text-white/80 font-semibold">{r.rule}</p>
+                          </div>
+                          <p className="text-[11px] text-white/50 pl-8">{r.detail}</p>
+                          <p className="text-[11px] text-green-400 pl-8">→ {r.implication}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 未確認 */}
+                  <div>
+                    <p className="text-xs font-semibold text-white/30 mb-1">❓ 未確認・議論中（参考のみ）</p>
+                    {algoKbData.uncertain.map(r => (
+                      <p key={r.rule} className="text-[11px] text-white/30">• {r.rule} <span className="text-white/20">[{r.source}]</span></p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 統計サマリー（常に表示） */}
           {algoData?.stats && (
