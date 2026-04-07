@@ -24,6 +24,7 @@ import { executeDirective } from './directive-executor.js';
 import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot } from './storage.js';
 import { getStrategySummary } from './strategy.js';
 import { contact } from './contact.js';
+import { getGrokXBriefing } from './grok.js';
 
 // ─── 自律会議結果の型 ─────────────────────────────────────────────────────────
 
@@ -40,14 +41,14 @@ export interface AutoMeetingResult {
 
 // ─── アジェンダ自動生成 ───────────────────────────────────────────────────────
 
-function buildAutoAgenda(): string {
+async function buildAutoAgenda(): Promise<string> {
   const stats = getStats();
   const strategyObj = getStrategySummary();
   const strategy = `インターバル${strategyObj.monitorIntervalHours}h / 最終評価:${strategyObj.lastEvaluatedAt ? new Date(strategyObj.lastEvaluatedAt).toLocaleDateString('ja-JP') : '未評価'}`;
   const snapshots = getDailyImpressionSnapshots(7);
   const latestInsight = getLatestAlgoInsight();
-
   const snapshot = getLatestSnapshot();
+
   const recentImpressions = snapshots.slice(-7).map(s => s.avgImpressions);
   const avgImp = recentImpressions.length > 0
     ? Math.round(recentImpressions.reduce((a, b) => a + b, 0) / recentImpressions.length)
@@ -57,8 +58,19 @@ function buildAutoAgenda(): string {
     : '不明';
 
   const algoContext = latestInsight
-    ? `\n\n【最新アルゴ解析（${new Date(latestInsight.generatedAt).toLocaleDateString('ja-JP')}）】\n${latestInsight.briefing?.slice(0, 500) ?? 'データなし'}`
+    ? `\n\n【保存済みアルゴ解析（${new Date(latestInsight.generatedAt).toLocaleDateString('ja-JP')}）】\n${latestInsight.briefing?.slice(0, 400) ?? 'データなし'}`
     : '';
+
+  // Grok 4.1 Fast でXリアルタイムデータを取得
+  console.log('  🦅 [自律会議] Grok でXリアルタイムデータを取得中...');
+  let grokContext = '';
+  try {
+    const briefing = await getGrokXBriefing();
+    grokContext = `\n\n${briefing.slice(0, 800)}`;
+    console.log('  ✅ [自律会議] Grok Xブリーフィング取得完了');
+  } catch (e: any) {
+    console.warn('  ⚠ [自律会議] Grok取得失敗:', e.message);
+  }
 
   return `【FANZA Xボット自律運営会議】${new Date().toLocaleDateString('ja-JP')} 自動実行
 
@@ -68,11 +80,12 @@ function buildAutoAgenda(): string {
 - 累計投稿数: ${stats.totalPosts ?? 0}件
 - 現在の戦略: ${strategy}
 ${algoContext}
+${grokContext}
 
 ## 議論してほしいこと
-1. 現在のインプレッション推移を踏まえ、シャドウバン回復の進捗評価と次の最優先アクション
+1. Grokが収集したXリアルタイムデータを踏まえ、シャドウバン回復の進捗評価と最優先アクション
 2. コンテンツ・投稿タイミング・テンプレートで今すぐ改善できること（具体的に）
-3. AIが自動実行すべき改善アクション vs ユーザーが手動で対応すべき事項の明確な切り分け
+3. AIが自動実行すべき改善アクション vs ユーザーが手動対応すべき事項の明確な切り分け
 
 結論として「AIが今週中に実行すること」と「ユーザーが確認・対応すること」を明確に合意してください。`;
 }
@@ -82,7 +95,7 @@ ${algoContext}
 export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMeetingResult> {
   const startAt = Date.now();
   const runAt = new Date().toISOString();
-  const topic = customTopic ?? buildAutoAgenda();
+  const topic = customTopic ?? await buildAutoAgenda();
 
   console.log('\n  🤝 [自律会議] 自動AI会議を開始...');
 
