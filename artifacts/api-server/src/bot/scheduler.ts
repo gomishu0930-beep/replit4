@@ -8,6 +8,7 @@ import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
 import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision } from './auto-execute.js';
+import { runAutonomousMeeting } from './auto-meeting.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact } from './contact.js';
@@ -428,6 +429,17 @@ export function startScheduler() {
       }
     } catch (e: any) {
       console.warn('  ⚠ 日次スナップ失敗:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 月曜 04:00 JST — 🤝 週次自律AI会議（GPT×Claude議論→決定→自動実行）
+  cron.schedule('0 4 * * 1', async () => {
+    console.log('\n  🤝 [自律会議] 週次AI会議を自動実行中...');
+    try {
+      const result = await runAutonomousMeeting();
+      console.log(`  ✅ [自律会議] 完了: 自動実行${result.autoExecuted.length}件 / 手動確認${result.manualItems.length}件`);
+    } catch (e: any) {
+      console.error(`  ❌ [自律会議] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

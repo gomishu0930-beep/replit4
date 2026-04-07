@@ -9,6 +9,7 @@ import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
 import { runAutoDirectiveExecution, runABTestDecision, AUTONOMY_GRANTED_AT } from '../bot/auto-execute.js';
+import { runAutonomousMeeting } from '../bot/auto-meeting.js';
 
 const router = Router();
 
@@ -312,6 +313,17 @@ router.post('/bot/autonomy/run-directives', async (_req, res) => {
   try {
     console.log('  🤖 [API] 手動トリガー: 会議室決定事項の自動実行開始');
     const result = await runAutoDirectiveExecution();
+    res.json({ ok: true, result });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/autonomy/run-meeting', async (req, res) => {
+  try {
+    console.log('  🤝 [API] 手動トリガー: 自律AI会議開始');
+    const customTopic = req.body?.topic as string | undefined;
+    const result = await runAutonomousMeeting(customTopic);
     res.json({ ok: true, result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

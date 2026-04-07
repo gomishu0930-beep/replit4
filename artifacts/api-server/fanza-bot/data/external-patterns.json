@@ -383,7 +383,7 @@
       "retweet_count": 2,
       "reply_count": 0,
       "bookmark_count": 6,
-      "impression_count": 6622,
+      "impression_count": 6672,
       "createdAt": "2026-04-07T00:00:00.000Z",
       "tweetId": "2041304951457235068",
       "score": 58,
@@ -638,7 +638,7 @@
       "retweet_count": 1,
       "reply_count": 1,
       "bookmark_count": 2,
-      "impression_count": 5373,
+      "impression_count": 5380,
       "createdAt": "2026-04-06T11:00:35.000Z",
       "tweetId": "2041108805904486436",
       "score": 34,
@@ -668,7 +668,7 @@
       "retweet_count": 1,
       "reply_count": 0,
       "bookmark_count": 1,
-      "impression_count": 5302,
+      "impression_count": 5321,
       "createdAt": "2026-04-07T00:47:21.000Z",
       "tweetId": "2041316865759482085",
       "score": 33,
@@ -1051,6 +1051,21 @@
       "savedAt": "2026-04-05T06:55:54.779Z"
     },
     {
+      "id": "2041408540410323330",
+      "text": "4/7のFANZA通販 アダルトDVD日間ランキングを公開！\n\nhttps://t.co/oJ3NsS446n\n\n#石川澪 #JULIA #北野未奈 #小野坂ゆいか #彩月七緒 #波多野結衣 #九井スナオ #辻井ほのか #西村ニーナ #松井日奈子 #小野六花 #井上もも #美ノ嶋めぐり #朝妃りお #若宮はずき #純白彩永 #葉山さゆり #深月めい #FANZA https://t.co/KT6auyxliB",
+      "authorId": "1179585162020974592",
+      "like_count": 6,
+      "retweet_count": 2,
+      "reply_count": 0,
+      "bookmark_count": 3,
+      "impression_count": 298,
+      "createdAt": "2026-04-07T06:51:38.000Z",
+      "tweetId": "2041408540410323330",
+      "score": 18,
+      "source": "#FANZA",
+      "savedAt": "2026-04-07T07:25:21.041Z"
+    },
+    {
       "id": "2040761384921903550",
       "text": "＼🩲パンツ満開 チャック全開🌸／\n#春のパンツまつり2026\n\n#FANZA 動画フロアでは対象作品が30%オフ❗\n沢山ゲットして楽しい新性活をスタートしよう🌸\n\n第4弾は4月6日(月) 朝9時59分まで！\n\n🎦動画はコチラ\nhttps://t.co/k7zbPLlyci\n\n#七瀬アリス\n#FANZA\n@fanza_sns\n＠snscp_a\n@Alice_Nanase_ https://t.co/C0TPnGc0Po",
       "authorId": "171340826",
@@ -1306,21 +1321,6 @@
       "savedAt": "2026-04-06T15:29:05.787Z"
     },
     {
-      "id": "2041408540410323330",
-      "text": "4/7のFANZA通販 アダルトDVD日間ランキングを公開！\n\nhttps://t.co/oJ3NsS446n\n\n#石川澪 #JULIA #北野未奈 #小野坂ゆいか #彩月七緒 #波多野結衣 #九井スナオ #辻井ほのか #西村ニーナ #松井日奈子 #小野六花 #井上もも #美ノ嶋めぐり #朝妃りお #若宮はずき #純白彩永 #葉山さゆり #深月めい #FANZA https://t.co/KT6auyxliB",
-      "authorId": "1179585162020974592",
-      "like_count": 4,
-      "retweet_count": 1,
-      "reply_count": 0,
-      "bookmark_count": 3,
-      "impression_count": 255,
-      "createdAt": "2026-04-07T06:51:38.000Z",
-      "tweetId": "2041408540410323330",
-      "score": 13,
-      "source": "#FANZA",
-      "savedAt": "2026-04-07T07:25:21.041Z"
-    },
-    {
       "id": "2040565082015322323",
       "text": "この後10:00オープン🎉\n本日は【超CHANGE取材】開催🔥\n\n入場抽選は9:30スタートです！\n\n皆さまのご来店お待ちしております🙌\n\n#DMM #取材 #安曇野 #松本 https://t.co/EUbbZSNWDU",
       "authorId": "1983412056662626304",
@@ -1501,7 +1501,7 @@
       "savedAt": "2026-04-06T04:19:08.990Z"
     }
   ],
-  "lastRefreshedAt": "2026-04-07T07:39:40.214Z",
+  "lastRefreshedAt": "2026-04-07T07:45:53.252Z",
   "queries": [
     "#FANZA",
     "#DMM",

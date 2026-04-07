@@ -922,6 +922,13 @@ function Dashboard() {
     total: number; executed: number; succeeded: number; skipped: number;
     results: Array<{ id: string; text: string; actionType: string; result: string; success: boolean }>;
   } | null>(null);
+  const [meetingRunning, setMeetingRunning] = useState(false);
+  const [meetingResult, setMeetingResult] = useState<{
+    totalDecisions: number;
+    autoExecuted: Array<{ text: string; result: string; success: boolean }>;
+    manualItems: Array<{ text: string; category: string; priority: string; rationale: string }>;
+  } | null>(null);
+  const [showAiDirectives, setShowAiDirectives] = useState(false);
 
   const [algoRunning, setAlgoRunning] = useState(false);
   const [algoKbOpen, setAlgoKbOpen] = useState(false);
@@ -1100,26 +1107,45 @@ function Dashboard() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    setAutoExecRunning(true);
-                    setAutoExecResult(null);
-                    try {
-                      const res = await fetch(`${API}/api/bot/autonomy/run-directives`, { method: "POST" });
-                      const data = await res.json();
-                      if (data.ok) setAutoExecResult(data.result);
-                    } finally { setAutoExecRunning(false); }
-                  }}
-                  disabled={autoExecRunning}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                >
-                  {autoExecRunning ? "実行中..." : "▶ 今すぐ実行"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setMeetingRunning(true);
+                      setMeetingResult(null);
+                      try {
+                        const res = await fetch(`${API}/api/bot/autonomy/run-meeting`, { method: "POST" });
+                        const data = await res.json();
+                        if (data.ok) setMeetingResult(data.result);
+                      } finally { setMeetingRunning(false); }
+                    }}
+                    disabled={meetingRunning || autoExecRunning}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-500/30 transition-colors disabled:opacity-50"
+                    title="GPT×Claudeが自動的に会議を開き、決定を実行します（約5分）"
+                  >
+                    {meetingRunning ? "会議中..." : "🤝 AI会議"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setAutoExecRunning(true);
+                      setAutoExecResult(null);
+                      try {
+                        const res = await fetch(`${API}/api/bot/autonomy/run-directives`, { method: "POST" });
+                        const data = await res.json();
+                        if (data.ok) setAutoExecResult(data.result);
+                      } finally { setAutoExecRunning(false); }
+                    }}
+                    disabled={autoExecRunning || meetingRunning}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                  >
+                    {autoExecRunning ? "実行中..." : "▶ 指令実行"}
+                  </button>
+                </div>
               </div>
 
               {/* 自律機能リスト */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(autonomyData?.features ?? [
+                  { label: "週次AI自律会議", schedule: "月曜 04:00 JST", enabled: true },
                   { label: "会議室決定の自動実行", schedule: "毎朝 07:30 JST", enabled: true },
                   { label: "アルゴ推奨の自動適用", schedule: "日曜 23:30 JST", enabled: true },
                   { label: "A/Bテスト自動判定", schedule: "W2終了後 月曜 09:00", enabled: true },
@@ -1134,7 +1160,40 @@ function Dashboard() {
                 ))}
               </div>
 
-              {/* 実行結果 */}
+              {/* 会議結果 */}
+              {meetingRunning && (
+                <div className="mt-1 bg-indigo-900/20 rounded-lg p-3 border border-indigo-500/20">
+                  <div className="flex items-center gap-2 text-xs text-indigo-300">
+                    <span className="animate-spin">⚙️</span>
+                    <span>GPT × Claude が会議中です（約5分かかります）...</span>
+                  </div>
+                </div>
+              )}
+              {meetingResult && (
+                <div className="mt-1 bg-indigo-900/20 rounded-lg p-3 space-y-2 border border-indigo-500/20">
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-white/60">決定事項: <strong className="text-white">{meetingResult.totalDecisions}件</strong></span>
+                    <span className="text-emerald-400">AI自動実行: {meetingResult.autoExecuted.filter(r => r.success).length}件</span>
+                    {meetingResult.manualItems.length > 0 && (
+                      <span className="text-rose-400 font-semibold">要確認: {meetingResult.manualItems.length}件</span>
+                    )}
+                  </div>
+                  {meetingResult.autoExecuted.slice(0, 3).map((r, i) => (
+                    <div key={i} className={`text-[10px] flex items-start gap-1.5 ${r.success ? "text-emerald-300" : "text-amber-300"}`}>
+                      <span>{r.success ? "✅" : "⚠"}</span>
+                      <span className="line-clamp-1">{r.text.slice(0, 50)}</span>
+                    </div>
+                  ))}
+                  {meetingResult.manualItems.slice(0, 2).map((m, i) => (
+                    <div key={i} className="text-[10px] flex items-start gap-1.5 text-rose-300">
+                      <span>👤</span>
+                      <span className="line-clamp-1">{m.text.slice(0, 50)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 指令実行結果 */}
               {autoExecResult && (
                 <div className="mt-1 bg-black/20 rounded-lg p-3 space-y-1.5">
                   <div className="flex items-center gap-3 text-xs">
@@ -1153,43 +1212,78 @@ function Dashboard() {
               )}
             </div>
 
-            {/* アクティブ決定事項バナー */}
-            {activeDirectives.length > 0 && (
-              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/8 p-4">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h2 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                    📌 会議室アクティブ決定事項 ({activeDirectives.length}件)
-                  </h2>
-                  <button onClick={() => setTab("meeting")} className="text-[10px] text-indigo-400/60 hover:text-indigo-300 transition-colors">
-                    会議室を開く →
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {activeDirectives.map((d) => {
-                    const catColor: Record<string, string> = {
-                      strategy: "text-violet-300 border-violet-500/30 bg-violet-500/10",
-                      content:  "text-blue-300 border-blue-500/30 bg-blue-500/10",
-                      timing:   "text-amber-300 border-amber-500/30 bg-amber-500/10",
-                      recovery: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
-                      other:    "text-white/50 border-white/10 bg-white/5",
-                    };
-                    const priIcon: Record<string, string> = { high: "🔴", medium: "🟡", low: "🟢" };
-                    return (
-                      <div key={d.id} className="flex items-start gap-2.5">
-                        <span className="shrink-0 mt-0.5">{priIcon[d.priority]}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-white/80 leading-relaxed">{d.text}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[d.category]}`}>{d.category}</span>
-                            <span className="text-[10px] text-white/30">{d.source}</span>
-                          </div>
-                        </div>
+            {/* 👤 あなたの確認が必要なタスク（user担当のみ表示） */}
+            {(() => {
+              const userDirectives = activeDirectives.filter(d => d.assignee === 'user');
+              const aiDirectives   = activeDirectives.filter(d => d.assignee !== 'user');
+              const catColor: Record<string, string> = {
+                strategy: "text-violet-300 border-violet-500/30 bg-violet-500/10",
+                content:  "text-blue-300 border-blue-500/30 bg-blue-500/10",
+                timing:   "text-amber-300 border-amber-500/30 bg-amber-500/10",
+                recovery: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10",
+                other:    "text-white/50 border-white/10 bg-white/5",
+              };
+              const priIcon: Record<string, string> = { high: "🔴", medium: "🟡", low: "🟢" };
+              return (
+                <>
+                  {/* ユーザー確認必要タスク */}
+                  {userDirectives.length > 0 && (
+                    <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-sm font-bold text-rose-300 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                          あなたの確認が必要 ({userDirectives.length}件)
+                        </h2>
+                        <button onClick={() => setTab("meeting")} className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors">
+                          会議室で確認 →
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                      <div className="space-y-2.5">
+                        {userDirectives.map((d) => (
+                          <div key={d.id} className="flex items-start gap-2.5 bg-white/3 rounded-lg p-2.5 border border-white/8">
+                            <span className="shrink-0 mt-0.5 text-sm">{priIcon[d.priority]}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-white/90 leading-relaxed font-medium">{d.text}</p>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${catColor[d.category] ?? catColor.other}`}>{d.category}</span>
+                                <span className="text-[10px] text-white/30">{d.source}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI自律実行中の指令（折りたたみ） */}
+                  {aiDirectives.length > 0 && (
+                    <div className="rounded-xl border border-white/8 bg-white/2 p-3">
+                      <button
+                        onClick={() => setShowAiDirectives(v => !v)}
+                        className="w-full flex items-center justify-between text-left"
+                      >
+                        <span className="text-xs text-white/40 flex items-center gap-2">
+                          <span className="text-sm">🤖</span>
+                          AI自律実行中の指令 ({aiDirectives.length}件)
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">07:30に自動処理</span>
+                        </span>
+                        <span className="text-white/30 text-xs">{showAiDirectives ? "▲ 閉じる" : "▼ 見る"}</span>
+                      </button>
+                      {showAiDirectives && (
+                        <div className="mt-2.5 space-y-1.5 border-t border-white/5 pt-2.5">
+                          {aiDirectives.map((d) => (
+                            <div key={d.id} className="flex items-start gap-2 text-[11px] text-white/40">
+                              <span>{priIcon[d.priority]}</span>
+                              <span className="line-clamp-2">{d.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard label="総投稿数" value={stats?.totalPosts ?? "—"} sub="全期間" />
