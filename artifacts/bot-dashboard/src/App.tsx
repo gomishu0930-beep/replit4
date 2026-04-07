@@ -777,6 +777,7 @@ function Dashboard() {
   const [meetingSession, setMeetingSession] = useState<MeetingSession | null>(null);
   const [meetingInput, setMeetingInput] = useState("");
   const [meetingLoading, setMeetingLoading] = useState(false);
+  const [trialoguRound, setTrialoguRound] = useState(0);  // 現在処理中のラウンド（0=非実行中）
   const [meetingCreating, setMeetingCreating] = useState(false);
 
   // 決定事項ステート
@@ -3142,18 +3143,32 @@ function Dashboard() {
 
             try {
               if (sendMode === "trialogue") {
-                // 2ラウンドディベート: GPT先手→Claude反論→GPT再反論→Claude最終統合
-                const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ message: msg }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error ?? "エラー");
-                setMeetingSession((s) => s ? {
-                  ...s,
-                  messages: [...s.messages, ...(data.messages ?? [])],
-                } : s);
+                // 1ラウンドずつ5回呼び出し（タイムアウト回避）
+                const ROUNDS = 5;
+                let lastGptReply = "", lastClaudeReply = "", lastGrokReply = "";
+                for (let round = 1; round <= ROUNDS; round++) {
+                  setTrialoguRound(round);  // ← 進捗インジケーター更新
+                  const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg, round, lastGptReply, lastClaudeReply, lastGrokReply }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error ?? `ラウンド${round}エラー`);
+                  // ラウンドの発言を即時表示
+                  setMeetingSession((s) => s ? {
+                    ...s,
+                    messages: [...s.messages, ...(data.messages ?? [])],
+                  } : s);
+                  // 次ラウンドへ引き継ぐ最終発言
+                  const msgs: MeetingMessage[] = data.messages ?? [];
+                  const gpt = msgs.find((m: MeetingMessage) => m.speaker === "gpt");
+                  const claude = msgs.find((m: MeetingMessage) => m.speaker === "claude");
+                  const grok = msgs.find((m: MeetingMessage) => m.speaker === "grok");
+                  if (gpt) lastGptReply = gpt.content;
+                  if (claude) lastClaudeReply = claude.content;
+                  if (grok) lastGrokReply = grok.content;
+                }
                 // 5ラウンド完了 → Q&Aフェーズへ
                 setDebateCompleted(true);
                 setQaRoundsLeft(2);
@@ -3174,6 +3189,7 @@ function Dashboard() {
               setMeetingSession((s) => s ? { ...s, messages: [...s.messages, errMsg] } : s);
             } finally {
               setMeetingLoading(false);
+              setTrialoguRound(0);
             }
           }
 
@@ -3462,24 +3478,27 @@ function Dashboard() {
                     {meetingLoading && (
                       <div className="space-y-2">
                         {sendMode === "trialogue" ? (
-                          <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3">
-                            <p className="text-[10px] text-white/40 mb-2 font-medium">🎙 5ラウンドディベート進行中... (完了まで約1〜2分)</p>
-                            <div className="space-y-1.5">
+                          <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[10px] text-white/50 font-medium">🎙 3者ディベート中</p>
+                              <span className="text-[10px] text-indigo-300 font-bold">ラウンド {trialoguRound} / 5</span>
+                            </div>
+                            {/* プログレスバー */}
+                            <div className="w-full h-1 bg-white/10 rounded-full mb-3">
+                              <div
+                                className="h-1 rounded-full bg-gradient-to-r from-blue-400 to-violet-400 transition-all duration-500"
+                                style={{ width: `${(trialoguRound / 5) * 100}%` }}
+                              />
+                            </div>
+                            <div className="space-y-1">
                               {[
-                                { icon: "🤖", label: "Round 1 — o3 Thinking が立論中",       color: "text-blue-300/80" },
-                                { icon: "🧠", label: "Round 1 — Claude が反論中",             color: "text-violet-300/70" },
-                                { icon: "🤖", label: "Round 2 — o3 Thinking が再論中",        color: "text-blue-300/55" },
-                                { icon: "🧠", label: "Round 2 — Claude が再反論中",           color: "text-violet-300/45" },
-                                { icon: "🤖", label: "Round 3 — o3 Thinking が議論深化中",    color: "text-blue-300/35" },
-                                { icon: "🧠", label: "Round 3 — Claude が考察中",             color: "text-violet-300/30" },
-                                { icon: "🤖", label: "Round 4 — o3 Thinking が精査中",        color: "text-blue-300/22" },
-                                { icon: "🧠", label: "Round 4 — Claude が検証中",             color: "text-violet-300/18" },
-                                { icon: "🤖", label: "Round 5 — o3 Thinking が最終立場表明中", color: "text-blue-300/15" },
-                                { icon: "🧠", label: "Round 5 — Claude が最終統合中",         color: "text-violet-300/12" },
+                                { icon: "🤖", label: "o3 Thinking が立論中..." },
+                                { icon: "🧠", label: "Claude が応答中..." },
+                                { icon: "🦅", label: "Grok がファクトチェック中..." },
                               ].map((step, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                   <span className="text-xs">{step.icon}</span>
-                                  <p className={`text-[10px] animate-pulse ${step.color}`}>{step.label}</p>
+                                  <p className="text-[10px] text-white/35 animate-pulse">{step.label}</p>
                                 </div>
                               ))}
                             </div>

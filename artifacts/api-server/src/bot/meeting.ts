@@ -436,7 +436,7 @@ export async function sendToClaude(sessionId: string, userMessage: string): Prom
 
 // ─── 3者会議モード（5ラウンドディベート）────────────────────────────────
 
-const TOTAL_ROUNDS = 5;
+export const TOTAL_ROUNDS = 5;
 
 // ラウンドごとのGPT指示
 function gptRoundInstruction(round: number, total: number): string {
@@ -500,59 +500,93 @@ function claudeRoundInstruction(round: number, total: number): string {
 「データがそう言っているからやる」ではなく「アカウントの現状に照らして本当に正しいか」を問い続けてください。`;
 }
 
+/**
+ * 1ラウンドのみ実行する（タイムアウト回避のため1リクエスト＝1ラウンド）
+ * フロントエンドが round=1〜5 を順番に呼び出す方式。
+ */
+export async function runTrialogueRound(
+  sessionId: string,
+  userMessage: string,
+  round: number,
+  lastGptReply: string = '',
+  lastClaudeReply: string = '',
+  lastGrokReply: string = '',
+): Promise<{
+  messages: MeetingMessage[];
+  round: number;
+  totalRounds: number;
+  isLastRound: boolean;
+}> {
+  const session = cache.meetings.find((m) => m.id === sessionId);
+  if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
+
+  // ラウンド1のみユーザーメッセージをセッションに追加
+  if (round === 1) {
+    pushMsg(session, 'user', userMessage);
+  }
+
+  console.log(`  🔄 [会議] ラウンド ${round}/${TOTAL_ROUNDS} 開始`);
+  const newMessages: MeetingMessage[] = [];
+
+  // ── GPT 発言 ──
+  const gptPrompt = round === 1
+    ? `【議題】${userMessage}\n\nデータ分析の観点から最初の立場を示してください。`
+    : `【前ラウンドのまとめ】\nClaude: ${lastClaudeReply.slice(0, 400)}\nGrok(X情報官): ${lastGrokReply.slice(0, 300)}\n\n---\n元の議題：${userMessage}\n\nClaudeの反論とGrokのX実態報告を受けて立場を再検討し、返答してください。`;
+
+  const gptReply = await speakAsGPT(session, gptPrompt, gptRoundInstruction(round, TOTAL_ROUNDS));
+  const gptMsg = pushMsg(session, 'gpt', gptReply);
+  newMessages.push(gptMsg);
+  console.log(`    ✅ GPT完了 (${gptReply.length}文字)`);
+
+  // ── Claude 発言 ──
+  const claudePrompt = round === TOTAL_ROUNDS
+    ? `${TOTAL_ROUNDS}ラウンドの議論全体（GPT・Grokの発言含む）を踏まえて最終統合見解を示してください。\n\nGPT最終発言: ${gptReply.slice(0, 500)}\n前ラウンドGrok報告: ${lastGrokReply.slice(0, 300)}\n\n元の議題：${userMessage}`
+    : `GPTが以下のように述べました（ラウンド${round}）：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討し、返答してください。`;
+
+  const claudeReply = await speakAsClaude(session, claudePrompt, claudeRoundInstruction(round, TOTAL_ROUNDS));
+  const claudeMsg = pushMsg(session, 'claude', claudeReply);
+  newMessages.push(claudeMsg);
+  console.log(`    ✅ Claude完了 (${claudeReply.length}文字)`);
+
+  // ── Grok 発言（X リアルタイム情報官）──
+  const grokPrompt = round === TOTAL_ROUNDS
+    ? `GPT最終発言: ${gptReply.slice(0, 400)}\nClaude最終統合: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXの現実に照らした最終裁定を下してください。`
+    : `GPT（ラウンド${round}）: ${gptReply.slice(0, 400)}\nClaude（ラウンド${round}）: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXのリアルタイムデータでこの議論をファクトチェックしてください。`;
+
+  const grokReply = await speakAsGrok(session, grokPrompt, grokRoundInstruction(round, TOTAL_ROUNDS));
+  const grokMsg = pushMsg(session, 'grok', grokReply);
+  newMessages.push(grokMsg);
+  console.log(`    ✅ Grok完了 (${grokReply.length}文字)`);
+
+  await saveData();
+  return {
+    messages: newMessages,
+    round,
+    totalRounds: TOTAL_ROUNDS,
+    isLastRound: round >= TOTAL_ROUNDS,
+  };
+}
+
+/** 後方互換用：全5ラウンドを順に実行（自律会議cronからのみ使用） */
 export async function runTrialogue(
   sessionId: string,
   userMessage: string,
 ): Promise<{ messages: MeetingMessage[] }> {
-  const session = cache.meetings.find((m) => m.id === sessionId);
-  if (!session) throw new Error(`会議が見つかりません: ${sessionId}`);
-
-  pushMsg(session, 'user', userMessage);
-
-  const newMessages: MeetingMessage[] = [];
-  let lastGptReply = '';
-  let lastClaudeReply = '';
-  let lastGrokReply = '';
+  const allMessages: MeetingMessage[] = [];
+  let lastGptReply = '', lastClaudeReply = '', lastGrokReply = '';
 
   for (let round = 1; round <= TOTAL_ROUNDS; round++) {
-    console.log(`  🔄 [会議] ラウンド ${round}/${TOTAL_ROUNDS} 開始`);
-
-    // ── GPT 発言 ──
-    const gptPrompt = round === 1
-      ? `【議題】${userMessage}\n\nデータ分析の観点から最初の立場を示してください。`
-      : `【前ラウンドのまとめ】\nClaude: ${lastClaudeReply.slice(0, 400)}\nGrok(X情報官): ${lastGrokReply.slice(0, 300)}\n\n---\n元の議題：${userMessage}\n\nClaudeの反論とGrokのX実態報告を受けて立場を再検討し、返答してください。`;
-
-    const gptReply = await speakAsGPT(session, gptPrompt, gptRoundInstruction(round, TOTAL_ROUNDS));
-    const gptMsg = pushMsg(session, 'gpt', gptReply);
-    newMessages.push(gptMsg);
-    lastGptReply = gptReply;
-    console.log(`    ✅ GPT完了 (${gptReply.length}文字)`);
-
-    // ── Claude 発言 ──
-    const claudePrompt = round === TOTAL_ROUNDS
-      ? `${TOTAL_ROUNDS}ラウンドの議論全体（GPT・Grokの発言含む）を踏まえて最終統合見解を示してください。\n\nGPT最終発言: ${gptReply.slice(0, 500)}\n前ラウンドGrok報告: ${lastGrokReply.slice(0, 300)}\n\n元の議題：${userMessage}`
-      : `GPTが以下のように述べました（ラウンド${round}）：\n\n${gptReply}\n\n---\n元の議題：${userMessage}\n\nGPTの主張を批判的に検討し、返答してください。`;
-
-    const claudeReply = await speakAsClaude(session, claudePrompt, claudeRoundInstruction(round, TOTAL_ROUNDS));
-    const claudeMsg = pushMsg(session, 'claude', claudeReply);
-    newMessages.push(claudeMsg);
-    lastClaudeReply = claudeReply;
-    console.log(`    ✅ Claude完了 (${claudeReply.length}文字)`);
-
-    // ── Grok 発言（X リアルタイム情報官）──
-    const grokPrompt = round === TOTAL_ROUNDS
-      ? `GPT最終発言: ${gptReply.slice(0, 400)}\nClaude最終統合: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXの現実に照らした最終裁定を下してください。`
-      : `GPT（ラウンド${round}）: ${gptReply.slice(0, 400)}\nClaude（ラウンド${round}）: ${claudeReply.slice(0, 400)}\n\n---\n元の議題：${userMessage}\n\nXのリアルタイムデータでこの議論をファクトチェックしてください。`;
-
-    const grokReply = await speakAsGrok(session, grokPrompt, grokRoundInstruction(round, TOTAL_ROUNDS));
-    const grokMsg = pushMsg(session, 'grok', grokReply);
-    newMessages.push(grokMsg);
-    lastGrokReply = grokReply;
-    console.log(`    ✅ Grok完了 (${grokReply.length}文字)`);
+    const result = await runTrialogueRound(sessionId, userMessage, round, lastGptReply, lastClaudeReply, lastGrokReply);
+    allMessages.push(...result.messages);
+    const grok = result.messages.find(m => m.speaker === 'grok');
+    const claude = result.messages.find(m => m.speaker === 'claude');
+    const gpt = result.messages.find(m => m.speaker === 'gpt');
+    if (gpt) lastGptReply = gpt.content;
+    if (claude) lastClaudeReply = claude.content;
+    if (grok) lastGrokReply = grok.content;
   }
 
-  await saveData();
-  return { messages: newMessages };
+  return { messages: allMessages };
 }
 
 // ─── 決定事項自動抽出 ────────────────────────────────────────────────────────

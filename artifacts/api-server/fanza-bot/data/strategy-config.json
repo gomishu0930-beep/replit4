@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 195,
-    "avgNewPatterns": 195.66925626756753,
-    "totalCycles": 109
+    "lastNewPatterns": 193,
+    "avgNewPatterns": 194.86847938729727,
+    "totalCycles": 110
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "109サイクル実績 / 平均新規パターン 195.7件/サイクル",
+      "finding": "110サイクル実績 / 平均新規パターン 194.9件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-07T10:09:49.787Z"
+      "testedAt": "2026-04-07T10:15:23.644Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "confirmed",
       "finding": "直近 12件の平均スコア 1.2 vs 以前 1.0 (+16.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-07T10:09:49.787Z"
+      "testedAt": "2026-04-07T10:15:23.644Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 12時 (avg 1.3) / 最低スロット: 20時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-07T10:09:49.787Z"
+      "testedAt": "2026-04-07T10:15:23.644Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-07T10:15:23.644Z",
+      "cycle": 110,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-07T10:09:49.787Z",
       "cycle": 109,
@@ -439,18 +446,8 @@
       "decisions": [
         "コンテンツ重み更新: buzz: 2.00 → 1.80 (平均スコア 1.0)"
       ]
-    },
-    {
-      "at": "2026-04-06T11:39:11.237Z",
-      "cycle": 65,
-      "decisions": [
-        "[会議決定] 会議決定: シャドウバン回復期間はrankコンテンツの重みを0.8に下げ、buzzを2.0に引き上げる。impressionタイプとの相性を優先。amateur",
-        "投稿重み[buzz]: 1.4 → 2",
-        "投稿重み[rank]: 1 → 0.8",
-        "投稿重み[amateur]: 1.4 → 1.2"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-07T10:09:49.787Z",
-  "version": 111
+  "lastEvaluatedAt": "2026-04-07T10:15:23.644Z",
+  "version": 112
 }
