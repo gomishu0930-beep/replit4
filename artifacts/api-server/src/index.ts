@@ -4,6 +4,7 @@ import { startScheduler } from "./bot/scheduler";
 import { initStorage } from "./bot/storage";
 import { loadMeetingData } from "./bot/meeting";
 import { initTasks } from "./bot/tasks";
+import { loadPauseState } from "./bot/twitter";
 
 const rawPort = process.env["PORT"];
 
@@ -31,6 +32,7 @@ const server = app.listen(port, async (err) => {
   await initStorage();
   await loadMeetingData();
   await initTasks();
+  await loadPauseState(); // 停止フラグを復元（凍結対応などで永続停止している場合）
   startScheduler();
 });
 

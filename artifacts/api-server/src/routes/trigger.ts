@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
-import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
+import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
@@ -240,6 +240,26 @@ router.post('/trigger/external-patterns', auth, async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ─── 緊急停止 / 再開 ──────────────────────────────────────────────────────────
+
+// POST /api/trigger/pause — 全投稿を即時停止（認証必須）
+router.post('/trigger/pause', auth, async (req, res) => {
+  const reason = (req.body?.reason as string) || '手動緊急停止';
+  await pauseBot(reason);
+  res.json({ ok: true, paused: true, reason });
+});
+
+// POST /api/trigger/resume — 投稿を再開（認証必須）
+router.post('/trigger/resume', auth, async (_req, res) => {
+  await resumeBot();
+  res.json({ ok: true, paused: false });
+});
+
+// GET /api/bot/pause-status — 停止状態を確認（認証不要）
+router.get('/bot/pause-status', (_req, res) => {
+  res.json({ paused: isBotPaused(), reason: getPausedReason() });
 });
 
 export default router;

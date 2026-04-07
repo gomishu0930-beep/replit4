@@ -1,4 +1,5 @@
 import { TwitterApi } from 'twitter-api-v2';
+import { readJson, writeJson } from './cloudStore.js';
 
 const client = new TwitterApi({
   appKey: process.env.TWITTER_API_KEY ?? '',
@@ -8,6 +9,39 @@ const client = new TwitterApi({
 });
 
 const rw = client.readWrite;
+
+// ─── 緊急停止フラグ ───────────────────────────────────────────────────────────
+
+let _botPaused = false;
+let _pausedReason = '';
+
+export function isBotPaused(): boolean { return _botPaused; }
+export function getPausedReason(): string { return _pausedReason; }
+
+export async function pauseBot(reason: string): Promise<void> {
+  _botPaused = true;
+  _pausedReason = reason;
+  await writeJson('bot-pause-state.json', { paused: true, reason, pausedAt: new Date().toISOString() });
+  console.log(`  🛑 [緊急停止] ボット全投稿を停止: ${reason}`);
+}
+
+export async function resumeBot(): Promise<void> {
+  _botPaused = false;
+  _pausedReason = '';
+  await writeJson('bot-pause-state.json', { paused: false, reason: '', resumedAt: new Date().toISOString() });
+  console.log('  ▶️  [再開] ボット投稿を再開');
+}
+
+export async function loadPauseState(): Promise<void> {
+  try {
+    const state = await readJson<{ paused: boolean; reason: string }>('bot-pause-state.json', { paused: false, reason: '' });
+    _botPaused = state.paused;
+    _pausedReason = state.reason ?? '';
+    if (_botPaused) {
+      console.log(`  🛑 [起動] 停止フラグ検出: ${_pausedReason}`);
+    }
+  } catch { /* 初回はファイルなし */ }
+}
 
 let _cachedUsername: string | null = null;
 let _cachedNumericId: string | null = null;
@@ -71,6 +105,9 @@ export async function uploadImages(imageUrls: string[]): Promise<string[]> {
 }
 
 export async function postTweet(text: string, mediaIds: string[] = []): Promise<string> {
+  if (_botPaused) {
+    throw new Error(`🛑 ボット停止中につき投稿をブロックしました（理由: ${_pausedReason}）`);
+  }
   const params: any = { text };
   if (mediaIds.length > 0) {
     params.media = { media_ids: mediaIds };
