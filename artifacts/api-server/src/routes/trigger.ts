@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns } from '../bot/storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
+import { getIsPosting as getSchedulerIsPosting } from '../bot/scheduler.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 
@@ -36,15 +37,35 @@ async function postItem(item: any, type: string) {
   return tweetId;
 }
 
+// 当日のJST0:00以降の投稿件数を返す
+function getTodayPostCount(): number {
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const todayMidnightJst = new Date(
+    Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate()) - 9 * 3600000,
+  );
+  return getPostsAfter(todayMidnightJst).length;
+}
+
 async function runJob(type: string, label: string, fetchItems: () => Promise<any[]>) {
-  if (isPosting) {
-    return { skipped: true, reason: '別の投稿が進行中' };
+  // スケジューラーとの排他制御（scheduler.ts の isPosting も確認）
+  if (isPosting || getSchedulerIsPosting()) {
+    return { skipped: true, reason: '別の投稿が進行中（スケジューラー含む）' };
   }
 
   // A/Bテスト週は手動トリガーも1件限定（1日1件制限を維持）
   const abWeek = getABTestWeek();
   const maxItems = (abWeek === 'W1' || abWeek === 'W2') ? 1 : 3;
   if (abWeek !== 'normal') {
+    const todayCount = getTodayPostCount();
+    if (todayCount >= 1) {
+      console.warn(`  ⚠ [trigger/${type}] ${abWeek}期間中に本日分(${todayCount}件)投稿済み → 手動トリガー実行（注意: 1日1件制限を超えます）`);
+      return {
+        ok: false,
+        skipped: true,
+        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日すでに${todayCount}件投稿済みです。シャドウバン回復に影響する可能性があります。`,
+        todayCount,
+      };
+    }
     console.log(`  ⚠ [trigger/${type}] ${abWeek}期間中 → 手動トリガー投稿を1件限定で実行`);
   }
 
@@ -115,9 +136,22 @@ router.post('/trigger/cid', auth, async (req, res) => {
     res.status(400).json({ ok: false, error: 'クエリ ?cid=商品ID を指定してください' });
     return;
   }
-  if (isPosting) {
-    res.status(429).json({ ok: false, error: '別の投稿が進行中' });
+  if (isPosting || getSchedulerIsPosting()) {
+    res.status(429).json({ ok: false, error: '別の投稿が進行中（スケジューラー含む）' });
     return;
+  }
+  // A/Bテスト週: 1日1件制限チェック
+  const abWeek = getABTestWeek();
+  if (abWeek !== 'normal') {
+    const todayCount = getTodayPostCount();
+    if (todayCount >= 1) {
+      res.status(429).json({
+        ok: false,
+        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日すでに${todayCount}件投稿済みです。`,
+        todayCount,
+      });
+      return;
+    }
   }
   isPosting = true;
   try {

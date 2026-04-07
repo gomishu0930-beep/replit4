@@ -30,8 +30,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 15,
-        "checkedAt": "2026-04-05T06:50:09.329Z"
+        "impression_count": 16,
+        "checkedAt": "2026-04-07T04:51:22.365Z"
       }
     },
     {
@@ -51,8 +51,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 17,
-        "checkedAt": "2026-04-05T06:50:10.900Z"
+        "impression_count": 19,
+        "checkedAt": "2026-04-07T04:51:24.012Z"
       }
     },
     {
@@ -72,8 +72,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 5,
-        "checkedAt": "2026-04-05T06:50:12.466Z"
+        "impression_count": 7,
+        "checkedAt": "2026-04-07T04:51:25.588Z"
       }
     },
     {
@@ -93,8 +93,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 8,
-        "checkedAt": "2026-04-05T06:50:14.048Z"
+        "impression_count": 10,
+        "checkedAt": "2026-04-07T04:51:27.181Z"
       }
     },
     {
@@ -114,8 +114,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 12,
-        "checkedAt": "2026-04-05T06:50:15.625Z"
+        "impression_count": 14,
+        "checkedAt": "2026-04-07T04:51:28.745Z"
       }
     },
     {
@@ -135,8 +135,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 7,
-        "checkedAt": "2026-04-05T06:50:17.196Z"
+        "impression_count": 9,
+        "checkedAt": "2026-04-07T04:51:30.323Z"
       }
     },
     {
@@ -156,8 +156,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 4,
-        "checkedAt": "2026-04-05T06:50:18.774Z"
+        "impression_count": 7,
+        "checkedAt": "2026-04-07T04:51:31.917Z"
       }
     },
     {
@@ -177,8 +177,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 5,
-        "checkedAt": "2026-04-05T06:50:20.358Z"
+        "impression_count": 7,
+        "checkedAt": "2026-04-07T04:51:33.482Z"
       }
     },
     {
@@ -198,8 +198,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 7,
-        "checkedAt": "2026-04-05T06:50:21.931Z"
+        "impression_count": 10,
+        "checkedAt": "2026-04-07T04:51:35.052Z"
       }
     },
     {
@@ -219,8 +219,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 6,
-        "checkedAt": "2026-04-05T06:50:23.497Z"
+        "impression_count": 8,
+        "checkedAt": "2026-04-07T04:51:36.635Z"
       }
     },
     {
@@ -240,8 +240,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 6,
-        "checkedAt": "2026-04-05T06:50:25.058Z"
+        "impression_count": 8,
+        "checkedAt": "2026-04-07T04:51:38.220Z"
       }
     },
     {
@@ -261,8 +261,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 4,
-        "checkedAt": "2026-04-05T06:50:26.628Z"
+        "impression_count": 9,
+        "checkedAt": "2026-04-07T04:51:39.806Z"
       }
     },
     {
@@ -282,8 +282,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 4,
-        "checkedAt": "2026-04-05T06:50:28.201Z"
+        "impression_count": 12,
+        "checkedAt": "2026-04-07T04:51:41.371Z"
       }
     },
     {
@@ -303,8 +303,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 9,
-        "checkedAt": "2026-04-05T06:50:29.769Z"
+        "impression_count": 17,
+        "checkedAt": "2026-04-07T04:51:42.944Z"
       }
     },
     {
@@ -324,8 +324,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 7,
-        "checkedAt": "2026-04-05T06:50:31.333Z"
+        "impression_count": 17,
+        "checkedAt": "2026-04-07T04:51:44.511Z"
       }
     },
     {
@@ -339,7 +339,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dlulu00342&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-05T11:01:29.863Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 17,
+        "checkedAt": "2026-04-07T04:51:46.080Z"
+      }
     },
     {
       "tweetId": "2040910899448344709",
@@ -353,7 +361,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dmkmp00651&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-05T21:56:12.476Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 14,
+        "checkedAt": "2026-04-07T04:51:47.675Z"
+      }
     },
     {
       "tweetId": "2040987975530557951",
@@ -366,7 +382,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3D1start00257&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-06T03:00:28.431Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 14,
+        "checkedAt": "2026-04-07T04:51:49.262Z"
+      }
     },
     {
       "tweetId": "2040987990114161117",
@@ -379,7 +403,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dofje00416&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-06T03:00:31.879Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 2,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 19,
+        "checkedAt": "2026-04-07T04:51:50.836Z"
+      }
     },
     {
       "tweetId": "2041108795007357065",
@@ -392,7 +424,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dmadm00176&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-06T11:02:35.591Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 11,
+        "checkedAt": "2026-04-07T04:51:52.399Z"
+      }
     },
     {
       "tweetId": "2041266672862986417",
@@ -406,7 +446,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Debwh00329&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-06T21:29:48.516Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 6,
+        "checkedAt": "2026-04-07T04:51:53.973Z"
+      }
     },
     {
       "tweetId": "2041330829750649002",
@@ -419,7 +467,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dcawd00242&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-07T01:44:20.951Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 2,
+        "checkedAt": "2026-04-07T04:51:55.563Z"
+      }
     },
     {
       "tweetId": "2041350369045856717",
@@ -432,7 +488,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3D13dsvr01627&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-07T03:00:29.900Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 2,
+        "checkedAt": "2026-04-07T04:51:57.154Z"
+      }
     },
     {
       "tweetId": "2041350384556355650",
@@ -445,7 +509,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Djur00371&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-07T03:00:33.439Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 3,
+        "checkedAt": "2026-04-07T04:51:58.731Z"
+      }
     }
   ]
 }
