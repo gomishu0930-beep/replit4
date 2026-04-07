@@ -3,7 +3,7 @@ import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmate
 import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter } from '../bot/storage.js';
-import { getIsPosting as getSchedulerIsPosting } from '../bot/scheduler.js';
+import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 
@@ -178,6 +178,27 @@ router.post('/trigger/keyword', auth, async (req, res) => {
   }
   const result = await runJob('amateur', `キーワード指定[${keyword}]`, () => getKeywordItems(keyword, 1));
   res.json(result);
+});
+
+// 芸能人アフィリ緊急手動投稿（W1制限を無視して即時投稿）
+router.post('/trigger/celebrity', auth, async (_req, res) => {
+  if (isPosting || getSchedulerIsPosting()) {
+    res.status(429).json({ ok: false, error: '別の投稿が進行中（スケジューラー含む）' });
+    return;
+  }
+  const abWeek = getABTestWeek();
+  const todayCount = getTodayPostCount();
+  console.log(`\n[緊急手動] 芸能人アフィリ投稿開始 (${abWeek} / 本日${todayCount}件目)`);
+  try {
+    await postCelebritySlotNow('手動緊急');
+    res.json({
+      ok: true,
+      warn: abWeek !== 'normal' ? `⚠ ${abWeek}期間中の追加投稿です。シャドウバン回復に注意してください。` : undefined,
+    });
+  } catch (e: any) {
+    console.error('[緊急手動] 芸能人投稿エラー:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // 指標更新のみ（投稿なし）

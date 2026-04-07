@@ -142,6 +142,10 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
   console.log(`  ✅ [${label}] 芸能人スロット投稿完了 (${tweetId})`);
 }
 
+export async function postCelebritySlotNow(label: string) {
+  return postCelebritySlot(label);
+}
+
 async function postCelebritySlot(label: string) {
   if (isPosting) {
     console.log(`  ⚠ [${label}] 前の投稿処理が進行中 — スキップ`);
