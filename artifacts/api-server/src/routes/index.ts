@@ -7,6 +7,7 @@ import meetingRouter from "./meeting";
 import tasksRouter from "./tasks";
 import goalsRouter from "./goals";
 import quickConfigRouter from "./quick-config";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(meetingRouter);
 router.use(tasksRouter);
 router.use(goalsRouter);
 router.use(quickConfigRouter);
+router.use(authRouter);
 
 export default router;
