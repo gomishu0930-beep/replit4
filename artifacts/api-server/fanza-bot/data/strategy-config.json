@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 5,
+  "monitorIntervalHours": 4,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 195,
-    "avgNewPatterns": 58.57515926573636,
-    "totalCycles": 142
+    "lastNewPatterns": 0,
+    "avgNewPatterns": 41.00261148601545,
+    "totalCycles": 143
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 6h）は最適か？",
+      "question": "外部情報の収集間隔（現在 5h）は最適か？",
       "status": "adjusted",
-      "finding": "142サイクル実績 / 平均新規パターン 58.6件/サイクル",
-      "adjustment": "監視間隔を 6h → 5h に短縮（平均新規パターン 58.6件/サイクル）",
-      "testedAt": "2026-04-08T02:40:37.744Z"
+      "finding": "143サイクル実績 / 平均新規パターン 41.0件/サイクル",
+      "adjustment": "監視間隔を 5h → 4h に短縮（平均新規パターン 41.0件/サイクル）",
+      "testedAt": "2026-04-08T03:06:14.232Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T02:40:37.745Z"
+      "testedAt": "2026-04-08T03:06:14.232Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T02:40:37.745Z"
+      "testedAt": "2026-04-08T03:06:14.487Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-08T03:06:14.487Z",
+      "cycle": 143,
+      "decisions": [
+        "監視間隔を 5h → 4h に短縮（平均新規パターン 41.0件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-08T02:40:37.745Z",
       "cycle": 142,
@@ -434,15 +441,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T06:47:33.394Z",
-      "cycle": 96,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-08T02:40:37.745Z",
-  "version": 144
+  "lastEvaluatedAt": "2026-04-08T03:06:14.487Z",
+  "version": 145
 }

@@ -90,12 +90,32 @@ async function downloadImageBuffer(url: string): Promise<Buffer> {
   return Buffer.from(ab);
 }
 
+async function downloadImageBufferWithMime(url: string): Promise<{ buf: Buffer; mimeType: string }> {
+  const res = await fetch(url, { headers: { 'User-Agent': 'FanzaBot/1.0' } });
+  if (!res.ok) throw new Error(`Image download failed: ${url} (${res.status})`);
+  const contentType = res.headers.get('content-type') ?? '';
+  const ab = await res.arrayBuffer();
+  const buf = Buffer.from(ab);
+  // MIME判定: content-typeが明示されていればそれを使う、なければURLの拡張子から推定
+  let mimeType = 'image/jpeg';
+  if (contentType.startsWith('image/')) {
+    mimeType = contentType.split(';')[0].trim();
+  } else if (url.match(/\.png(\?|$)/i)) {
+    mimeType = 'image/png';
+  } else if (url.match(/\.webp(\?|$)/i)) {
+    mimeType = 'image/webp';
+  } else if (url.match(/\.gif(\?|$)/i)) {
+    mimeType = 'image/gif';
+  }
+  return { buf, mimeType };
+}
+
 export async function uploadImages(imageUrls: string[]): Promise<string[]> {
   const ids: string[] = [];
   for (const url of imageUrls.slice(0, 4)) {
     try {
-      const buf = await downloadImageBuffer(url);
-      const id = await rw.v1.uploadMedia(buf, { mimeType: 'image/jpeg' });
+      const { buf, mimeType } = await downloadImageBufferWithMime(url);
+      const id = await rw.v1.uploadMedia(buf, { mimeType });
       ids.push(id);
     } catch (e: any) {
       console.error(`  ⚠ 画像アップロード失敗 (${url}): ${e.message}`);

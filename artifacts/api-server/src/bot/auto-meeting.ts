@@ -32,7 +32,8 @@ import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestS
 import { getStrategySummary } from './strategy.js';
 import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing } from './grok.js';
-import { postTweet } from './twitter.js';
+import { postTweet, uploadImages } from './twitter.js';
+import { generateImage, buildImagePrompt, isNanobananaEnabled } from './imageGen.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -587,15 +588,40 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
     return { meetingId: session.id, directive: directiveText, posted: false, reason: 'ツイート本文抽出失敗' };
   }
 
+  // ── Phase 4: 画像生成（リンクなし投稿のみ）────────────────────────────────
+  const hasUrl = /https?:\/\/\S+/.test(tweetText);
+  let mediaIds: string[] = [];
+
+  if (!hasUrl && isNanobananaEnabled()) {
+    console.log(`\n[${jst()}] 🍌 [投稿会議] リンクなし投稿 → Nanobanana2で画像生成`);
+    try {
+      // 議論の中から商品名を抽出してプロンプトに活用
+      const productTitle = directiveText.match(/[「『]([^」』]{5,40})[」』]/)?.[1];
+      const imagePrompt = buildImagePrompt(tweetText, productTitle);
+      console.log(`  プロンプト: ${imagePrompt.slice(0, 100)}`);
+
+      const imageUrl = await generateImage(imagePrompt);
+      const uploaded = await uploadImages([imageUrl]);
+      mediaIds = uploaded;
+      console.log(`  🖼 画像アップロード完了 mediaIds: ${mediaIds.join(', ')}`);
+    } catch (e: any) {
+      console.warn(`[${jst()}] ⚠ [投稿会議] 画像生成スキップ（エラー）: ${e.message}`);
+      mediaIds = [];
+    }
+  } else if (!hasUrl && !isNanobananaEnabled()) {
+    console.log(`[${jst()}] ℹ [投稿会議] リンクなし投稿・NANOBANANA_API_KEY未設定 → テキストのみ投稿`);
+  }
+
   // ── Phase 4: X投稿 ───────────────────────────────────────────────────────
-  console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿 → "${tweetText.slice(0, 60)}..."`);
+  const withImage = mediaIds.length > 0;
+  console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿${withImage ? '（画像付き）' : ''} → "${tweetText.slice(0, 60)}..."`);
   try {
-    const tweetId = await postTweet(tweetText, []);
+    const tweetId = await postTweet(tweetText, mediaIds);
     recordPost({ tweetId, replyId: '', text: tweetText, type: 'meeting-post' });
     console.log(`\n[${jst()}] 🏁 [投稿会議] Phase 4完了！ tweetId: ${tweetId}`);
     await contact.systemAlert(
-      '🏁 投稿会議→投稿完了',
-      `Phase 1-4フルサイクル完了。Grok裁定に基づき自律投稿しました。\n\n📝 投稿内容:\n${tweetText}\n\n🔗 tweetId: ${tweetId}`,
+      `🏁 投稿会議→投稿完了${withImage ? '（画像付き）' : ''}`,
+      `Phase 1-4フルサイクル完了。Grok裁定に基づき自律投稿しました。\n\n📝 投稿内容:\n${tweetText}\n${withImage ? '🖼 Nanobanana2生成画像添付\n' : ''}\n🔗 tweetId: ${tweetId}`,
     );
     return { meetingId: session.id, directive: directiveText, tweetText, tweetId, posted: true };
   } catch (e: any) {
