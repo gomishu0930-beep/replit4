@@ -1201,24 +1201,24 @@
       "text": "【API実装候補】Prime-Time Scheduled Posting (18-22 JST): 回復事例で最も効果が高い時間帯。cron で時刻制御するだけでインプレッションが伸びるためコスパが高い。",
       "category": "tech",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "user",
       "source": "API調査会議",
       "platform": "x",
       "createdAt": "2026-04-08T03:41:13.863Z",
-      "updatedAt": "2026-04-08T03:41:13.863Z"
+      "updatedAt": "2026-04-08T14:59:42.598Z"
     },
     {
       "id": "dir-1775619673578",
       "text": "【API実装候補】Possibly Sensitive (NSFW) Media Flagging: 2025Q1以降、NSFW未ラベル投稿はリーチ30%減。投稿時にフラグを付けるだけでペナルティを回避でき、インプレッション維持効果が大きい。",
       "category": "tech",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "user",
       "source": "API調査会議",
       "platform": "x",
       "createdAt": "2026-04-08T03:41:13.578Z",
-      "updatedAt": "2026-04-08T03:41:13.578Z"
+      "updatedAt": "2026-04-08T14:59:43.405Z"
     },
     {
       "id": "dir-1775571848232",
@@ -1315,12 +1315,12 @@
       "text": "4/12〜4/14の3日間で「リンク無しQT+Poll」を1本ずつ試験投稿（Poll文面『どっち派？ A) 巨乳🍼 B) 痴女😈 投票で教えて🔥』・QT対象は@FANZA公式ツイート・ハッシュタグ#FANZAのみ・投稿後30分でEV5・IPF取得）",
       "category": "content",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "緊急会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T13:35:44.297Z",
-      "updatedAt": "2026-04-07T13:35:47.631Z",
+      "updatedAt": "2026-04-08T15:00:16.831Z",
       "executionLog": [
         {
           "at": "2026-04-07T13:35:44.564Z",
@@ -1336,12 +1336,12 @@
       "text": "4/9〜4/11の3日間はFANZA公式への返信投稿のみ実施（1日1件・10:30枠・QT対象は@FANZA公式の直近ツイート・文面20文字以内・🔞なし・リンクなし・絵文字1個まで）",
       "category": "content",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "緊急会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T13:35:41.661Z",
-      "updatedAt": "2026-04-07T13:35:44.027Z",
+      "updatedAt": "2026-04-08T15:00:17.376Z",
       "executionLog": [
         {
           "at": "2026-04-07T13:35:41.952Z",
@@ -1357,12 +1357,12 @@
       "text": "4/8 10:30のW1通常枠でcelebrity/buzz/emergency/amateur/randomのいずれかのテンプレート投稿を1本のみ実施し、Poll実験は4/9以降に延期する",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "ai",
       "source": "緊急会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T13:35:38.021Z",
-      "updatedAt": "2026-04-07T13:35:41.390Z",
+      "updatedAt": "2026-04-08T14:59:43.917Z",
       "executionLog": [
         {
           "at": "2026-04-07T13:35:38.328Z",
@@ -1378,12 +1378,12 @@
       "text": "今夜（4/7 23:00）の投稿を完全中止し、4/8 10:30まで投稿を停止する",
       "category": "timing",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "ai",
       "source": "緊急会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T13:35:34.457Z",
-      "updatedAt": "2026-04-07T13:35:37.749Z",
+      "updatedAt": "2026-04-08T14:59:44.431Z",
       "executionLog": [
         {
           "at": "2026-04-07T13:35:34.741Z",
@@ -1399,24 +1399,24 @@
       "text": "[Grok裁定・o3案採用] 4/8〜4/10 10:30にFANZA公式QT返信1件/日（リンク/🔞なし・20文字内「気になってた🔥 #FANZA」）を実施し、4/12 10:30からリンク無しQT+Poll1本/隔日へ移行",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "AI会議 自律裁定 (【緊急戦略会議】アカウント凍結検証・新規スタート 2026/4/7)",
       "platform": "x",
       "createdAt": "2026-04-07T13:34:52.027Z",
-      "updatedAt": "2026-04-07T13:34:52.027Z"
+      "updatedAt": "2026-04-08T15:00:17.932Z"
     },
     {
       "id": "dir-1775565166902",
       "text": "Gate0達成後（4/20以降）に「1日1投稿+1リプライ」パターンをWeek3で試験実施し、本投稿の3時間後に非🔞リプライ1件（FANZA公式/人気AV女優垢対象、20文字以内・リンクなし）を投稿する",
       "category": "strategy",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:46.902Z",
-      "updatedAt": "2026-04-07T12:32:49.437Z",
+      "updatedAt": "2026-04-08T15:00:18.509Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:32:47.177Z",
@@ -1432,24 +1432,24 @@
       "text": "4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする",
       "category": "other",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "user",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:46.604Z",
-      "updatedAt": "2026-04-07T12:32:46.604Z"
+      "updatedAt": "2026-04-08T14:59:53.642Z"
     },
     {
       "id": "dir-1775565163445",
       "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する",
       "category": "strategy",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:43.445Z",
-      "updatedAt": "2026-04-07T12:32:46.343Z",
+      "updatedAt": "2026-04-08T14:59:54.114Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:32:43.705Z",
@@ -1465,24 +1465,24 @@
       "text": "4/8 09:00までにスプレッドシートのL列にプロフィールクリック数、M列にPVR_24h計算式（=L列÷D列）、N列にPoll総投票数、O列にエンゲージメント率（=(E+F+N)÷D）を追加する",
       "category": "other",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "user",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:43.161Z",
-      "updatedAt": "2026-04-07T12:32:43.161Z"
+      "updatedAt": "2026-04-08T14:59:54.591Z"
     },
     {
       "id": "dir-1775565160661",
       "text": "4/8 10:30のW1通常枠でcelebrity/buzz/emergency/amateur/randomのいずれかのテンプレート投稿を1本のみ実施し、Poll実験は4/9以降に延期する",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:40.661Z",
-      "updatedAt": "2026-04-07T12:32:42.909Z",
+      "updatedAt": "2026-04-08T14:59:53.181Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:32:40.947Z",
@@ -1498,12 +1498,12 @@
       "text": "今夜（4/7 23:00）の投稿を完全中止し、4/8 10:30まで投稿を停止する",
       "category": "timing",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:38.008Z",
-      "updatedAt": "2026-04-07T12:32:40.357Z",
+      "updatedAt": "2026-04-08T14:59:45.043Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:32:38.254Z",
@@ -1519,36 +1519,36 @@
       "text": "[Grok裁定・Claude案採用] 以下のツイート本文をそのまま投稿せよ→「【今夜投稿中止】1日1件厳守継続。明日4/8 10:30 W1枠でFANZA🔥celebrity投稿🔞広瀬すず似の逸材発見！⭐4.67 #FANZA」（0実行・待機）",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "ai",
       "source": "AI会議 自律裁定 (【自律】2026/4/7 週次戦略会議)",
       "platform": "x",
       "createdAt": "2026-04-07T12:32:03.494Z",
-      "updatedAt": "2026-04-07T12:32:03.494Z"
+      "updatedAt": "2026-04-08T14:59:45.570Z"
     },
     {
       "id": "dir-1775564560244",
       "text": "4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする",
       "category": "other",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "user",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:40.244Z",
-      "updatedAt": "2026-04-07T12:22:40.244Z"
+      "updatedAt": "2026-04-08T14:59:55.043Z"
     },
     {
       "id": "dir-1775564556817",
       "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・PVR・SB状態で統計比較する",
       "category": "strategy",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:36.817Z",
-      "updatedAt": "2026-04-07T12:22:39.964Z",
+      "updatedAt": "2026-04-08T14:59:55.548Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:22:37.125Z",
@@ -1564,24 +1564,24 @@
       "text": "4/8 09:00までにスプレッドシートのL列にプロフィールクリック数、M列にPVR_24h計算式（=L列÷D列）、N列にPoll総投票数、O列にエンゲージメント率（=(E+F+N)÷D）を追加する",
       "category": "other",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "user",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:36.527Z",
-      "updatedAt": "2026-04-07T12:22:36.527Z"
+      "updatedAt": "2026-04-08T14:59:56.013Z"
     },
     {
       "id": "dir-1775564554218",
       "text": "4/8の10:30スロット（W1テスト枠）投稿をキャンセルし、1日1件厳守を優先する",
       "category": "timing",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:34.218Z",
-      "updatedAt": "2026-04-07T12:22:36.236Z",
+      "updatedAt": "2026-04-08T14:59:56.514Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:22:34.498Z",
@@ -1597,12 +1597,12 @@
       "text": "今夜23:00に@FANZA春セール公式ツイートをQTし「🔥春セール残り1時間！30%OFFで買うならどっち？👇 #FANZA春セール A) 巨乳系🍼 B) 痴女系😈 投票+リプで教えて🔥」と投稿、Poll統合形式（24h締切・2択）で実施する",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:31.420Z",
-      "updatedAt": "2026-04-07T12:22:33.937Z",
+      "updatedAt": "2026-04-08T15:00:18.941Z",
       "executionLog": [
         {
           "at": "2026-04-07T12:22:31.720Z",
@@ -1618,24 +1618,24 @@
       "text": "[Grok裁定・Claude案採用] 以下のツイート本文をそのまま投稿せよ→「🔥春セール残り1時間！30%OFFで買うならどっち？👇 #FANZA春セール A) 巨乳系🍼 B) 痴女系😈 投票+リプで教えて🔥」（@FANZA春セール公式QT+Poll統合、23:00投稿）",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "AI会議 自律裁定 (【自律】2026/4/7 週次戦略会議)",
       "platform": "x",
       "createdAt": "2026-04-07T12:22:00.259Z",
-      "updatedAt": "2026-04-07T12:22:00.259Z"
+      "updatedAt": "2026-04-08T15:00:19.389Z"
     },
     {
       "id": "dir-1775562737967",
       "text": "4/8の10:30投稿枠は予定通り実行し、今夜のQT+Poll投稿を「緊急テスト」として週7→8投稿に増やすが、4/9以降は1日1件厳守に戻す",
       "category": "timing",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T11:52:17.967Z",
-      "updatedAt": "2026-04-07T11:52:20.051Z",
+      "updatedAt": "2026-04-08T14:59:57.029Z",
       "executionLog": [
         {
           "at": "2026-04-07T11:52:18.231Z",
@@ -1651,12 +1651,12 @@
       "text": "Gate0達成後（4/14以降）に「スタンドアロンPoll」vs「QT+Poll」のA/Bテストを各6本ずつ（合計12本）実施し、IPF・EV5・SB状態で統計比較する",
       "category": "strategy",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T11:52:15.506Z",
-      "updatedAt": "2026-04-07T11:52:17.687Z",
+      "updatedAt": "2026-04-08T14:59:57.521Z",
       "executionLog": [
         {
           "at": "2026-04-07T11:52:15.791Z",
@@ -1672,12 +1672,12 @@
       "text": "4/13 09:00までにGoogle Apps Scriptで週次平均IPFを自動計算しSlackへプッシュ通知する仕組みをデプロイする",
       "category": "other",
       "priority": "medium",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "user",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T11:52:15.268Z",
-      "updatedAt": "2026-04-07T11:52:15.268Z"
+      "updatedAt": "2026-04-08T14:59:57.933Z"
     },
     {
       "id": "dir-1775562734963",
@@ -1708,12 +1708,12 @@
       "text": "今夜21:00に@FANZA春セール公式ツイートをQTし「🔥春セール最終日！30%OFFで買うならどっち？👇 #FANZA春セール」と投稿、直下リプに2択Poll「A)巨乳パイズリ B)痴女逆レイプ 投票+リプ🔥」を設置する",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "自律会議 2026/4/7",
       "platform": "x",
       "createdAt": "2026-04-07T11:52:12.254Z",
-      "updatedAt": "2026-04-07T11:52:14.428Z",
+      "updatedAt": "2026-04-08T15:00:19.908Z",
       "executionLog": [
         {
           "at": "2026-04-07T11:52:12.514Z",
@@ -1729,12 +1729,12 @@
       "text": "[Grok裁定・Claude案採用] 今夜21:00に@FANZA春セール公式QT「🔥春セール最終日！30%OFFで買うならどっち？👇 #FANZA春セール」+直下リプPoll「A)巨乳パイズリ B)痴女逆レイプ 投票+リプ🔥」で投稿を実行",
       "category": "content",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "AI会議 自律裁定 (【自律】2026/4/7 週次戦略会議)",
       "platform": "x",
       "createdAt": "2026-04-07T11:51:38.784Z",
-      "updatedAt": "2026-04-07T11:51:38.784Z"
+      "updatedAt": "2026-04-08T15:00:20.361Z"
     },
     {
       "id": "dir-1775475507295",
@@ -1967,11 +1967,11 @@
       "text": "投稿頻度を1日1件に厳守し、スロットABテストはW1（4/7〜4/13）を10:30枠のみ・W2（4/14〜4/20）を5:00枠のみで週単位切り替え方式で実施する",
       "category": "timing",
       "priority": "high",
-      "status": "active",
+      "status": "completed",
       "assignee": "user",
       "source": "会議: あ",
       "createdAt": "2026-04-06T11:19:58.341Z",
-      "updatedAt": "2026-04-07T07:45:28.567Z",
+      "updatedAt": "2026-04-08T14:59:46.041Z",
       "executionLog": [
         {
           "at": "2026-04-07T07:45:24.796Z",
@@ -2202,10 +2202,10 @@
       "text": "サブアカウントの初動操作はIPアドレス・デバイス・登録メール・電話番号をメインアカウントと完全に分離し、いいね・リプライのタイミングを毎回±5分ずらしてパターン検知を回避する",
       "category": "other",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "source": "会議: X（Twitter）の2025〜2026年における成人向けコンテンツへのアルゴリ",
       "createdAt": "2026-04-06T09:49:58.262Z",
-      "updatedAt": "2026-04-07T07:46:30.081Z",
+      "updatedAt": "2026-04-08T14:59:58.364Z",
       "executionLog": [
         {
           "at": "2026-04-07T07:46:27.957Z",
