@@ -1521,12 +1521,12 @@
       "text": "4/13 09:00にSBI自動計測システム（SBI = SearchBan×3 + GhostBan×2 + ReplyBan×1 + NSFW強制×2）を初回実行し、結果をSlack #sb-logにJSON送信、SBI>2なら投稿本数を自動で1件/日に減速",
       "category": "recovery",
       "priority": "high",
-      "status": "active",
+      "status": "cancelled",
       "assignee": "ai",
       "source": "週次会議 2026/4/8",
       "platform": "x",
       "createdAt": "2026-04-08T15:20:10.118Z",
-      "updatedAt": "2026-04-08T15:20:12.946Z",
+      "updatedAt": "2026-04-08T16:03:32.511Z",
       "executionLog": [
         {
           "at": "2026-04-08T15:20:10.497Z",
