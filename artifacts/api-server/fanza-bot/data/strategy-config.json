@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 6,
+  "monitorIntervalHours": 5,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 0,
-    "avgNewPatterns": 0.15338625660481872,
-    "totalCycles": 140
+    "lastNewPatterns": 195,
+    "avgNewPatterns": 58.57515926573636,
+    "totalCycles": 142
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 6h）は最適か？",
-      "status": "confirmed",
-      "finding": "140サイクル実績 / 平均新規パターン 0.2件/サイクル",
-      "adjustment": null,
-      "testedAt": "2026-04-08T02:18:43.549Z"
+      "status": "adjusted",
+      "finding": "142サイクル実績 / 平均新規パターン 58.6件/サイクル",
+      "adjustment": "監視間隔を 6h → 5h に短縮（平均新規パターン 58.6件/サイクル）",
+      "testedAt": "2026-04-08T02:40:37.744Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T02:18:43.550Z"
+      "testedAt": "2026-04-08T02:40:37.745Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T02:18:43.550Z"
+      "testedAt": "2026-04-08T02:40:37.745Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-08T02:40:37.745Z",
+      "cycle": 142,
+      "decisions": [
+        "監視間隔を 6h → 5h に短縮（平均新規パターン 58.6件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-08T02:35:03.614Z",
+      "cycle": 141,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-08T02:18:43.550Z",
       "cycle": 140,
@@ -427,22 +441,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T06:35:32.449Z",
-      "cycle": 95,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T06:27:05.437Z",
-      "cycle": 94,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-08T02:18:43.550Z",
-  "version": 142
+  "lastEvaluatedAt": "2026-04-08T02:40:37.745Z",
+  "version": 144
 }
