@@ -501,17 +501,64 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
     return { meetingId: session.id, posted: false, reason: `議論エラー: ${e.message}` };
   }
 
-  // ── Grok指令抽出 ─────────────────────────────────────────────────────────
+  // ── Grok指令抽出（多段フォールバック）───────────────────────────────────
   const updatedSession = getMeetingById(session.id);
   const grokMessages = (updatedSession?.messages ?? []).filter(m => m.speaker === 'grok');
   const lastGrok = grokMessages[grokMessages.length - 1];
-  const directiveMatch = lastGrok?.content.match(/🎯\s*自律実行指令[：:]\s*(.+?)(?:\n|$)/s);
 
-  if (!directiveMatch) {
-    console.warn(`[${jst()}] ⚠ [投稿会議] Grok指令（🎯自律実行指令）が見つかりません`);
-    return { meetingId: session.id, posted: false, reason: 'Grok指令なし（情報収集のみ完了）' };
+  let directiveText = '';
+
+  // Pattern 1: 🎯自律実行指令： の完全一致
+  const directiveMatch = lastGrok?.content.match(/🎯\s*自律実行指令[：:]\s*(.+?)(?:\n|$)/s);
+  if (directiveMatch) {
+    directiveText = directiveMatch[1].trim();
+    console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P1）: ${directiveText.slice(0, 80)}`);
   }
-  const directiveText = directiveMatch[1].trim();
+
+  // Pattern 2: 「」で囲まれたツイート本文を直接抽出
+  if (!directiveText) {
+    const quoteMatch = lastGrok?.content.match(/[「『"](.{15,140})[」』"]/);
+    if (quoteMatch) {
+      directiveText = quoteMatch[1].trim();
+      console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P2 引用抽出）: ${directiveText.slice(0, 80)}`);
+    }
+  }
+
+  // Pattern 3: 採用/決定などのキーワード後のテキスト
+  if (!directiveText) {
+    const adoptMatch = lastGrok?.content.match(/(?:採用|決定|投稿|ツイート)[：:\s]*[「]?([🔞].{15,120})/);
+    if (adoptMatch) {
+      directiveText = adoptMatch[1].trim();
+      console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P3 採用後テキスト）: ${directiveText.slice(0, 80)}`);
+    }
+  }
+
+  // Pattern 4: Grokの全文をOpenAIに渡してツイート本文を生成
+  if (!directiveText && lastGrok?.content) {
+    console.log(`[${jst()}] 🤖 [投稿会議] Grok指令未検出 → OpenAIでGrok応答からツイート本文を生成...`);
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `以下はX(Twitter)アフィリエイトボットのAI会議でGrokが出した最終応答です。この応答の中から「今日投稿すべきツイート本文」を特定し、そのツイート本文だけを140文字以内で出力してください。ツイート本文のみを出力し、説明・注釈は一切書かないこと。\n\nGrok応答:\n${lastGrok.content.slice(0, 2000)}`,
+        }],
+        max_tokens: 200,
+        temperature: 0.3,
+      });
+      directiveText = completion.choices[0]?.message?.content?.trim() ?? '';
+      if (directiveText) {
+        console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P4 OpenAI解釈）: ${directiveText.slice(0, 80)}`);
+      }
+    } catch (e: any) {
+      console.warn(`[${jst()}] ⚠ [投稿会議] P4 OpenAI解釈エラー: ${e.message}`);
+    }
+  }
+
+  if (!directiveText) {
+    console.warn(`[${jst()}] ⚠ [投稿会議] 全パターンで指令抽出失敗`);
+    return { meetingId: session.id, posted: false, reason: 'Grok指令抽出失敗（全4パターン）' };
+  }
   console.log(`\n[${jst()}] 🎯 [投稿会議] Grok裁定: ${directiveText.slice(0, 120)}`);
 
   // ── Phase 4: 投稿可否チェック ────────────────────────────────────────────

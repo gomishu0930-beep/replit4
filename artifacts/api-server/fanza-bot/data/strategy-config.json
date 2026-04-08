@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 0,
-    "avgNewPatterns": 0.4471902524921829,
-    "totalCycles": 137
+    "avgNewPatterns": 0.2191232237211696,
+    "totalCycles": 139
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 5h）は最適か？",
-      "status": "adjusted",
-      "finding": "137サイクル実績 / 平均新規パターン 0.4件/サイクル",
-      "adjustment": "監視間隔を 5h → 6h に延長（平均新規パターン 0.4件/サイクル）",
-      "testedAt": "2026-04-08T01:26:43.986Z"
+      "question": "外部情報の収集間隔（現在 6h）は最適か？",
+      "status": "confirmed",
+      "finding": "139サイクル実績 / 平均新規パターン 0.2件/サイクル",
+      "adjustment": null,
+      "testedAt": "2026-04-08T01:58:19.343Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T01:26:43.987Z"
+      "testedAt": "2026-04-08T01:58:19.344Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-08T01:26:43.987Z"
+      "testedAt": "2026-04-08T01:58:19.344Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-08T01:58:19.344Z",
+      "cycle": 139,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-08T01:42:00.910Z",
+      "cycle": 138,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-08T01:26:43.987Z",
       "cycle": 137,
@@ -427,22 +441,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T06:08:22.467Z",
-      "cycle": 92,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T05:56:58.556Z",
-      "cycle": 91,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-08T01:26:43.987Z",
-  "version": 139
+  "lastEvaluatedAt": "2026-04-08T01:58:19.344Z",
+  "version": 141
 }
