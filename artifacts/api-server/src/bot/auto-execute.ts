@@ -223,7 +223,7 @@ export async function runABTestDecision(): Promise<ABTestDecision | null> {
     return null;
   }
 
-  // W1期間(4/7-4/13): 10:30 JSTの投稿
+  // W1期間(4/7-4/13): 20:00 JST プライムタイムの投稿
   const w1Start = new Date('2026-04-07T00:00:00+09:00');
   const w1End   = new Date('2026-04-13T23:59:59+09:00');
   // W2期間(4/14-4/20): 05:00 JSTの投稿
@@ -264,12 +264,12 @@ export async function runABTestDecision(): Promise<ABTestDecision | null> {
     const diff = (w1Avg - w2Avg) / Math.max(w2Avg, 1);
     if (diff > 0.15) {
       winner = 'W1';
-      winnerTime = '10:30 JST';
-      recommendation = `W1(10:30)がW2(05:00)より${(diff * 100).toFixed(0)}%高インプレッション → 10:30投稿を推奨`;
+      winnerTime = '20:00 JST';
+      recommendation = `W1(20:00)がW2(05:00)より${(diff * 100).toFixed(0)}%高インプレッション → 20:00投稿を推奨`;
     } else if (diff < -0.15) {
       winner = 'W2';
       winnerTime = '05:00 JST';
-      recommendation = `W2(05:00)がW1(10:30)より${Math.abs(diff * 100).toFixed(0)}%高インプレッション → 05:00投稿を推奨`;
+      recommendation = `W2(05:00)がW1(20:00)より${Math.abs(diff * 100).toFixed(0)}%高インプレッション → 05:00投稿を推奨`;
     } else {
       winner = 'inconclusive';
       winnerTime = '18-22 JST（差異なし）';

@@ -230,7 +230,7 @@ async function monitoringLoop() {
 }
 
 // ─── A/Bテスト週判定 ──────────────────────────────────────────────────────────
-// W1 (4/7-4/13): 10:30 JST のみ
+// W1 (4/7-4/13): 20:00 JST のみ（プライムタイム）
 // W2 (4/14-4/20): 05:00 JST のみ
 // W3以降: 通常の動的スロット (18-22 JST) に戻す
 
@@ -265,9 +265,9 @@ async function catchUpMissedSlots() {
       console.log(`  ✅ [補完チェック] ${week} 本日分投稿済み → スキップ`);
       return;
     }
-    // A/Bテスト週の補完対象スロット時刻
-    const slotHour = week === 'W1' ? 10 : 5;
-    const slotMin  = week === 'W1' ? 30 : 0;
+    // A/Bテスト週の補完対象スロット時刻 (W1: 20:00 JST / W2: 05:00 JST)
+    const slotHour = week === 'W1' ? 20 : 5;
+    const slotMin  = week === 'W1' ?  0 : 0;
     const slotTime = new Date(todayMidnightJst.getTime() + (slotHour * 60 + slotMin) * 60 * 1000);
     const slotPastMs = nowUtc - slotTime.getTime();
     if (slotPastMs < 0) {
@@ -371,7 +371,7 @@ export function startScheduler() {
 
   // ── 投稿スケジュール（シャドウバン回復 A/Bテストモード）─────────────────────
   // 設計方針: 1日1件に絞り信頼スコアを回復しながらスロット最適化テストを実施
-  //   W1 (4/7-4/13):  10:30 JST のみ → 芸能人アフィリ1本
+  //   W1 (4/7-4/13):  20:00 JST のみ（プライムタイム）→ 芸能人アフィリ1本
   //   W2 (4/14-4/20): 05:00 JST のみ → 芸能人アフィリ1本
   //   W3以降:          動的 (18-22 JST) に戻す
   // ※ 合計: 1本/日（A/Bテスト期間）
@@ -400,18 +400,18 @@ export function startScheduler() {
     autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
   }, { timezone: 'Asia/Tokyo' });
 
-  // 10:10 JST — W1=投稿会議（10:30投稿目標）/ 通常週=投稿会議①
-  // 投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを10:30前後にX投稿
-  cron.schedule('10 10 * * *', async () => {
+  // 19:40 JST — W1=投稿会議（20:00投稿目標・プライムタイム）/ 通常週=投稿会議①
+  // 投稿会議（Phase 1-4）を開始 → Grok裁定ツイートを20:00前後にX投稿
+  cron.schedule('40 19 * * *', async () => {
     const week = getABTestWeek();
     const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
     if (week === 'W1') {
       if (getCelebPostedDate() === todayKey) {
-        console.log(`  ℹ️  [10:10 W1投稿会議] 本日投稿済み → スキップ`);
+        console.log(`  ℹ️  [19:40 W1投稿会議] 本日投稿済み → スキップ`);
         return;
       }
       setCelebPostedDate(todayKey); // 会議開始前にフラグ立て
-      console.log('\n  🎙 [10:10 W1投稿会議] Phase 1-4 投稿会議開始...');
+      console.log('\n  🎙 [19:40 W1投稿会議] Phase 1-4 投稿会議開始...（プライムタイム 20:00目標）');
       const result = await runMeetingAndPost();
       if (result.posted) {
         console.log(`  ✅ [W1投稿会議] 投稿完了: ${result.tweetId}`);
@@ -420,11 +420,11 @@ export function startScheduler() {
       }
       autoCompleteTask('daily-celeb-post', 'daily').catch(() => {});
     } else if (week === 'W2') {
-      // W2: 10:10は使わない (04:40スロット担当)
-      console.log(`  ℹ️  [10:10スロット] W2期間中 → スキップ (04:40スロット担当)`);
+      // W2: 19:40は使わない (04:40スロット担当)
+      console.log(`  ℹ️  [19:40スロット] W2期間中 → スキップ (04:40スロット担当)`);
     } else {
       // 通常週: 投稿会議①
-      console.log('\n  🎙 [10:10 投稿会議①] Phase 1-4 投稿会議開始...');
+      console.log('\n  🎙 [19:40 投稿会議①] Phase 1-4 投稿会議開始...');
       const result = await runMeetingAndPost();
       if (result.posted) {
         console.log(`  ✅ [投稿会議①] 投稿完了: ${result.tweetId}`);
@@ -757,7 +757,7 @@ export function startScheduler() {
   }
 
   const currentWeek = getABTestWeek();
-  const weekLabel = currentWeek === 'W1' ? 'W1: 10:30 JST のみ' : currentWeek === 'W2' ? 'W2: 05:00 JST のみ' : '動的 (18-22 JST)';
+  const weekLabel = currentWeek === 'W1' ? 'W1: 20:00 JST のみ（プライムタイム）' : currentWeek === 'W2' ? 'W2: 05:00 JST のみ' : '動的 (18-22 JST)';
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║  FANZA X Bot【シャドウバン回復モード】   ║');

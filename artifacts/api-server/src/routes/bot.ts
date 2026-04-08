@@ -29,9 +29,9 @@ router.get('/bot/status', async (_req, res) => {
   // A/Bテスト週は1本/日のみ。通常週は動的3スロット。
   const schedule = week === 'W1'
     ? [
-        { time: '10:30 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W1・本命スロット）', active: true },
+        { time: '20:00 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W1・プライムタイム）', active: true },
         { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い', active: false, reason: 'W1停止中' },
-        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（通常週スロット）', active: false, reason: 'W1停止中 — 今週は10:30のみ' },
+        { time: '05:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（W2スロット参考）', active: false, reason: 'W1停止中 — 今週は20:00のみ' },
       ]
     : week === 'W2'
     ? [

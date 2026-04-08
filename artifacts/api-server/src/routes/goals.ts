@@ -38,7 +38,7 @@ interface WeekDef {
 
 const WEEKS: WeekDef[] = [
   {
-    week: 'W1', start: '2026-04-07', end: '2026-04-13', slot: '10:30 JST',
+    week: 'W1', start: '2026-04-07', end: '2026-04-13', slot: '20:00 JST',
     kpis: [
       { metric: 'avgIMP', label: 'Avg インプ/投稿', target: 15, unit: 'IMP', higherIsBetter: true },
     ],
