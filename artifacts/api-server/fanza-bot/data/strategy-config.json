@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 1,
+  "monitorIntervalHours": 6,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 0,
-    "avgNewPatterns": 3.8010544287854815,
-    "totalCycles": 131
+    "avgNewPatterns": 0.4471902524921829,
+    "totalCycles": 137
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 1h）は最適か？",
-      "status": "confirmed",
-      "finding": "131サイクル実績 / 平均新規パターン 3.8件/サイクル",
-      "adjustment": null,
-      "testedAt": "2026-04-07T15:03:23.688Z"
+      "question": "外部情報の収集間隔（現在 5h）は最適か？",
+      "status": "adjusted",
+      "finding": "137サイクル実績 / 平均新規パターン 0.4件/サイクル",
+      "adjustment": "監視間隔を 5h → 6h に延長（平均新規パターン 0.4件/サイクル）",
+      "testedAt": "2026-04-08T01:26:43.986Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-07T15:03:23.689Z"
+      "testedAt": "2026-04-08T01:26:43.987Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-07T15:03:23.689Z"
+      "testedAt": "2026-04-08T01:26:43.987Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,48 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-08T01:26:43.987Z",
+      "cycle": 137,
+      "decisions": [
+        "監視間隔を 5h → 6h に延長（平均新規パターン 0.4件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-07T21:08:14.018Z",
+      "cycle": 136,
+      "decisions": [
+        "監視間隔を 4h → 5h に延長（平均新規パターン 0.6件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-07T20:14:01.432Z",
+      "cycle": 135,
+      "decisions": [
+        "監視間隔を 3h → 4h に延長（平均新規パターン 0.9件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-07T16:46:49.734Z",
+      "cycle": 134,
+      "decisions": [
+        "監視間隔を 2h → 3h に延長（平均新規パターン 1.3件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-07T15:39:42.960Z",
+      "cycle": 133,
+      "decisions": [
+        "監視間隔を 1h → 2h に延長（平均新規パターン 1.9件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-07T15:13:05.038Z",
+      "cycle": 132,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-07T15:03:23.689Z",
       "cycle": 131,
@@ -399,55 +441,8 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T05:33:31.891Z",
-      "cycle": 90,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T05:27:01.113Z",
-      "cycle": 89,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T04:56:16.242Z",
-      "cycle": 88,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T04:46:36.273Z",
-      "cycle": 87,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T04:35:15.658Z",
-      "cycle": 86,
-      "decisions": [
-        "[会議決定] 戦略重みをbuzz=2.0, rank=0.8, amateur=1.2, sale=1.0, random=1.0に設定してください。これはシャドウバン回復A",
-        "投稿重み[buzz]: 1.21 → 2",
-        "投稿重み[rank]: 0.8 → 0.8",
-        "投稿重み[amateur]: 1.04 → 1.2",
-        "投稿重み[sale]: 0.97 → 1",
-        "投稿重み[random]: 0.97 → 1"
-      ]
-    },
-    {
-      "at": "2026-04-07T04:27:27.179Z",
-      "cycle": 86,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-07T15:03:23.689Z",
-  "version": 133
+  "lastEvaluatedAt": "2026-04-08T01:26:43.987Z",
+  "version": 139
 }

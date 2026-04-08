@@ -71,6 +71,26 @@
     "directive-dir-1775562734683_2026-W15": {
       "at": "2026-04-07T14:50:02.050Z",
       "by": "user"
+    },
+    "weekly-check-affiliate_2026-W15": {
+      "at": "2026-04-07T16:42:03.842Z",
+      "by": "user"
+    },
+    "weekly-eval-shadowban_2026-W15": {
+      "at": "2026-04-07T16:42:10.235Z",
+      "by": "user"
+    },
+    "weekly-meeting-review_2026-W15": {
+      "at": "2026-04-07T16:42:11.698Z",
+      "by": "user"
+    },
+    "daily-check-analytics_2026-04-08": {
+      "at": "2026-04-07T16:42:17.048Z",
+      "by": "user"
+    },
+    "daily-review-posts_2026-04-08": {
+      "at": "2026-04-07T16:42:21.309Z",
+      "by": "user"
     }
   }
 }
