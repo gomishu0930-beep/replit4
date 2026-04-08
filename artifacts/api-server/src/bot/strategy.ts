@@ -30,9 +30,17 @@ export interface DecisionLog {
   decisions: string[];
 }
 
+export interface ImagePolicy {
+  enableOnUrlPost: boolean;   // URLありツイートにも画像を生成するか（default: false）
+  alwaysGenerate: boolean;    // 常に画像を生成するか（enableOnUrlPost より優先）
+  decidedAt: string | null;   // 会議で決定した日時
+  decidedBy: string | null;   // 決定した会議ID
+}
+
 export interface StrategyConfig {
   monitorIntervalHours: number;            // 外部監視間隔（デフォルト 3h）
   typeWeights: Record<string, number>;     // コンテンツ種別の投稿重み
+  imagePolicy: ImagePolicy;               // 画像生成ポリシー（会議が制御）
   cycleStats: {                            // 監視サイクルの効率記録
     lastNewPatterns: number;
     avgNewPatterns: number;
@@ -52,6 +60,12 @@ const DEFAULT_CONFIG: StrategyConfig = {
     rank:    1.0,
     sale:    0.8,
     random:  0.8,
+  },
+  imagePolicy: {
+    enableOnUrlPost: false,   // URLあり投稿に画像を付けるか（会議が決める）
+    alwaysGenerate:  false,   // 常に画像生成するか（会議が決める）
+    decidedAt:       null,
+    decidedBy:       null,
   },
   cycleStats: { lastNewPatterns: 0, avgNewPatterns: 0, totalCycles: 0 },
   hypotheses: [],
@@ -81,6 +95,15 @@ export function getMonitorIntervalMs(): number {
 
 export function getTypeWeights(): Record<string, number> {
   return config.typeWeights;
+}
+
+export function getImagePolicy(): ImagePolicy {
+  return config.imagePolicy ?? {
+    enableOnUrlPost: false,
+    alwaysGenerate:  false,
+    decidedAt:       null,
+    decidedBy:       null,
+  };
 }
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────────
@@ -619,9 +642,10 @@ export function getStrategySummary() {
 export interface StrategyPatch {
   monitorIntervalHours?: number;
   typeWeights?: Partial<Record<string, number>>;
+  imagePolicy?: Partial<Pick<ImagePolicy, 'enableOnUrlPost' | 'alwaysGenerate'>>;
 }
 
-export async function patchStrategyConfig(patch: StrategyPatch, reason: string): Promise<string[]> {
+export async function patchStrategyConfig(patch: StrategyPatch, reason: string, meetingId?: string): Promise<string[]> {
   const changes: string[] = [];
 
   if (patch.monitorIntervalHours !== undefined) {
@@ -639,6 +663,24 @@ export async function patchStrategyConfig(patch: StrategyPatch, reason: string):
         changes.push(`投稿重み[${key}]: ${config.typeWeights[key]} → ${clamped}`);
         config.typeWeights[key] = clamped;
       }
+    }
+  }
+
+  if (patch.imagePolicy) {
+    if (!config.imagePolicy) {
+      config.imagePolicy = { enableOnUrlPost: false, alwaysGenerate: false, decidedAt: null, decidedBy: null };
+    }
+    if (patch.imagePolicy.enableOnUrlPost !== undefined && patch.imagePolicy.enableOnUrlPost !== config.imagePolicy.enableOnUrlPost) {
+      changes.push(`画像ポリシー[URLあり投稿]: ${config.imagePolicy.enableOnUrlPost} → ${patch.imagePolicy.enableOnUrlPost}`);
+      config.imagePolicy.enableOnUrlPost = patch.imagePolicy.enableOnUrlPost;
+    }
+    if (patch.imagePolicy.alwaysGenerate !== undefined && patch.imagePolicy.alwaysGenerate !== config.imagePolicy.alwaysGenerate) {
+      changes.push(`画像ポリシー[常時生成]: ${config.imagePolicy.alwaysGenerate} → ${patch.imagePolicy.alwaysGenerate}`);
+      config.imagePolicy.alwaysGenerate = patch.imagePolicy.alwaysGenerate;
+    }
+    if (changes.some(c => c.startsWith('画像ポリシー'))) {
+      config.imagePolicy.decidedAt = new Date().toISOString();
+      config.imagePolicy.decidedBy = meetingId ?? reason.slice(0, 40);
     }
   }
 

@@ -29,7 +29,7 @@ import {
 } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
 import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData } from './storage.js';
-import { getStrategySummary } from './strategy.js';
+import { getStrategySummary, getImagePolicy } from './strategy.js';
 import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing } from './grok.js';
 import { postTweet, uploadImages } from './twitter.js';
@@ -588,14 +588,17 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
     return { meetingId: session.id, directive: directiveText, posted: false, reason: 'ツイート本文抽出失敗' };
   }
 
-  // ── Phase 4: 画像生成（リンクなし投稿のみ）────────────────────────────────
+  // ── Phase 4: 画像生成（ポリシーに従う）──────────────────────────────────────
   const hasUrl = /https?:\/\/\S+/.test(tweetText);
+  const imgPolicy = getImagePolicy();
+  // 画像生成条件: 常時生成フラグ OR (URLなし) OR (URLありでも enableOnUrlPost=true)
+  const shouldGenerateImage = imgPolicy.alwaysGenerate || !hasUrl || (hasUrl && imgPolicy.enableOnUrlPost);
   let mediaIds: string[] = [];
 
-  if (!hasUrl && isNanobananaEnabled()) {
-    console.log(`\n[${jst()}] 🍌 [投稿会議] リンクなし投稿 → Nanobanana2で画像生成`);
+  if (shouldGenerateImage && isNanobananaEnabled()) {
+    const reason = imgPolicy.alwaysGenerate ? '常時生成ポリシー' : hasUrl ? 'URLあり投稿・enableOnUrlPost=true（会議決定）' : 'リンクなし投稿';
+    console.log(`\n[${jst()}] 🍌 [投稿会議] ${reason} → Nanobanana2で画像生成`);
     try {
-      // 議論の中から商品名を抽出してプロンプトに活用
       const productTitle = directiveText.match(/[「『]([^」』]{5,40})[」』]/)?.[1];
       const imagePrompt = buildImagePrompt(tweetText, productTitle);
       console.log(`  プロンプト: ${imagePrompt.slice(0, 100)}`);
@@ -608,8 +611,10 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
       console.warn(`[${jst()}] ⚠ [投稿会議] 画像生成スキップ（エラー）: ${e.message}`);
       mediaIds = [];
     }
-  } else if (!hasUrl && !isNanobananaEnabled()) {
-    console.log(`[${jst()}] ℹ [投稿会議] リンクなし投稿・NANOBANANA_API_KEY未設定 → テキストのみ投稿`);
+  } else if (shouldGenerateImage && !isNanobananaEnabled()) {
+    console.log(`[${jst()}] ℹ [投稿会議] 画像生成対象・NANOBANANA_API_KEY未設定 → テキストのみ投稿`);
+  } else {
+    console.log(`[${jst()}] ℹ [投稿会議] 画像生成スキップ（ポリシー: enableOnUrlPost=${imgPolicy.enableOnUrlPost}, alwaysGenerate=${imgPolicy.alwaysGenerate}）`);
   }
 
   // ── Phase 4: X投稿 ───────────────────────────────────────────────────────
