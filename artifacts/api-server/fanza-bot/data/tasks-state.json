@@ -91,6 +91,10 @@
     "daily-review-posts_2026-04-08": {
       "at": "2026-04-07T16:42:21.309Z",
       "by": "user"
+    },
+    "daily-shadowban-check_2026-04-08": {
+      "at": "2026-04-08T14:00:00.008Z",
+      "by": "bot"
     }
   }
 }
