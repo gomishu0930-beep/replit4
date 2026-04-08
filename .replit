@@ -23,3 +23,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+NANOBANANA_API_KEY = "bace1ee62d71cf056c04f9619461c203"

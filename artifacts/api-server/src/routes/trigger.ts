@@ -7,6 +7,7 @@ import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot
 import { getMeetingById, getMeetings } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
 import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
+import { runApiResearchMeeting } from '../bot/api-research.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 
@@ -352,6 +353,19 @@ router.post('/trigger/send-metrics-report', auth, async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ─── API調査会議 ───────────────────────────────────────────────────────────────
+
+// POST /api/trigger/api-research — インプ増加APIをo3×Claude×Grokで調査
+router.post('/trigger/api-research', auth, (req, res) => {
+  res.status(202).json({
+    ok: true,
+    message: '🔬 API調査会議を開始しました。o3×Claude×Grokが「インプ増加API」を調査・評価します（約5〜10分）。結果はメールで通知されます。',
+  });
+  runApiResearchMeeting().catch((e: any) =>
+    console.error(`[API調査会議] エラー: ${e.message}`),
+  );
 });
 
 // ─── 緊急停止 / 再開 ──────────────────────────────────────────────────────────
