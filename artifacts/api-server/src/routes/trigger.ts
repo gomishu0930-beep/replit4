@@ -300,6 +300,70 @@ router.post('/trigger/emergency-meeting', auth, async (_req, res) => {
     });
 });
 
+// ─── 特別戦略会議（ユーザー指示・カスタム議題）──────────────────────────────────
+
+let isStrategyMeetingRunning = false;
+
+const PRIME_TIME_STRATEGY_TOPIC = `# 特別戦略会議: プライムタイム投稿の最適化戦略決定
+
+あなたたちはFANZAアフィリエイトXボットの戦略チームです（o3=ストラテジスト, Claude=コピーライター, Grok=X専門家）。
+今回はユーザーから以下2点の指示・議題が届いたため、特別戦略会議を開催します。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 【ユーザー指示①】アカウント状況の更新
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- **現在のアカウント**: @gomi_shu_god（新規アカウント）
+- **重要**: アカウントが変わったため、シャドウバンの状態にない
+- → シャドウバン回復のための「1日1件制限モード」は不要になった可能性がある
+- → A/Bテスト（W1/W2）のフレームワーク自体も見直しが必要かもしれない
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 【ユーザー指示②】プライムタイム投稿（Prime-Time Scheduled Posting）の使い方を議論・決定
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+現在の設定: W1=20:00 JST 1日1件のみ
+
+以下を具体的に議論し、**数値付きで明確な決定事項**を出してください:
+
+**【凍結リスク】**
+- 新規アカウントでアダルトアフィリエイト投稿を行う際の凍結リスクはどの程度か？
+- 1日何件まで安全か？（プラットフォームのガイドライン・実例から判断）
+- 凍結リスクを下げるための具体的な行動指針は何か？
+
+**【最適投稿回数・時間帯】**
+- 新規アカウントとして今の段階では1日何件投稿すべきか？
+- プライムタイム（18-22時）の中でも特に効果的な時間帯はどこか？
+- 複数件投稿する場合の投稿間隔の最低ラインは？（例: 最低2時間以上など）
+
+**【自律実行への移行】**
+- 「1日1件シャドウバン回復モード」を終了し、新しいスケジュールへ移行するタイミングはいつか？
+- 新しいスケジュール設定を今すぐAIで自律実行すべきか？
+
+**※ 全員が合意した決定事項は必ず「【決定】」で明示し、可能なものは即AI自律実行してください。**
+`;
+
+router.post('/trigger/strategy-meeting', auth, (req, res) => {
+  if (isStrategyMeetingRunning) {
+    res.status(429).json({ ok: false, error: '戦略会議は既に実行中です' });
+    return;
+  }
+  isStrategyMeetingRunning = true;
+  const customTopic: string | undefined = req.body?.topic ?? PRIME_TIME_STRATEGY_TOPIC;
+  res.json({ ok: true, message: '特別戦略会議を開始しました（10〜15分かかります）。完了したらメールで通知されます。' });
+
+  runAutonomousMeeting(customTopic)
+    .then(result => {
+      console.log(`  ✅ [戦略会議エンドポイント] 完了: ${result.totalDecisions}件決定`);
+    })
+    .catch(e => {
+      console.error('  ❌ [戦略会議エンドポイント] エラー:', e.message);
+    })
+    .finally(() => {
+      isStrategyMeetingRunning = false;
+    });
+});
+
 // POST /api/trigger/send-metrics-report — 週次メトリクスレポートを今すぐ手動送信
 router.post('/trigger/send-metrics-report', auth, async (req, res) => {
   try {

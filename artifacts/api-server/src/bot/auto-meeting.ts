@@ -196,9 +196,9 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
   console.log('  🔎 [週次会議] 事前Webリサーチ実行中...');
   let researchId: string | undefined;
   try {
-    const now = new Date();
-    const weekStr = now >= new Date('2026-04-14') ? 'W2(05:00枠)' : 'W1(10:30枠)';
-    const researchTopic = `2026年最新のX(Twitter) FANZA/成人向けアフィリエイトアカウントのアルゴリズム攻略法。${weekStr}投稿A/Bテスト中（日本語アカウント）。インプレッション改善と外部からの流入増加のための具体的手法を調査してください。`;
+    const weekDef = getABTestWeek();
+    const weekStr = weekDef === 'W2' ? 'W2(05:00枠)' : weekDef === 'W1' ? 'W1(20:00プライムタイム枠)' : '通常週（動的18-22時枠）';
+    const researchTopic = `2026年最新のX(Twitter) FANZA/成人向けアフィリエイトアカウントのプライムタイム投稿戦略。${weekStr}A/Bテスト中（日本語アカウント@gomi_shu_god・新規アカウント・シャドウバンなし）。凍結リスク最小化・最適投稿本数・プライムタイム時間帯選定・インプレッション最大化の具体的手法を調査してください。`;
     const research = await runDeepResearch(researchTopic);
     researchId = research.id;
     console.log(`  ✅ [週次会議] Webリサーチ完了 (${research.result.length}文字取得)`);
