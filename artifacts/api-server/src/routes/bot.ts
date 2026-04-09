@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta, recordPostManual } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
 import { collectAlgoNews } from '../bot/algo-news.js';
-import { getMyUsername, getAccountInfo } from '../bot/twitter.js';
+import { getMyUsername, getAccountInfo, getTweetById } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
@@ -57,8 +57,29 @@ router.get('/bot/status', async (_req, res) => {
 });
 
 router.get('/bot/posts', (_req, res) => {
-  const posts = getAllPosts().slice(-30).reverse();
+  const posts = getAllPosts().slice(-50).reverse();
   res.json({ posts });
+});
+
+router.post('/bot/posts/register-manual', async (req, res) => {
+  const { tweetId } = req.body as { tweetId?: string };
+  if (!tweetId || !/^\d+$/.test(tweetId.trim())) {
+    return res.status(400).json({ error: 'tweetId (数字) が必要です' });
+  }
+  const id = tweetId.trim();
+  console.log(`  🔍 [手動登録] ツイート取得中: ${id}`);
+  const tweet = await getTweetById(id);
+  if (!tweet) {
+    return res.status(404).json({ error: 'ツイートが見つかりません（IDを確認してください）' });
+  }
+  const { isNew, post } = recordPostManual({
+    tweetId: tweet.id,
+    text: tweet.text,
+    postedAt: tweet.createdAt,
+    metrics: tweet.metrics,
+  });
+  console.log(`  ✅ [手動登録] ${isNew ? '新規登録' : 'メトリクス更新'}: ${tweet.id} (インプ: ${tweet.metrics?.impression_count ?? 0})`);
+  return res.json({ success: true, isNew, post });
 });
 
 router.get('/bot/external-patterns', (_req, res) => {

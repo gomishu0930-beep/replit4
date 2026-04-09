@@ -231,20 +231,23 @@ function typeLabel(t: string) {
   const m: Record<string, string> = {
     amateur: "素人", rank: "ランキング", sale: "セール",
     buzz: "バズ/高評価", random: "ランダム", celebrity: "芸能人似",
-    impression: "インプ狙い", emergency: "緊急",
+    impression: "インプ狙い", emergency: "緊急", manual: "手動投稿",
+    "meeting-post": "AI会議投稿",
   };
   return m[t] ?? t;
 }
 function typeBadge(t: string) {
   const m: Record<string, string> = {
-    amateur:    "bg-rose-500/20 text-rose-300 border-rose-500/30",
-    rank:       "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    sale:       "bg-green-500/20 text-green-300 border-green-500/30",
-    buzz:       "bg-pink-500/20 text-pink-300 border-pink-500/30",
-    random:     "bg-purple-500/20 text-purple-300 border-purple-500/30",
-    celebrity:  "bg-orange-500/20 text-orange-300 border-orange-500/30",
-    impression: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    emergency:  "bg-red-500/20 text-red-300 border-red-500/30",
+    amateur:      "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    rank:         "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+    sale:         "bg-green-500/20 text-green-300 border-green-500/30",
+    buzz:         "bg-pink-500/20 text-pink-300 border-pink-500/30",
+    random:       "bg-purple-500/20 text-purple-300 border-purple-500/30",
+    celebrity:    "bg-orange-500/20 text-orange-300 border-orange-500/30",
+    impression:   "bg-sky-500/20 text-sky-300 border-sky-500/30",
+    emergency:    "bg-red-500/20 text-red-300 border-red-500/30",
+    manual:       "bg-white/15 text-white/70 border-white/25",
+    "meeting-post": "bg-violet-500/20 text-violet-300 border-violet-500/30",
   };
   return m[t] ?? "bg-gray-500/20 text-gray-300 border-gray-500/30";
 }
@@ -771,6 +774,39 @@ function Dashboard() {
   const [obsForm, setObsForm] = useState({ category: "engagement", observation: "", source: "", hypothesis: "", priority: "medium" });
   const [obsSubmitting, setObsSubmitting] = useState(false);
 
+  // 手動ツイート登録
+  const [manualId, setManualId] = useState("");
+  const [manualStatus, setManualStatus] = useState<{type:"ok"|"err"|"dup"; msg:string}|null>(null);
+  const [registering, setRegistering] = useState(false);
+
+  async function registerManual() {
+    const id = manualId.trim().replace(/\D/g, "");
+    if (!id) return;
+    setRegistering(true);
+    setManualStatus(null);
+    try {
+      const r = await fetch(`${API}/api/bot/posts/register-manual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tweetId: id }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setManualStatus({ type: "err", msg: d.error ?? "登録失敗" });
+      } else if (!d.isNew) {
+        setManualStatus({ type: "dup", msg: "既に登録済みです（メトリクスを更新しました）" });
+      } else {
+        setManualStatus({ type: "ok", msg: `登録完了 — インプ: ${d.post?.metrics?.impression_count ?? "取得中"}` });
+        setManualId("");
+        refetchPosts();
+      }
+    } catch {
+      setManualStatus({ type: "err", msg: "通信エラー" });
+    } finally {
+      setRegistering(false);
+    }
+  }
+
   // ─── 秘書チャット ──────────────────────────────────────────────────────────
   const [secOpen, setSecOpen] = useState(false);
   const [secInput, setSecInput] = useState("");
@@ -910,7 +946,7 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/status`).then((r) => r.json()),
     refetchInterval: 30000,
   });
-  const { data: postsData } = useQuery<{ posts: Post[] }>({
+  const { data: postsData, refetch: refetchPosts } = useQuery<{ posts: Post[] }>({
     queryKey: ["botPosts", tick],
     queryFn: () => fetch(`${API}/api/bot/posts`).then((r) => r.json()),
     refetchInterval: 60000,
@@ -2221,59 +2257,105 @@ function Dashboard() {
 
         {/* ════════════════════ 投稿履歴タブ ════════════════════ */}
         {tab === "posts" && (
-          <div className="rounded-xl border border-white/8 bg-white/5 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">投稿履歴</h2>
-              <span className="text-[10px] text-white/30">{posts.length}件</span>
-            </div>
-            {posts.length === 0 ? (
-              <p className="text-xs text-white/30 text-center py-8">投稿データがありません</p>
-            ) : (
-              <div className="space-y-2">
-                {posts.map((post) => {
-                  const sc = calcScore(post.metrics);
-                  return (
-                    <div key={post.tweetId} className="p-3 rounded-lg bg-white/5 border border-white/8 flex gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${typeBadge(post.type)}`}>
-                            {typeLabel(post.type)}
-                          </span>
-                          {post.contentType && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
-                              {post.contentType}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-white/40">{fmtDate(post.postedAt)}</span>
-                          {post.metrics && (
-                            <span className="text-[10px] text-indigo-300 ml-auto">スコア {sc}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-white/60 line-clamp-2">{post.item.title}</p>
-                        {post.metrics ? (
-                          <div className="flex gap-3 mt-1.5 text-[10px] text-white/40">
-                            <span>❤ {post.metrics.like_count}</span>
-                            <span>🔁 {post.metrics.retweet_count}</span>
-                            {post.metrics.bookmark_count != null && <span>🔖 {post.metrics.bookmark_count}</span>}
-                            {post.metrics.reply_count != null && <span>💬 {post.metrics.reply_count}</span>}
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-white/25 mt-1">指標未取得</p>
-                        )}
-                      </div>
-                      <a
-                        href={`https://twitter.com/i/web/status/${post.tweetId}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="text-[10px] text-indigo-400 hover:underline shrink-0 mt-1"
-                      >
-                        Xで見る →
-                      </a>
-                    </div>
-                  );
-                })}
+            <div className="space-y-4">
+              {/* 手動ツイート登録フォーム */}
+              <div className="rounded-xl border border-white/12 bg-white/5 p-4">
+                <h2 className="text-xs font-semibold text-white/60 mb-3">📥 手動投稿を検証データに追加</h2>
+                <p className="text-[11px] text-white/40 mb-3">
+                  手動でXに投稿したツイートのIDを入力すると、インプレッション数などを自動取得して検証データに組み込みます。
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={manualId}
+                    onChange={e => setManualId(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && registerManual()}
+                    placeholder="ツイートID（例: 1234567890123456789）"
+                    className="flex-1 bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-[12px] text-white placeholder-white/25 focus:outline-none focus:border-white/30"
+                  />
+                  <button
+                    onClick={registerManual}
+                    disabled={registering || !manualId.trim()}
+                    className="px-4 py-2 rounded-lg bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-[12px] font-medium disabled:opacity-40 hover:bg-indigo-500/40 transition-colors shrink-0"
+                  >
+                    {registering ? "取得中..." : "登録"}
+                  </button>
+                </div>
+                {manualStatus && (
+                  <div className={`mt-2 text-[11px] px-3 py-1.5 rounded-lg border ${
+                    manualStatus.type === "ok"  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300" :
+                    manualStatus.type === "dup" ? "bg-amber-500/10 border-amber-500/25 text-amber-300" :
+                                                  "bg-red-500/10 border-red-500/25 text-red-300"
+                  }`}>
+                    {manualStatus.msg}
+                  </div>
+                )}
+                <p className="text-[10px] text-white/25 mt-2">
+                  ツイートIDはXのURLの末尾の数字です（例: x.com/user/status/<strong>1234567890</strong>）
+                </p>
               </div>
-            )}
-          </div>
+
+              {/* 投稿履歴 */}
+              <div className="rounded-xl border border-white/8 bg-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider">投稿履歴</h2>
+                  <span className="text-[10px] text-white/30">{posts.length}件</span>
+                </div>
+                {posts.length === 0 ? (
+                  <p className="text-xs text-white/30 text-center py-8">投稿データがありません</p>
+                ) : (
+                  <div className="space-y-2">
+                    {posts.map((post) => {
+                      const sc = calcScore(post.metrics);
+                      const isManual = post.type === "manual";
+                      return (
+                        <div key={post.tweetId} className={`p-3 rounded-lg border flex gap-3 ${isManual ? "bg-white/3 border-white/10" : "bg-white/5 border-white/8"}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${typeBadge(post.type)}`}>
+                                {typeLabel(post.type)}
+                              </span>
+                              {post.contentType && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
+                                  {post.contentType}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-white/40">{fmtDate(post.postedAt)}</span>
+                              {post.metrics && (
+                                <span className="text-[10px] text-indigo-300 ml-auto">スコア {sc}</span>
+                              )}
+                            </div>
+                            {isManual ? (
+                              <p className="text-xs text-white/55 line-clamp-2">{post.text?.slice(0, 80)}{(post.text?.length ?? 0) > 80 ? "…" : ""}</p>
+                            ) : (
+                              <p className="text-xs text-white/60 line-clamp-2">{post.item?.title}</p>
+                            )}
+                            {post.metrics ? (
+                              <div className="flex gap-3 mt-1.5 text-[10px] text-white/40">
+                                <span className="text-white/60">👁 {post.metrics.impression_count ?? "–"}</span>
+                                <span>❤ {post.metrics.like_count}</span>
+                                <span>🔁 {post.metrics.retweet_count}</span>
+                                {post.metrics.bookmark_count != null && <span>🔖 {post.metrics.bookmark_count}</span>}
+                                {post.metrics.reply_count != null && <span>💬 {post.metrics.reply_count}</span>}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-white/25 mt-1">指標未取得</p>
+                            )}
+                          </div>
+                          <a
+                            href={`https://twitter.com/i/web/status/${post.tweetId}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] text-indigo-400 hover:underline shrink-0 mt-1"
+                          >
+                            Xで見る →
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
         )}
 
         {/* ════════════════════ 外部データタブ ════════════════════ */}

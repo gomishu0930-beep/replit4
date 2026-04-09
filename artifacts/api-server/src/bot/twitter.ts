@@ -156,6 +156,26 @@ export async function getTweetMetrics(tweetId: string) {
   }
 }
 
+export async function getTweetById(tweetId: string): Promise<{
+  id: string; text: string; createdAt: string; metrics: Record<string, number> | null;
+} | null> {
+  try {
+    const res = await rw.v2.singleTweet(tweetId, {
+      'tweet.fields': ['public_metrics', 'created_at', 'text'],
+    });
+    if (!res.data) return null;
+    return {
+      id: res.data.id,
+      text: res.data.text,
+      createdAt: (res.data as any).created_at ?? new Date().toISOString(),
+      metrics: res.data.public_metrics ?? null,
+    };
+  } catch (e: any) {
+    console.error(`  ⚠ ツイート取得失敗 (${tweetId}): ${e.message}`);
+    return null;
+  }
+}
+
 export async function getOwnRecentTweets(count = 20) {
   // TWITTER_USER_ID が @username 形式の場合は /v2/users/me で数値IDを解決する
   const numericId = await getMyNumericId();

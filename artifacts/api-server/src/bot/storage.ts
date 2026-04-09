@@ -191,6 +191,29 @@ export function updateMetrics(tweetId: string, metrics: any) {
   }
 }
 
+export function recordPostManual({ tweetId, text, postedAt, metrics }: {
+  tweetId: string; text: string; postedAt: string; metrics?: Record<string, number> | null;
+}): { isNew: boolean; post: any } {
+  const existing = postsCache.posts.find((p) => p.tweetId === tweetId);
+  if (existing) {
+    if (metrics) existing.metrics = { ...metrics, checkedAt: new Date().toISOString() };
+    savePostsAsync();
+    return { isNew: false, post: existing };
+  }
+  const post: any = {
+    tweetId, replyId: '', type: 'manual', text,
+    item: { id: '', title: '【手動投稿】', affiliateURL: '' },
+    postedAt,
+    metrics: metrics ? { ...metrics, checkedAt: new Date().toISOString() } : null,
+  };
+  postsCache.posts.push(post);
+  postsCache.posts.sort(
+    (a: any, b: any) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime(),
+  );
+  savePostsAsync();
+  return { isNew: true, post };
+}
+
 export function getTopPatterns(limit = 10): PostRecord[] {
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const withMetrics = postsCache.posts.filter(
