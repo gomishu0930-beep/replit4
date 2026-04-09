@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getDynamicTemplates, recordDynamicTemplateUsed, getPostsAfter } from './storage.js';
+import { getDynamicTemplates, recordDynamicTemplateUsed, getPostsAfter, getTopPatterns, getLatestAlgoInsight } from './storage.js';
+import { getXActiveDirectives } from './meeting.js';
 import { getOwnRecentTweets } from './twitter.js';
 
 // ─── バイラル特化テンプレート（ハッシュタグなし）────────────────────────────
@@ -213,6 +214,50 @@ function makeAnthropicClient(): Anthropic | null {
   return new Anthropic({ baseURL, apiKey });
 }
 
+// ─── 知見ループ：会議・アルゴ・実績 → プロンプト注入コンテキスト ─────────────
+
+function buildCelebrityPostContext(): string {
+  const sections: string[] = [];
+
+  // ① 過去の高パフォーマンス投稿（実績パターン）
+  try {
+    const top = getTopPatterns(3);
+    if (top.length > 0) {
+      const examples = top.map((p) => {
+        const imp = p.metrics?.impression_count ?? 0;
+        const eng = (p.metrics?.like_count ?? 0) + (p.metrics?.retweet_count ?? 0) * 3;
+        const preview = (p.text ?? '').slice(0, 60).replace(/\n/g, ' ');
+        return `  ・「${preview}…」→ インプ${imp.toLocaleString()} / エンゲ${eng}`;
+      }).join('\n');
+      sections.push(`## 📊 直近の高パフォーマンス投稿（参考にすべきパターン）\n${examples}`);
+    }
+  } catch { /* ストレージ未初期化時はスキップ */ }
+
+  // ② アルゴ解析からの知見（最新ブリーフィング）
+  try {
+    const insight = getLatestAlgoInsight();
+    if (insight?.briefing) {
+      const brief = insight.briefing.slice(0, 300);
+      sections.push(`## 🧠 アルゴ解析からの知見\n${brief}`);
+    }
+  } catch { /* スキップ */ }
+
+  // ③ 会議決定事項（コンテンツ系のactiveなもの）
+  try {
+    const directives = getXActiveDirectives()
+      .filter((d) => d.category === 'content' || d.category === 'strategy')
+      .slice(0, 4);
+    if (directives.length > 0) {
+      const list = directives.map((d) => `  ・[${d.category}/${d.priority}] ${d.text.slice(0, 80)}`).join('\n');
+      sections.push(`## 📋 会議決定事項（AI戦略チームの指示）\n${list}`);
+    }
+  } catch { /* スキップ */ }
+
+  return sections.length > 0
+    ? '\n\n' + sections.join('\n\n')
+    : '';
+}
+
 // ─── Claude 生成────────────────────────────────────────────────────────────
 
 async function generateWithClaude(
@@ -392,11 +437,14 @@ export async function generateCelebrityMainTweet(
   const claude = makeAnthropicClient();
   if (!claude) return fallback;
 
+  // 会議知見・アルゴ解析・過去実績を動的に取得してプロンプトに注入
+  const knowledgeContext = buildCelebrityPostContext();
+
   try {
     const prompt = `あなたは日本のXで成果を出しているアダルトアフィリエイターです。
-「${celebrity}に激似の女優を発見した」という切り口で、スクロールが止まるツイートを1件作成してください。
+「${celebrity}に激似の女優を発見した」という切り口で、スクロールが止まるツイートを1件作成してください。${knowledgeContext}
 
-## 作品情報
+## 今回の作品情報
 - 芸能人（似ている対象）: ${celebrity}
 - フック候補: 「${hook}」
 - 出演AV女優: ${actress}

@@ -2966,17 +2966,23 @@ function Dashboard() {
             high: "bg-red-400", medium: "bg-amber-400", low: "bg-white/25",
           };
 
+          const PROMPT_INJECTED_CATS = new Set(["content", "strategy"]);
+
           function DCard2({ d }: { d: MeetingDirective }) {
             const assignee = d.assignee ?? "others";
+            const isInjected = PROMPT_INJECTED_CATS.has(d.category) && d.status === "active";
             const cardBorder = assignee === "ai" ? "border-l-2 border-l-emerald-500/60"
               : assignee === "user" ? "border-l-2 border-l-amber-500/60"
               : "border-l-2 border-l-white/15";
             return (
-              <div className={`rounded-r-xl rounded-bl-xl border border-white/10 bg-white/4 p-3 ${cardBorder}`}>
+              <div className={`rounded-r-xl rounded-bl-xl border border-white/10 bg-white/4 p-3 ${cardBorder} ${isInjected ? "ring-1 ring-violet-500/25" : ""}`}>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STATUS_BADGE[assignee]}`}>
                     {STATUS_LABEL[assignee]}
                   </span>
+                  {isInjected && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded border bg-violet-500/15 text-violet-300 border-violet-400/25 shrink-0">🧠 AIプロンプト注入中</span>
+                  )}
                   {d.priority === "high" && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded border bg-red-500/15 text-red-300 border-red-400/25 shrink-0">優先度 高</span>
                   )}
@@ -3061,6 +3067,8 @@ function Dashboard() {
             );
           }
 
+          const injectedCount = active.filter(d => PROMPT_INJECTED_CATS.has(d.category)).length;
+
           return (
             <div className="space-y-4 py-4">
               {/* ヘッダー */}
@@ -3071,6 +3079,20 @@ function Dashboard() {
                 </div>
                 <span className="text-[10px] text-white/25 font-mono">{allDirectives.length}件 合計</span>
               </div>
+
+              {/* 知見ループ バナー */}
+              {injectedCount > 0 && (
+                <div className="rounded-xl border border-violet-500/30 bg-violet-500/8 px-4 py-3 flex items-start gap-3">
+                  <span className="text-lg shrink-0">🧠</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-violet-200">知見ループ 稼働中</p>
+                    <p className="text-[11px] text-white/55 mt-0.5 leading-relaxed">
+                      <span className="text-violet-300 font-bold">{injectedCount}件</span>の戦略・コンテンツ決定事項が、次回ツイートのAIプロンプトに自動注入されます。
+                      会議で「このパターンが効いた」と決定した内容は、翌日の20:00投稿にすぐ反映されます。
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* ステータスサマリーバー */}
               <div className="grid grid-cols-4 gap-2">
