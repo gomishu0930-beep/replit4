@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-09T16:17:00.502Z",
+  "lastCheckAt": "2026-04-09T17:54:56.338Z",
   "lastIssueAt": "2026-04-09T12:17:41.808Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
   "status": "healthy",
@@ -7,26 +7,6 @@
   "recoveryCount": 8,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-09T11:04:37.567Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-09T11:05:14.495Z",
-      "level": "recovery",
-      "detail": "✅ 自動回復成功 (通算 4回目)"
-    },
-    {
-      "at": "2026-04-09T11:10:22.134Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-09T11:10:22.134Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 31.8h 無投稿"
-    },
     {
       "at": "2026-04-09T11:10:22.134Z",
       "level": "info",
@@ -254,6 +234,26 @@
     },
     {
       "at": "2026-04-09T16:17:00.503Z",
+      "level": "info",
+      "detail": "最終投稿から 0h — 正常範囲"
+    },
+    {
+      "at": "2026-04-09T16:26:55.283Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-09T16:26:55.283Z",
+      "level": "info",
+      "detail": "最終投稿から 0.2h — 正常範囲"
+    },
+    {
+      "at": "2026-04-09T17:54:56.339Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-09T17:54:56.339Z",
       "level": "info",
       "detail": "最終投稿から 0h — 正常範囲"
     }

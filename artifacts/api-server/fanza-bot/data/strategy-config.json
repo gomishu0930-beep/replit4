@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 192,
-    "avgNewPatterns": 193.47991260877313,
-    "totalCycles": 177
+    "lastNewPatterns": 180,
+    "avgNewPatterns": 189.12515717829882,
+    "totalCycles": 179
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "177サイクル実績 / 平均新規パターン 193.5件/サイクル",
+      "finding": "179サイクル実績 / 平均新規パターン 189.1件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-09T16:19:14.342Z"
+      "testedAt": "2026-04-09T17:57:09.932Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T16:19:14.342Z"
+      "testedAt": "2026-04-09T17:57:09.933Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T16:19:14.342Z"
+      "testedAt": "2026-04-09T17:57:09.933Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-09T17:57:09.933Z",
+      "cycle": 179,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-09T16:29:30.882Z",
+      "cycle": 178,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-09T16:19:14.342Z",
       "cycle": 177,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T14:24:47.022Z",
-      "cycle": 129,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T14:15:36.306Z",
-      "cycle": 128,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-09T16:19:14.342Z",
-  "version": 179,
+  "lastEvaluatedAt": "2026-04-09T17:57:09.933Z",
+  "version": 181,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

@@ -1,9 +1,13 @@
 /**
  * celebrity.ts
  * 芸能人×似ている女優 マッピング＋最高エンゲージメント時間帯検出
+ * v2: GPT-4o-mini Vision によるジャケット画像類似度スコアリング追加
  */
+import OpenAI from 'openai';
 import { getAllPosts } from './storage.js';
 import { fetchItems } from './fanza.js';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
@@ -230,7 +234,127 @@ export function getBestPostingHour(): number {
   return bestHour;
 }
 
-// ─── FANZA から似ている女優の作品を取得 ──────────────────────────────────────
+// ─── GPT-4o-mini Vision による芸能人類似度スコアリング ────────────────────────
+
+/**
+ * FANZA作品のジャケット画像を GPT-4o-mini Vision に渡し、
+ * 指定芸能人への類似度を 1〜10 で返す。
+ * 画像なし・APIエラー時は null を返す。
+ */
+async function scoreJacketSimilarity(
+  celebrity: string,
+  jacketUrl: string,
+): Promise<number | null> {
+  if (!jacketUrl) return null;
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 10,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'あなたは日本の芸能人とAV女優の外見を比較する評価AIです。' +
+            '画像に写っている女性の顔・輪郭・雰囲気を分析し、指定された芸能人への類似度を数値のみで回答してください。',
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: jacketUrl, detail: 'low' },
+            },
+            {
+              type: 'text',
+              text:
+                `この画像に写っている女性は日本の芸能人「${celebrity}」に顔が似ていますか？` +
+                `顔の輪郭・目・鼻・口・全体の雰囲気を基準に1〜10で評価してください。` +
+                `10が最も似ている。数字1文字だけ回答してください。`,
+            },
+          ],
+        },
+      ],
+    });
+    const raw = res.choices[0]?.message?.content?.trim() ?? '';
+    const score = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+    return isNaN(score) ? null : Math.min(10, Math.max(1, score));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Vision] スコアリングエラー: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * FANZA作品リストを Vision スコア付きでソートして返す。
+ * 並列で最大 MAX_SCORE_ITEMS 件をスコアリング。
+ */
+const MAX_SCORE_ITEMS = 12; // Vision API 呼び出し上限（コスト制御）
+const MIN_ACCEPTABLE_SCORE = 4; // この点数以上を「合格」とする
+
+/** 直近のVisionスコアリング結果（ダッシュボード表示用）*/
+export interface VisionScoringResult {
+  celebrity: string;
+  scoredAt: string;
+  scores: Array<{ actressName: string; title: string; score: number | null; jacketUrl: string }>;
+  topScore: number | null;
+  topActress: string;
+  adopted: string;
+}
+let _lastVisionResult: VisionScoringResult | null = null;
+export function getLastVisionScoringResult(): VisionScoringResult | null { return _lastVisionResult; }
+
+export async function scoredCelebrityItems(
+  celebrity: string,
+  items: any[],
+): Promise<Array<{ item: any; score: number | null }>> {
+  // ジャケット画像があるものを優先して上限件数を取る
+  const candidates = items
+    .filter((i) => i.imageURL?.large)
+    .slice(0, MAX_SCORE_ITEMS);
+
+  // 全件を並列スコアリング
+  const scored = await Promise.all(
+    candidates.map(async (item) => ({
+      item,
+      score: await scoreJacketSimilarity(celebrity, item.imageURL.large),
+    })),
+  );
+
+  // スコアなし（null）は末尾扱い
+  scored.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  const best = scored[0];
+  const topScore = best?.score ?? 0;
+  const actressName = (item: any): string =>
+    item.actress?.map((a: any) => a.name).join('・') || item.title?.slice(0, 20) || '?';
+
+  console.log(
+    `  🔍 [Vision] ${celebrity} 類似度スコアリング完了: ` +
+    scored.map((s) => `${actressName(s.item)}=${s.score}`).join(' / '),
+  );
+  console.log(
+    `  🏆 [Vision] 最高スコア: ${actressName(best?.item ?? {})} = ${topScore}点`,
+  );
+
+  // ダッシュボード表示用にキャッシュ（adoptedは呼び出し元が後で設定）
+  _lastVisionResult = {
+    celebrity,
+    scoredAt: new Date().toISOString(),
+    scores: scored.map((s) => ({
+      actressName: actressName(s.item),
+      title: s.item.title?.slice(0, 40) ?? '',
+      score: s.score,
+      jacketUrl: s.item.imageURL?.large ?? '',
+    })),
+    topScore,
+    topActress: actressName(best?.item ?? {}),
+    adopted: '',  // getCelebrityLikeItems が後で更新
+  };
+
+  return scored;
+}
+
+// ─── FANZA から似ている女優の作品を取得（Vision スコアリング付き）────────────
 
 export async function getCelebrityLikeItems(mapping: CelebrityMapping, count = 1): Promise<any[]> {
   const items = await fetchItems({
@@ -243,7 +367,38 @@ export async function getCelebrityLikeItems(mapping: CelebrityMapping, count = 1
   const filtered = items.filter(
     (i: any) => (i.review?.count ?? 0) >= 10 && parseFloat(i.review?.average ?? '0') >= 4.0,
   );
-
   const pool = filtered.length >= count ? filtered : items;
+
+  // ── Vision スコアリングで最も似ている女優を選ぶ ─────────────────────────────
+  try {
+    const scored = await scoredCelebrityItems(mapping.celebrity, pool);
+
+    // スコア MIN_ACCEPTABLE_SCORE 以上の合格アイテムを優先
+    const passed = scored.filter((s) => (s.score ?? 0) >= MIN_ACCEPTABLE_SCORE);
+    const getName = (item: any) =>
+      item.actress?.map((a: any) => a.name).join('・') || item.title?.slice(0, 20) || '?';
+
+    if (passed.length >= count) {
+      // 上位からランダムにPickして単調さを避ける（上位3件の中からランダム）
+      const topN = passed.slice(0, Math.min(3, passed.length));
+      const picked = topN.sort(() => Math.random() - 0.5).slice(0, count);
+      const adoptedName = picked.map(p => getName(p.item)).join('・');
+      console.log(`  ✅ [Vision] 合格(${passed.length}件中${count}件採用): ${adoptedName}`);
+      if (_lastVisionResult) _lastVisionResult.adopted = adoptedName;
+      return picked.map((s) => s.item);
+    }
+
+    // 合格がいなければ最高スコアのアイテムを採用（フォールバック）
+    if (scored.length > 0) {
+      const adoptedName = getName(scored[0].item);
+      console.warn(`  ⚠ [Vision] 合格アイテムなし → 最高スコア(${scored[0].score}点)を採用`);
+      if (_lastVisionResult) _lastVisionResult.adopted = adoptedName;
+      return [scored[0].item];
+    }
+  } catch (e: any) {
+    console.warn(`  ⚠ [Vision] スコアリング全体エラー → 従来フィルタにフォールバック: ${e.message}`);
+  }
+
+  // Vision 完全失敗時のフォールバック（従来ロジック）
   return pool.sort(() => Math.random() - 0.5).slice(0, count);
 }

@@ -1022,6 +1022,16 @@ function Dashboard() {
     refetchInterval: 60000,
   });
 
+  const { data: visionData } = useQuery<{ ok: boolean; result: {
+    celebrity: string; scoredAt: string; adopted: string;
+    topScore: number | null; topActress: string;
+    scores: Array<{ actressName: string; title: string; score: number | null; jacketUrl: string }>;
+  } | null }>({
+    queryKey: ["vision-scoring-latest"],
+    queryFn: () => fetch(`${API}/api/bot/vision-scoring/latest`, { headers: { "x-admin-token": "fanza-bot-admin" } }).then((r) => r.json()),
+    refetchInterval: 60000,
+  });
+
   // 自律モードステート
   const { data: autonomyData } = useQuery<{
     autonomyGrantedAt: string;
@@ -3138,6 +3148,52 @@ function Dashboard() {
                   {postMeetingData.result.tweetId && (
                     <p className="text-[10px] text-white/35 font-mono">tweetId: {postMeetingData.result.tweetId}</p>
                   )}
+                </div>
+              )}
+
+              {/* 👁 Vision 類似度スコアリング最新結果 */}
+              {visionData?.result && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">👁</span>
+                    <p className="text-[12px] font-semibold text-emerald-200">Vision類似度スコアリング</p>
+                    <span className="ml-auto text-[9px] text-white/30 font-mono">
+                      {new Date(visionData.result.scoredAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className="text-emerald-300 font-bold">{visionData.result.celebrity}</span>
+                    <span className="text-white/30">→</span>
+                    <span className="text-white/70">採用: <span className="text-emerald-300 font-semibold">{visionData.result.adopted || visionData.result.topActress}</span></span>
+                    <span className="ml-auto px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold text-[11px]">
+                      最高 {visionData.result.topScore ?? "—"}/10
+                    </span>
+                  </div>
+                  {/* スコア分布バー */}
+                  <div className="space-y-1">
+                    {visionData.result.scores.slice(0, 6).map((s, i) => {
+                      const score = s.score ?? 0;
+                      const pct = (score / 10) * 100;
+                      const color = score >= 6 ? "bg-emerald-400" : score >= 4 ? "bg-amber-400" : "bg-white/20";
+                      return (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-white/40 w-[90px] truncate shrink-0">{s.actressName}</span>
+                          <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={`text-[9px] font-mono w-5 text-right ${score >= 4 ? "text-emerald-300" : "text-white/30"}`}>
+                            {s.score ?? "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {visionData.result.scores.length > 6 && (
+                      <p className="text-[9px] text-white/25 text-right">他 {visionData.result.scores.length - 6}件</p>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-white/30 leading-relaxed">
+                    GPT-4o-mini Vision がジャケット画像を評価 / スコア4以上が採用候補 / 合格候補から最大3件の中でランダムPick
+                  </p>
                 </div>
               )}
 
