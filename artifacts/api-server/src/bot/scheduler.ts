@@ -1,9 +1,9 @@
 import cron from 'node-cron';
 
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
-import { uploadImages, postTweet, replyToTweet, getAccountInfo } from './twitter.js';
+import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
+import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
@@ -589,6 +589,28 @@ export function startScheduler() {
     }
   }, { timezone: 'Asia/Tokyo' });
 
+  // 毎日 08:00 JST — タイムライン自動同期（直近50件を検証データに取込）
+  cron.schedule('0 8 * * *', async () => {
+    console.log('\n  🔄 [タイムライン自動同期] 開始...');
+    try {
+      const tweets = await getOwnRecentTweets(50);
+      let newCount = 0;
+      let updatedCount = 0;
+      for (const t of tweets) {
+        const { isNew } = recordPostManual({
+          tweetId: t.id,
+          text: t.text,
+          postedAt: (t as any).created_at ?? new Date().toISOString(),
+          metrics: (t.public_metrics as any) ?? null,
+        });
+        if (isNew) newCount++; else updatedCount++;
+      }
+      console.log(`  ✅ [タイムライン自動同期] 新規: ${newCount}件 / 更新: ${updatedCount}件（計${tweets.length}件）`);
+    } catch (e: any) {
+      console.warn(`  ⚠ [タイムライン自動同期] 失敗: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
   // 毎日 23:00 JST — シャドウバン回復自動チェック（③）
   cron.schedule('0 23 * * *', async () => {
     try {
@@ -766,6 +788,7 @@ export function startScheduler() {
   console.log('║  🧪 1日1件 A/Bテストモード               ║');
   console.log(`║  🎭 ${weekLabel.padEnd(35)}║`);
   console.log('║  📡 外部監視    : 常時ループ              ║');
+  console.log('║  🔄 TL自動同期  : 08:00 JST              ║');
   console.log('║  📊 SBIチェック : 23:00 JST              ║');
   console.log('║  🌙 日次評価    : 03:00 JST              ║');
   console.log('║  計: 芸能人アフィリ1本 = 1本/日          ║');
