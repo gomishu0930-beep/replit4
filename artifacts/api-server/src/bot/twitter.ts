@@ -128,7 +128,7 @@ export async function postTweet(text: string, mediaIds: string[] = []): Promise<
   if (_botPaused) {
     throw new Error(`🛑 ボット停止中につき投稿をブロックしました（理由: ${_pausedReason}）`);
   }
-  const params: any = { text, possibly_sensitive: true };
+  const params: any = { text };
   if (mediaIds.length > 0) {
     params.media = { media_ids: mediaIds };
   }

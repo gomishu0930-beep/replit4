@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 196,
-    "avgNewPatterns": 188.52069436261127,
-    "totalCycles": 167
+    "lastNewPatterns": 193,
+    "avgNewPatterns": 191.4351402376795,
+    "totalCycles": 169
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "167サイクル実績 / 平均新規パターン 188.5件/サイクル",
+      "finding": "169サイクル実績 / 平均新規パターン 191.4件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-09T11:12:35.866Z"
+      "testedAt": "2026-04-09T11:52:11.133Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T11:12:35.867Z"
+      "testedAt": "2026-04-09T11:52:11.134Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T11:12:35.867Z"
+      "testedAt": "2026-04-09T11:52:11.407Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-09T11:52:11.407Z",
+      "cycle": 169,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-09T11:37:54.216Z",
+      "cycle": 168,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-09T11:12:35.867Z",
       "cycle": 167,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-07T12:20:33.293Z",
-      "cycle": 119,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-07T12:15:02.686Z",
-      "cycle": 118,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-09T11:12:35.867Z",
-  "version": 169,
+  "lastEvaluatedAt": "2026-04-09T11:52:11.407Z",
+  "version": 171,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
