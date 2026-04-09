@@ -19,7 +19,7 @@
       "status": "confirmed",
       "finding": "161サイクル実績 / 平均新規パターン 143.7件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-09T05:11:08.021Z"
+      "testedAt": "2026-04-09T05:15:10.734Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T05:11:08.022Z"
+      "testedAt": "2026-04-09T05:15:10.734Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-09T05:11:08.022Z"
+      "testedAt": "2026-04-09T05:15:10.735Z"
     },
     {
       "id": "content-5types",
@@ -88,7 +88,7 @@
   ],
   "decisionLog": [
     {
-      "at": "2026-04-09T05:11:08.022Z",
+      "at": "2026-04-09T05:15:10.735Z",
       "cycle": 161,
       "decisions": [
         "評価完了 / 変更なし"
@@ -438,7 +438,7 @@
       ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-09T05:11:08.022Z",
+  "lastEvaluatedAt": "2026-04-09T05:15:10.735Z",
   "version": 163,
   "imagePolicy": {
     "enableOnUrlPost": false,

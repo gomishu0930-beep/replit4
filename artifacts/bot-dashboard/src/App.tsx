@@ -2393,18 +2393,21 @@ function Dashboard() {
 
           return (
             <>
-              {/* 回復モードバナー */}
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+              {/* 育成モードバナー */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/8 p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">⚠️</span>
-                  <div>
-                    <h2 className="text-sm font-bold text-amber-300 mb-1">シャドウバン回復モード</h2>
-                    <p className="text-xs text-amber-200/70">
-                      1日2件体制で信頼スコア回復中。この期間を活用して「回復後の政策」を研究・蓄積します。
+                  <span className="text-2xl">🌱</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h2 className="text-sm font-bold text-emerald-300">新アカウント育成モード</h2>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-mono">Phase-0</span>
+                    </div>
+                    <p className="text-xs text-emerald-200/70">
+                      シャドウバンなし。新規アカウントの信頼スコアを慎重に積み上げる期間です。1日1件でスロット最適化A/Bテストを実施中。
                     </p>
-                    <div className="mt-2 flex gap-4 text-xs text-amber-200/60">
-                      <span>📅 Phase 1: 手動観察 + 2件/日 (〜4週間)</span>
-                      <span>📈 目標: インプ 10以上で回復確認</span>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-emerald-200/55">
+                      <span>📊 移行条件: IP≥150 & SBI=0 連続1週間</span>
+                      <span>🎯 次フェーズ: Phase-1（EV5≥10）</span>
                     </div>
                   </div>
                 </div>
@@ -3064,7 +3067,7 @@ function Dashboard() {
             {
               title: "監視・回復", emoji: "🔍", color: "amber",
               features: [
-                { name: "シャドウバン自動チェック", desc: "毎日 23:00 JST に shadowban.eu API で状態確認", status: "active" },
+                { name: "SBI自動チェック", desc: "毎日 23:00 JST にインプレッション平均を計算してShadow Ban Index(SBI)を評価", status: "active" },
                 { name: "ウォッチドッグ", desc: "投稿失敗・API異常を検知し自動リカバリ試行", status: "active" },
                 { name: "指標自動更新", desc: "投稿後に Twitter API でインプ・いいね・RTを自動取得", status: "active" },
                 { name: "外部パターン監視", desc: "1時間ごとに競合アカウントの高スコアツイートを自動収集", status: "active" },

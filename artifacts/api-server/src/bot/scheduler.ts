@@ -760,12 +760,13 @@ export function startScheduler() {
   const weekLabel = currentWeek === 'W1' ? 'W1: 20:00 JST のみ（プライムタイム）' : currentWeek === 'W2' ? 'W2: 05:00 JST のみ' : '動的 (18-22 JST)';
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
-  console.log('║  FANZA X Bot【シャドウバン回復モード】   ║');
+  console.log('║  FANZA X Bot【新アカウント育成モード】   ║');
   console.log('╠══════════════════════════════════════════╣');
-  console.log('║  ⚠️  1日1件 A/Bテストモード               ║');
+  console.log('║  🌱 Phase-0: 信頼スコア積み上げ期間      ║');
+  console.log('║  🧪 1日1件 A/Bテストモード               ║');
   console.log(`║  🎭 ${weekLabel.padEnd(35)}║`);
   console.log('║  📡 外部監視    : 常時ループ              ║');
-  console.log('║  📊 回復チェック: 23:00 JST              ║');
+  console.log('║  📊 SBIチェック : 23:00 JST              ║');
   console.log('║  🌙 日次評価    : 03:00 JST              ║');
   console.log('║  計: 芸能人アフィリ1本 = 1本/日          ║');
   console.log('╚══════════════════════════════════════════╝');

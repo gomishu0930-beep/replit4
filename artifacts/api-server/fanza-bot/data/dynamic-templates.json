@@ -43,45 +43,45 @@
       "usedCount": 0
     },
     {
-      "text": "🔞{actress}さんの最新作🎬\n{shortTitle}が話題沸騰中📺\nレビュー{reviewCount}件✨平均{reviewAvg}点\nリプ欄へ👇",
+      "text": "🔞{actress}出演の{shortTitle}が話題沸騰🔥 レビュー{reviewCount}件・評価{reviewAvg}⭐ リプ欄からどうぞ👇",
       "type": "amateur",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}に{actress}出演🌟\n{reviewCount}人が高評価⭐{reviewAvg}\n今すぐ視聴できます🎥\nリプ欄からどうぞ👇",
+      "text": "🔞{shortTitle}で{actress}の新作が配信開始🎬 {reviewCount}人が高評価{reviewAvg}✨ リプ欄へ👇",
       "type": "amateur",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
-      "text": "🔞話題のあの子{actress}🔥\n{shortTitle}が{reviewCount}件評価突破💬\n平均{reviewAvg}点の傑作🎬\nリプ欄へ👇",
+      "text": "🔞話題の{shortTitle}🌟 {actress}出演作品がランクイン中📈 評価{reviewAvg}・{reviewCount}件のレビュー💬 リプ欄からどうぞ👇",
       "type": "buzz",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{reviewer}件のレビューで{reviewAvg}点⭐\n{actress}主演{shortTitle}が神配信中📺\n見逃せません✨\nリプ欄からどうぞ👇",
+      "text": "🔞{actress}最新作{shortTitle}が好評配信中🎥 {reviewCount}件レビュー・平均{reviewAvg}の高評価🏆 リプ欄へ👇",
       "type": "buzz",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
-      "text": "🔞{shortTitle}🎬{actress}×{reviewCount}件評価✨\nスコア{reviewAvg}の傑作😍\nリプ欄へ👇",
+      "text": "🔞{shortTitle}で{actress}の魅力炸裂💥 {reviewCount}件・{reviewAvg}評価👍 詳細はリプ欄からどうぞ👇",
       "type": "any",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
-      "text": "🔞最新配信中🌟{actress}の{shortTitle}\n{reviewCount}件・{reviewAvg}点評価🎥\nリプ欄からどうぞ👇",
+      "text": "🔞{actress}出演{shortTitle}🎬 評価{reviewAvg}⭐{reviewCount}件突破🎉 リプ欄へ👇",
       "type": "any",
       "sourceScore": 202,
-      "generatedAt": "2026-04-09T05:11:06.748Z",
+      "generatedAt": "2026-04-09T05:15:02.334Z",
       "usedCount": 0
     },
     {
@@ -701,6 +701,6 @@
       "usedCount": 0
     }
   ],
-  "lastEvolvedAt": "2026-04-09T05:11:06.748Z",
+  "lastEvolvedAt": "2026-04-09T05:15:02.334Z",
   "evolutionCount": 140
 }
