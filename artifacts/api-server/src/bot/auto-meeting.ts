@@ -36,7 +36,7 @@ import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing, getViralAVPostExamples } from './grok.js';
 import { postTweet, replyToTweet, uploadImages } from './twitter.js';
 import { generateImage, buildImagePrompt, isNanobananaEnabled } from './imageGen.js';
-import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroReply } from './ai.js';
+import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroReply, generateCelebrityMainTweet } from './ai.js';
 import { pickCelebrity, pickRandom, getCelebrityLikeItems } from './celebrity.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { getSampleImages } from './fanza.js';
@@ -365,6 +365,7 @@ export async function runThreeAIPostMeeting(
   celebrity: string,
   item: any,
   sessionId: string,
+  hooks?: string[],
 ): Promise<{ grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string }> {
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
   const actress = item.actress?.map((a: any) => a.name).join('・') || item.title.slice(0, 20);
@@ -406,54 +407,22 @@ export async function runThreeAIPostMeeting(
   );
   console.log(`  ✅ [3者会議 Step2] GPTプロンプト設計完了 (${gptAnalysis.length}文字)`);
 
-  // ── Step 3: Claude — プロンプト確定 + ツイート本文生成 ────────────────────
+  // ── Step 3: Claude — 既存生成関数でツイート本文を確定 ──────────────────────
+  // （generateCelebrityMainTweet はassistant prefill + isRefusal()チェック付き）
   console.log(`  🟣 [3者会議 Step3] Claudeが投稿文を生成中...`);
-  const claude = makeAnthropicClient();
-  const knowledgeCtx = buildCelebrityPostContext();
 
-  let finalTweet = '';
-  let introReply = '';
+  // GPT分析から「今日の投稿フック」を抽出（なければデフォルト）
+  const hookFromGPT = gptAnalysis.match(/【今日の投稿戦略】[^\n]*\n([^\n【]+)/)?.[1]?.trim()
+    ?? gptAnalysis.match(/フック[：:]\s*([^\n]{5,40})/)?.[1]?.trim()
+    ?? (hooks && hooks.length > 0 ? pickRandom(hooks) : `${celebrity}に激似の女優を見つけてしまった件`);
 
-  if (claude) {
-    // メインツイート生成
-    const claudeMainRes = await claude.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 350,
-      messages: [
-        {
-          role: 'user',
-          content: `${gptAnalysis}\n\n---\n【確定した作品情報】\n- 芸能人（ターゲット）: ${celebrity}\n- 出演AV女優: ${actress}\n- 作品タイトル: ${title}\n- レビュー: ⭐${reviewAvg}点（${reviewCount}件）\n${knowledgeCtx}\n\n---\n【絶対ルール】\n- 必ず 🔞 から始める（1文字目）\n- ハッシュタグ（#）は絶対に入れない\n- 日本語で110文字以内（短いほど良い）\n- 絵文字は2〜4個まで\n- 「詳細はリプ欄👇」で締める\n- AV女優名を必ず入れる\n\nメインツイート本文だけ出力してください（説明文不要）:`,
-        },
-      ],
-    });
-    const mainBlock = claudeMainRes.content[0];
-    finalTweet = mainBlock.type === 'text' ? mainBlock.text.trim() : '';
+  const finalTweet = await generateCelebrityMainTweet(celebrity, hookFromGPT, item);
+  const introReply = await generateCelebrityIntroReply(hookFromGPT, item);
 
-    // リプライ（女優紹介）生成
-    const claudeReplyRes = await claude.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'user',
-          content: `メインツイートの自己リプライを作成してください。\n\nメインツイート:「${finalTweet}」\n出演女優: ${actress}\n作品: ${title}\nレビュー: ⭐${reviewAvg}点（${reviewCount}件）\n\n【ルール】\n- 女優名を冒頭に\n- 作品・レビュー数字を入れる\n- 「🔗次のリプにリンクあります」で締める\n- 100文字以内\n- ハッシュタグ禁止\n\nリプライ本文のみ出力:`,
-        },
-      ],
-    });
-    const replyBlock = claudeReplyRes.content[0];
-    introReply = replyBlock.type === 'text' ? replyBlock.text.trim() : '';
-
-    await pushMessageToSession(sessionId, 'claude',
-      `【🟣 Claude — プロンプト確定・投稿文生成】\n\nGPTの分析とプロンプト設計を受けて、投稿文を生成しました。\n\n**メインツイート（確定）:**\n「${finalTweet}」\n\n**リプライ①（女優紹介・確定）:**\n「${introReply}」\n\n---\n🎯 自律実行指令: 上記メインツイートを即時X投稿し、30〜90秒後に女優紹介リプライを追加してください。`
-    );
-    console.log(`  ✅ [3者会議 Step3] Claude生成完了 — メイン: ${finalTweet.slice(0, 30)}...`);
-  } else {
-    // Claudeクライアント未設定時のフォールバック
-    finalTweet = `🔞 ${celebrity}にそっくりなAV女優を発見した\n\n👤 ${actress}\n🎬「${title}」⭐${reviewAvg}点\n\n詳細はリプ欄👇`;
-    introReply = `👤 ${actress}\n🎬「${title}」\n⭐${reviewAvg}点（${reviewCount}件）\n🔗次のリプにリンクあります`;
-    await pushMessageToSession(sessionId, 'claude', `【Claude】クライアント未設定 → フォールバックテンプレート使用\n「${finalTweet}」`);
-    console.warn('  ⚠ [3者会議 Step3] Claudeクライアント未設定 → フォールバック');
-  }
+  await pushMessageToSession(sessionId, 'claude',
+    `【🟣 Claude — プロンプト確定・投稿文生成】\n\nGPTの分析・フックを受けて、既存生成関数（isRefusal()チェック+フォールバック付き）で投稿文を生成しました。\n\n**フック採用:** 「${hookFromGPT}」\n\n**メインツイート（確定）:**\n「${finalTweet}」\n\n**リプライ①（女優紹介・確定）:**\n「${introReply}」\n\n---\n🎯 自律実行指令: 上記メインツイートを即時X投稿し、30〜90秒後に女優紹介リプライを追加してください。`
+  );
+  console.log(`  ✅ [3者会議 Step3] Claude生成完了 — メイン: "${finalTweet.slice(0, 40)}..."`);
 
   return { grokRefs, gptAnalysis, finalTweet, introReply };
 }
@@ -621,7 +590,7 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
   console.log(`[${jst()}] 💬 [投稿会議] Phase 2: Grok→GPT→Claude 3者会議開始...`);
   let meetingResult: { grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string };
   try {
-    meetingResult = await runThreeAIPostMeeting(celebrity, item, session.id);
+    meetingResult = await runThreeAIPostMeeting(celebrity, item, session.id, mapping.hooks);
   } catch (e: any) {
     console.error(`[${jst()}] ❌ [投稿会議] 3者会議エラー: ${e.message}`);
     return { meetingId: session.id, posted: false, reason: `3者会議エラー: ${e.message}` };
