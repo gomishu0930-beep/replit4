@@ -17,6 +17,7 @@
  */
 
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import {
   createMeetingSession,
   runTrialogue,
@@ -26,14 +27,19 @@ import {
   saveDirectiveExecution,
   updateDirectiveStatus,
   getMeetingById,
+  pushMessageToSession,
 } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
-import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData } from './storage.js';
+import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData, setLastPostMeetingResult } from './storage.js';
 import { getStrategySummary, getImagePolicy } from './strategy.js';
 import { contact, sendMeetingFullLog } from './contact.js';
-import { getGrokXBriefing } from './grok.js';
-import { postTweet, uploadImages } from './twitter.js';
+import { getGrokXBriefing, getViralAVPostExamples } from './grok.js';
+import { postTweet, replyToTweet, uploadImages } from './twitter.js';
 import { generateImage, buildImagePrompt, isNanobananaEnabled } from './imageGen.js';
+import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroReply } from './ai.js';
+import { pickCelebrity, pickRandom, getCelebrityLikeItems } from './celebrity.js';
+import { resolveShortUrl } from './rebrandly.js';
+import { getSampleImages } from './fanza.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -344,6 +350,115 @@ async function notifyWeeklyMeetingResult(params: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  3者順次投稿会議（Grok→GPT→Claude）
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 投稿会議 新フロー:
+ *   Step 1: Grok   → X上のバズ投稿を5件検索・参考事例として提出
+ *   Step 2: GPT    → バズ参考を分析し、Claudeへの最強プロンプトを設計
+ *   Step 3: Claude → プロンプトを確定し、実際のツイート本文を生成
+ *
+ * @returns { grokRefs, gptAnalysis, finalTweet, introReply }
+ */
+export async function runThreeAIPostMeeting(
+  celebrity: string,
+  item: any,
+  sessionId: string,
+): Promise<{ grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string }> {
+  const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const actress = item.actress?.map((a: any) => a.name).join('・') || item.title.slice(0, 20);
+  const title = item.title?.slice(0, 40) ?? '';
+  const reviewAvg = item.review?.average ?? '4.5';
+  const reviewCount = item.review?.count ?? 0;
+
+  // ── Step 1: Grok — バズ投稿参考収集 ────────────────────────────────────────
+  console.log(`  🦅 [3者会議 Step1] Grokがバズ参考を収集中... (${celebrity})`);
+  await pushMessageToSession(sessionId, 'user',
+    `【3者投稿会議 開始】\n本日の作品: ${celebrity}似 / ${actress} /「${title}」\nレビュー: ⭐${reviewAvg}点（${reviewCount}件）\n\n**Step 1: Grok、X上のバズ投稿を収集・提出してください**`
+  );
+  const grokRefs = await getViralAVPostExamples(celebrity);
+  await pushMessageToSession(sessionId, 'grok',
+    `【🦅 Grok — バズ参考提出】\n\n${grokRefs}\n\n---\n以上が本日のX上の参考事例です。GPTはこれを元にClaudeへのプロンプトを設計してください。`
+  );
+  console.log(`  ✅ [3者会議 Step1] Grokバズ参考収集完了 (${grokRefs.length}文字)`);
+
+  // ── Step 2: GPT — バズ分析 + Claudeへのプロンプト設計 ──────────────────────
+  console.log(`  🤖 [3者会議 Step2] GPTがプロンプトを設計中...`);
+  const gptResponse = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `あなたはXアフィリエイター専門のコンサルタントです。Grokが提出したバズ投稿の参考事例を分析し、Claudeが今夜最強のツイートを生成するための具体的なプロンプト指示を設計してください。`,
+      },
+      {
+        role: 'user',
+        content: `【Grokのバズ参考データ】\n${grokRefs}\n\n【本日の作品情報】\n- 芸能人（ターゲット）: ${celebrity}\n- 出演AV女優: ${actress}\n- 作品タイトル: ${title}\n- レビュー: ⭐${reviewAvg}点（${reviewCount}件）\n\n---\n上記バズ参考を分析して、以下の形式で出力してください:\n\n【バズ分析】\n（なぜこれらの投稿がバズったか — フック・感情トリガー・構造を2〜3点で分析）\n\n【今日の投稿戦略】\n（上記分析から導いた今夜使うべき具体的な手法 — 1〜2点）\n\n【Claudeへのプロンプト指示】\n（これをそのままClaudeに渡す。「${celebrity}に激似の女優ネタ」で今夜最強のツイート本文を生成させるための具体的指示。フック形式・感情トリガー・構造を明記すること）`,
+      },
+    ],
+    max_tokens: 700,
+    temperature: 0.7,
+  });
+  const gptAnalysis = gptResponse.choices[0]?.message?.content ?? '';
+  await pushMessageToSession(sessionId, 'gpt',
+    `【🤖 GPT — バズ分析・プロンプト設計】\n\n${gptAnalysis}\n\n---\nClaudeは上記【Claudeへのプロンプト指示】に従ってツイート本文を生成してください。`
+  );
+  console.log(`  ✅ [3者会議 Step2] GPTプロンプト設計完了 (${gptAnalysis.length}文字)`);
+
+  // ── Step 3: Claude — プロンプト確定 + ツイート本文生成 ────────────────────
+  console.log(`  🟣 [3者会議 Step3] Claudeが投稿文を生成中...`);
+  const claude = makeAnthropicClient();
+  const knowledgeCtx = buildCelebrityPostContext();
+
+  let finalTweet = '';
+  let introReply = '';
+
+  if (claude) {
+    // メインツイート生成
+    const claudeMainRes = await claude.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 350,
+      messages: [
+        {
+          role: 'user',
+          content: `${gptAnalysis}\n\n---\n【確定した作品情報】\n- 芸能人（ターゲット）: ${celebrity}\n- 出演AV女優: ${actress}\n- 作品タイトル: ${title}\n- レビュー: ⭐${reviewAvg}点（${reviewCount}件）\n${knowledgeCtx}\n\n---\n【絶対ルール】\n- 必ず 🔞 から始める（1文字目）\n- ハッシュタグ（#）は絶対に入れない\n- 日本語で110文字以内（短いほど良い）\n- 絵文字は2〜4個まで\n- 「詳細はリプ欄👇」で締める\n- AV女優名を必ず入れる\n\nメインツイート本文だけ出力してください（説明文不要）:`,
+        },
+      ],
+    });
+    const mainBlock = claudeMainRes.content[0];
+    finalTweet = mainBlock.type === 'text' ? mainBlock.text.trim() : '';
+
+    // リプライ（女優紹介）生成
+    const claudeReplyRes = await claude.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 200,
+      messages: [
+        {
+          role: 'user',
+          content: `メインツイートの自己リプライを作成してください。\n\nメインツイート:「${finalTweet}」\n出演女優: ${actress}\n作品: ${title}\nレビュー: ⭐${reviewAvg}点（${reviewCount}件）\n\n【ルール】\n- 女優名を冒頭に\n- 作品・レビュー数字を入れる\n- 「🔗次のリプにリンクあります」で締める\n- 100文字以内\n- ハッシュタグ禁止\n\nリプライ本文のみ出力:`,
+        },
+      ],
+    });
+    const replyBlock = claudeReplyRes.content[0];
+    introReply = replyBlock.type === 'text' ? replyBlock.text.trim() : '';
+
+    await pushMessageToSession(sessionId, 'claude',
+      `【🟣 Claude — プロンプト確定・投稿文生成】\n\nGPTの分析とプロンプト設計を受けて、投稿文を生成しました。\n\n**メインツイート（確定）:**\n「${finalTweet}」\n\n**リプライ①（女優紹介・確定）:**\n「${introReply}」\n\n---\n🎯 自律実行指令: 上記メインツイートを即時X投稿し、30〜90秒後に女優紹介リプライを追加してください。`
+    );
+    console.log(`  ✅ [3者会議 Step3] Claude生成完了 — メイン: ${finalTweet.slice(0, 30)}...`);
+  } else {
+    // Claudeクライアント未設定時のフォールバック
+    finalTweet = `🔞 ${celebrity}にそっくりなAV女優を発見した\n\n👤 ${actress}\n🎬「${title}」⭐${reviewAvg}点\n\n詳細はリプ欄👇`;
+    introReply = `👤 ${actress}\n🎬「${title}」\n⭐${reviewAvg}点（${reviewCount}件）\n🔗次のリプにリンクあります`;
+    await pushMessageToSession(sessionId, 'claude', `【Claude】クライアント未設定 → フォールバックテンプレート使用\n「${finalTweet}」`);
+    console.warn('  ⚠ [3者会議 Step3] Claudeクライアント未設定 → フォールバック');
+  }
+
+  return { grokRefs, gptAnalysis, finalTweet, introReply };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  投稿会議（runMeetingAndPost）
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -484,154 +599,108 @@ async function extractTweetFromDirective(directive: string): Promise<string> {
  */
 export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }): Promise<MeetingPostResult> {
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-  console.log(`\n[${jst()}] 🎙 [投稿会議] Phase 1-4 フルサイクル開始`);
+  console.log(`\n[${jst()}] 🎙 [投稿会議] 3者会議フロー（Grok→GPT→Claude）開始`);
 
-  // ── Phase 1-2: 投稿検証 + Xバズり調査 → トピック生成 ───────────────────
-  const topic = await buildPostMeetingTopic();
+  // ── Phase 1: 芸能人・作品の選定 ─────────────────────────────────────────
+  const mapping = pickCelebrity();
+  const items = await getCelebrityLikeItems(mapping, 1);
+  if (items.length === 0) {
+    console.warn(`[${jst()}] ⚠ [投稿会議] 対象作品が見つかりませんでした`);
+    return { meetingId: '', posted: false, reason: '対象作品なし' };
+  }
+  const item = items[0];
+  const celebrity = mapping.celebrity;
+  const actress = item.actress?.map((a: any) => a.name).join('・') || item.title.slice(0, 20);
+  console.log(`[${jst()}] 🎭 [投稿会議] 対象: ${celebrity} / ${actress}`);
 
-  // 会議セッション作成（投稿会議はWebリサーチなし: Grokが会議中にリアルタイム調査）
-  const title = `【投稿会議】${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
+  // 会議セッション作成
+  const title = `【3者投稿会議】${celebrity} / ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
   const session = await createMeetingSession(title);
 
-  // ── Phase 3: 3ラウンドトリアローグで生成文を確定 ────────────────────────
-  console.log(`[${jst()}] 💬 [投稿会議] Phase 3: 3者議論（3ラウンド）...`);
+  // ── Phase 2: 3者順次会議（Grok→GPT→Claude）────────────────────────────
+  console.log(`[${jst()}] 💬 [投稿会議] Phase 2: Grok→GPT→Claude 3者会議開始...`);
+  let meetingResult: { grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string };
   try {
-    await runTrialogue(session.id, topic, 3);
+    meetingResult = await runThreeAIPostMeeting(celebrity, item, session.id);
   } catch (e: any) {
-    console.error(`[${jst()}] ❌ [投稿会議] 議論エラー: ${e.message}`);
-    return { meetingId: session.id, posted: false, reason: `議論エラー: ${e.message}` };
+    console.error(`[${jst()}] ❌ [投稿会議] 3者会議エラー: ${e.message}`);
+    return { meetingId: session.id, posted: false, reason: `3者会議エラー: ${e.message}` };
   }
 
-  // ── Grok指令抽出（多段フォールバック）───────────────────────────────────
-  const updatedSession = getMeetingById(session.id);
-  const grokMessages = (updatedSession?.messages ?? []).filter(m => m.speaker === 'grok');
-  const lastGrok = grokMessages[grokMessages.length - 1];
-
-  let directiveText = '';
-
-  // Pattern 1: 🎯自律実行指令： の完全一致
-  const directiveMatch = lastGrok?.content.match(/🎯\s*自律実行指令[：:]\s*(.+?)(?:\n|$)/s);
-  if (directiveMatch) {
-    directiveText = directiveMatch[1].trim();
-    console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P1）: ${directiveText.slice(0, 80)}`);
+  const { finalTweet, introReply, grokRefs, gptAnalysis } = meetingResult;
+  if (!finalTweet || finalTweet.length < 5) {
+    console.error(`[${jst()}] ❌ [投稿会議] Claudeのツイート本文が空`);
+    return { meetingId: session.id, posted: false, reason: 'Claude生成ツイートが空' };
   }
+  console.log(`\n[${jst()}] 📝 [投稿会議] Claude確定ツイート: "${finalTweet.slice(0, 80)}..."`);
 
-  // Pattern 2: 「」で囲まれたツイート本文を直接抽出
-  if (!directiveText) {
-    const quoteMatch = lastGrok?.content.match(/[「『"](.{15,140})[」』"]/);
-    if (quoteMatch) {
-      directiveText = quoteMatch[1].trim();
-      console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P2 引用抽出）: ${directiveText.slice(0, 80)}`);
-    }
-  }
-
-  // Pattern 3: 採用/決定などのキーワード後のテキスト
-  if (!directiveText) {
-    const adoptMatch = lastGrok?.content.match(/(?:採用|決定|投稿|ツイート)[：:\s]*[「]?([🔞].{15,120})/);
-    if (adoptMatch) {
-      directiveText = adoptMatch[1].trim();
-      console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P3 採用後テキスト）: ${directiveText.slice(0, 80)}`);
-    }
-  }
-
-  // Pattern 4: Grokの全文をOpenAIに渡してツイート本文を生成
-  if (!directiveText && lastGrok?.content) {
-    console.log(`[${jst()}] 🤖 [投稿会議] Grok指令未検出 → OpenAIでGrok応答からツイート本文を生成...`);
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{
-          role: 'user',
-          content: `以下はX(Twitter)アフィリエイトボットのAI会議でGrokが出した最終応答です。この応答の中から「今日投稿すべきツイート本文」を特定し、そのツイート本文だけを140文字以内で出力してください。ツイート本文のみを出力し、説明・注釈は一切書かないこと。\n\nGrok応答:\n${lastGrok.content.slice(0, 2000)}`,
-        }],
-        max_tokens: 200,
-        temperature: 0.3,
-      });
-      directiveText = completion.choices[0]?.message?.content?.trim() ?? '';
-      if (directiveText) {
-        console.log(`[${jst()}] 🎯 [投稿会議] Grok裁定（P4 OpenAI解釈）: ${directiveText.slice(0, 80)}`);
-      }
-    } catch (e: any) {
-      console.warn(`[${jst()}] ⚠ [投稿会議] P4 OpenAI解釈エラー: ${e.message}`);
-    }
-  }
-
-  if (!directiveText) {
-    console.warn(`[${jst()}] ⚠ [投稿会議] 全パターンで指令抽出失敗`);
-    return { meetingId: session.id, posted: false, reason: 'Grok指令抽出失敗（全4パターン）' };
-  }
-  console.log(`\n[${jst()}] 🎯 [投稿会議] Grok裁定: ${directiveText.slice(0, 120)}`);
-
-  // ── Phase 4: 投稿可否チェック ────────────────────────────────────────────
+  // ── Phase 3: 投稿可否チェック ────────────────────────────────────────────
   const abWeek = getABTestWeek();
   const todayCount = getTodayPostCount();
   if (!options?.bypassDailyLimit && abWeek !== 'normal' && todayCount >= 1) {
-    console.log(`[${jst()}] ℹ [投稿会議] ${abWeek}・本日${todayCount}件投稿済み → Phase 4スキップ`);
+    console.log(`[${jst()}] ℹ [投稿会議] ${abWeek}・本日${todayCount}件投稿済み → 投稿スキップ`);
+    setLastPostMeetingResult({
+      celebrity, actress, title: item.title ?? '',
+      generatedAt: new Date().toISOString(),
+      step1Grok: grokRefs, step2GPT: gptAnalysis,
+      step3Claude: finalTweet, finalTweet, introReply,
+      meetingId: session.id,
+    });
     await contact.systemAlert(
-      '🎙 投稿会議完了（Phase 4スキップ）',
-      `${abWeek}制限中のため投稿はスキップ（Phase 1-3は完了）。\n\nGrok裁定: ${directiveText.slice(0, 200)}\n\n次回W3以降またはbypassモードで投稿されます。`,
+      '🎙 3者投稿会議完了（投稿スキップ）',
+      `${abWeek}制限中のため投稿はスキップ（会議は完了）。\n\nClaude確定ツイート: ${finalTweet}\n\n次回W3以降またはbypassモードで投稿。`,
     );
-    return { meetingId: session.id, directive: directiveText, posted: false, reason: `${abWeek}制限・本日${todayCount}件投稿済み` };
+    return { meetingId: session.id, directive: finalTweet, posted: false, reason: `${abWeek}制限・本日${todayCount}件投稿済み` };
   }
 
-  // ── Phase 4: ツイート本文抽出 ────────────────────────────────────────────
-  let tweetText: string;
+  // ── Phase 4: X投稿（芸能人3連フォーマット）──────────────────────────────
+  const tweetText = finalTweet;
+  console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿 → "${tweetText.slice(0, 60)}..."`);
   try {
-    tweetText = await extractTweetFromDirective(directiveText);
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [投稿会議] ツイート生成エラー: ${e.message}`);
-    return { meetingId: session.id, directive: directiveText, posted: false, reason: `生成エラー: ${e.message}` };
-  }
-
-  if (!tweetText || tweetText.length < 5) {
-    console.error(`[${jst()}] ❌ [投稿会議] ツイート本文が空`);
-    return { meetingId: session.id, directive: directiveText, posted: false, reason: 'ツイート本文抽出失敗' };
-  }
-
-  // ── Phase 4: 画像生成（ポリシーに従う）──────────────────────────────────────
-  const hasUrl = /https?:\/\/\S+/.test(tweetText);
-  const imgPolicy = getImagePolicy();
-  // 画像生成条件: 常時生成フラグ OR (URLなし) OR (URLありでも enableOnUrlPost=true)
-  const shouldGenerateImage = imgPolicy.alwaysGenerate || !hasUrl || (hasUrl && imgPolicy.enableOnUrlPost);
-  let mediaIds: string[] = [];
-
-  if (shouldGenerateImage && isNanobananaEnabled()) {
-    const reason = imgPolicy.alwaysGenerate ? '常時生成ポリシー' : hasUrl ? 'URLあり投稿・enableOnUrlPost=true（会議決定）' : 'リンクなし投稿';
-    console.log(`\n[${jst()}] 🍌 [投稿会議] ${reason} → Nanobanana2で画像生成`);
-    try {
-      const productTitle = directiveText.match(/[「『]([^」』]{5,40})[」』]/)?.[1];
-      const imagePrompt = buildImagePrompt(tweetText, productTitle);
-      console.log(`  プロンプト: ${imagePrompt.slice(0, 100)}`);
-
-      const imageUrl = await generateImage(imagePrompt);
-      const uploaded = await uploadImages([imageUrl]);
-      mediaIds = uploaded;
-      console.log(`  🖼 画像アップロード完了 mediaIds: ${mediaIds.join(', ')}`);
-    } catch (e: any) {
-      console.warn(`[${jst()}] ⚠ [投稿会議] 画像生成スキップ（エラー）: ${e.message}`);
-      mediaIds = [];
-    }
-  } else if (shouldGenerateImage && !isNanobananaEnabled()) {
-    console.log(`[${jst()}] ℹ [投稿会議] 画像生成対象・NANOBANANA_API_KEY未設定 → テキストのみ投稿`);
-  } else {
-    console.log(`[${jst()}] ℹ [投稿会議] 画像生成スキップ（ポリシー: enableOnUrlPost=${imgPolicy.enableOnUrlPost}, alwaysGenerate=${imgPolicy.alwaysGenerate}）`);
-  }
-
-  // ── Phase 4: X投稿 ───────────────────────────────────────────────────────
-  const withImage = mediaIds.length > 0;
-  console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿${withImage ? '（画像付き）' : ''} → "${tweetText.slice(0, 60)}..."`);
-  try {
+    // ① メインツイート（サンプル画像付き）
+    const imageUrls = getSampleImages(item);
+    const mediaIds = await uploadImages(imageUrls);
     const tweetId = await postTweet(tweetText, mediaIds);
-    recordPost({ tweetId, replyId: '', text: tweetText, type: 'meeting-post' });
+
+    // ② リプライ①: 女優紹介（30〜90秒後）
+    const waitMs = (30 + Math.floor(Math.random() * 60)) * 1000;
+    await new Promise(r => setTimeout(r, waitMs));
+    const finalIntroReply = introReply || `👤 ${actress}\n🎬「${item.title?.slice(0, 30)}」\n⭐${item.review?.average ?? '4.5'}点（${item.review?.count ?? 0}件）\n🔗次のリプにリンクあります`;
+    const introReplyId = await replyToTweet(tweetId, finalIntroReply);
+
+    // ③ リプライ②: アフィリエイトリンク（20〜60秒後）
+    await new Promise(r => setTimeout(r, (20 + Math.floor(Math.random() * 40)) * 1000));
+    const reviewAvg2 = parseFloat(item.review?.average ?? '0');
+    const reviewCount2 = item.review?.count ?? 0;
+    const isHighScore2 = reviewAvg2 >= 4.3 && reviewCount2 >= 25;
+    const affiliateURL = await resolveShortUrl(
+      item.affiliateURL ?? '',
+      isHighScore2 ? (item.content_id ?? item.id) : undefined,
+      isHighScore2 ? item.title : undefined,
+    );
+    await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+
+    // 記録
+    recordPost({ tweetId, replyId: introReplyId, item, text: tweetText, type: 'celebrity' });
+
+    // 投稿会議結果を保存
+    setLastPostMeetingResult({
+      celebrity, actress, title: item.title ?? '',
+      generatedAt: new Date().toISOString(),
+      step1Grok: grokRefs, step2GPT: gptAnalysis,
+      step3Claude: tweetText, finalTweet: tweetText,
+      introReply: finalIntroReply, tweetId, meetingId: session.id,
+    });
+
     console.log(`\n[${jst()}] 🏁 [投稿会議] Phase 4完了！ tweetId: ${tweetId}`);
     await contact.systemAlert(
-      `🏁 投稿会議→投稿完了${withImage ? '（画像付き）' : ''}`,
-      `Phase 1-4フルサイクル完了。Grok裁定に基づき自律投稿しました。\n\n📝 投稿内容:\n${tweetText}\n${withImage ? '🖼 Nanobanana2生成画像添付\n' : ''}\n🔗 tweetId: ${tweetId}`,
+      `🏁 3者投稿会議→投稿完了`,
+      `Grok(参考)→GPT(分析)→Claude(生成) フルサイクル完了。\n\n📝 メインツイート:\n${tweetText}\n\n🔗 tweetId: ${tweetId}`,
     );
-    return { meetingId: session.id, directive: directiveText, tweetText, tweetId, posted: true };
+    return { meetingId: session.id, directive: tweetText, tweetText, tweetId, posted: true };
   } catch (e: any) {
     console.error(`[${jst()}] ❌ [投稿会議] 投稿エラー: ${e.message}`);
-    return { meetingId: session.id, directive: directiveText, tweetText, posted: false, reason: `投稿エラー: ${e.message}` };
+    return { meetingId: session.id, directive: tweetText, tweetText, posted: false, reason: `投稿エラー: ${e.message}` };
   }
 }
 

@@ -207,7 +207,7 @@ function isValidTweet(text: string): boolean {
 
 // ─── Anthropic クライアント共通 ──────────────────────────────────────────────
 
-function makeAnthropicClient(): Anthropic | null {
+export function makeAnthropicClient(): Anthropic | null {
   const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   if (!baseURL || !apiKey) return null;
@@ -216,7 +216,7 @@ function makeAnthropicClient(): Anthropic | null {
 
 // ─── 知見ループ：会議・アルゴ・実績 → プロンプト注入コンテキスト ─────────────
 
-function buildCelebrityPostContext(): string {
+export function buildCelebrityPostContext(): string {
   const sections: string[] = [];
 
   // ① 過去の高パフォーマンス投稿（実績パターン）

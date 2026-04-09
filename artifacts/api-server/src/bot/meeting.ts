@@ -444,6 +444,15 @@ function pushMsg(session: MeetingSession, speaker: Speaker, content: string): Me
   return msg;
 }
 
+// 外部から任意の発言者のメッセージをセッションに追加（3者投稿会議用）
+export async function pushMessageToSession(sessionId: string, speaker: Speaker, content: string): Promise<MeetingMessage | null> {
+  const session = cache.meetings.find((m) => m.id === sessionId);
+  if (!session) return null;
+  const msg = pushMsg(session, speaker, content);
+  await saveData();
+  return msg;
+}
+
 // GPTへのメッセージ送信
 export async function sendToGPT(sessionId: string, userMessage: string): Promise<MeetingMessage> {
   const session = cache.meetings.find((m) => m.id === sessionId);

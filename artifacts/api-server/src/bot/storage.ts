@@ -719,3 +719,29 @@ export async function resetBotData(): Promise<{ cleared: string[] }> {
   return { cleared };
 }
 
+// ─── 3者投稿会議 結果キャッシュ（in-memory）──────────────────────────────────
+
+export interface PostMeetingResult {
+  celebrity: string;
+  actress: string;
+  title: string;
+  generatedAt: string;
+  step1Grok: string;
+  step2GPT: string;
+  step3Claude: string;
+  finalTweet: string;
+  introReply?: string;
+  tweetId?: string;
+  meetingId?: string;
+}
+
+let lastPostMeetingResult: PostMeetingResult | null = null;
+
+export function setLastPostMeetingResult(r: PostMeetingResult): void {
+  lastPostMeetingResult = r;
+}
+
+export function getLastPostMeetingResult(): PostMeetingResult | null {
+  return lastPostMeetingResult;
+}
+

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta, recordPostManual } from '../bot/storage.js';
+import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta, recordPostManual, getLastPostMeetingResult } from '../bot/storage.js';
 import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
@@ -438,6 +438,13 @@ router.post('/bot/autonomy/run-ab-test', requireAdminToken, async (_req, res) =>
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── 3者投稿会議 最新結果 ─────────────────────────────────────────────────────
+router.get('/bot/post-meeting/latest', requireAdminToken, (_req, res) => {
+  const result = getLastPostMeetingResult();
+  if (!result) { res.json({ ok: false, result: null }); return; }
+  res.json({ ok: true, result });
 });
 
 export default router;

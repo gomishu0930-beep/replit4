@@ -1012,6 +1012,16 @@ function Dashboard() {
     refetchInterval: 300000,
   });
 
+  const { data: postMeetingData } = useQuery<{ ok: boolean; result: {
+    celebrity: string; actress: string; title: string; generatedAt: string;
+    step1Grok: string; step2GPT: string; step3Claude: string;
+    finalTweet: string; introReply?: string; tweetId?: string; meetingId?: string;
+  } | null }>({
+    queryKey: ["post-meeting-latest"],
+    queryFn: () => fetch(`${API}/api/bot/post-meeting/latest`, { headers: { "x-admin-token": "fanza-bot-admin" } }).then((r) => r.json()),
+    refetchInterval: 60000,
+  });
+
   // 自律モードステート
   const { data: autonomyData } = useQuery<{
     autonomyGrantedAt: string;
@@ -3091,6 +3101,43 @@ function Dashboard() {
                       会議で「このパターンが効いた」と決定した内容は、翌日の20:00投稿にすぐ反映されます。
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* 3者投稿会議 最新結果パネル */}
+              {postMeetingData?.result && (
+                <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/8 px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🎙</span>
+                    <p className="text-[12px] font-semibold text-cyan-200">3者投稿会議 最新結果</p>
+                    <span className="ml-auto text-[9px] text-white/30 font-mono">
+                      {new Date(postMeetingData.result.generatedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap text-[9px]">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/25 text-amber-300">🦅 Grok: 参考収集</span>
+                    <span className="text-white/20">→</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-300">🤖 GPT: バズ分析</span>
+                    <span className="text-white/20">→</span>
+                    <span className="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/25 text-violet-300">🟣 Claude: 本文生成</span>
+                    {postMeetingData.result.tweetId && (
+                      <>
+                        <span className="text-white/20">→</span>
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/25 text-blue-300">✅ 投稿済み</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-black/25 border border-white/8 p-2.5 text-[11px] text-white/80 leading-relaxed">
+                    <span className="text-cyan-400 font-bold">{postMeetingData.result.celebrity}似</span>
+                    {" / "}
+                    <span className="text-white/60">{postMeetingData.result.actress}</span>
+                    <br />
+                    <span className="text-white/45 text-[10px]">📝 確定ツイート: </span>
+                    {postMeetingData.result.finalTweet}
+                  </div>
+                  {postMeetingData.result.tweetId && (
+                    <p className="text-[10px] text-white/35 font-mono">tweetId: {postMeetingData.result.tweetId}</p>
+                  )}
                 </div>
               )}
 
