@@ -204,6 +204,15 @@ function isValidTweet(text: string): boolean {
   return true;
 }
 
+// ─── Anthropic クライアント共通 ──────────────────────────────────────────────
+
+function makeAnthropicClient(): Anthropic | null {
+  const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  if (!baseURL || !apiKey) return null;
+  return new Anthropic({ baseURL, apiKey });
+}
+
 // ─── Claude 生成────────────────────────────────────────────────────────────
 
 async function generateWithClaude(
@@ -359,13 +368,19 @@ ${ownSection}${extSection}
   return text;
 }
 
-// ─── 芸能人スロット専用：本文生成 ───────────────────────────────────────────
+// ─── 芸能人スロット専用：AI生成 ─────────────────────────────────────────────
 
-export function generateCelebrityMainTweet(celebrity: string, hook: string, item: any): string {
+export async function generateCelebrityMainTweet(
+  celebrity: string,
+  hook: string,
+  item: any,
+): Promise<string> {
   const actress = item.actress?.map((a: any) => a.name).join('・') || shortTitle(item.title, 15);
   const reviewAvg = item.review?.average ?? '4.5';
   const reviewCount = item.review?.count ?? 0;
-  return [
+  const title = item.title?.slice(0, 40) ?? '';
+
+  const fallback = [
     `🔞${hook}`,
     ``,
     `出演: ${actress}`,
@@ -373,17 +388,125 @@ export function generateCelebrityMainTweet(celebrity: string, hook: string, item
     ``,
     `詳細はリプ欄👇`,
   ].join('\n');
+
+  const claude = makeAnthropicClient();
+  if (!claude) return fallback;
+
+  try {
+    const prompt = `あなたは日本のXで成果を出しているアダルトアフィリエイターです。
+「${celebrity}に激似の女優を発見した」という切り口で、スクロールが止まるツイートを1件作成してください。
+
+## 作品情報
+- 芸能人（似ている対象）: ${celebrity}
+- フック候補: 「${hook}」
+- 出演AV女優: ${actress}
+- 作品タイトル（参考）: ${title}
+- レビュー: ⭐${reviewAvg}点（${reviewCount}件）
+
+## 成功するツイートの構造
+1行目（0.3秒で止める）: ${celebrity}の名前を使って強烈な一言
+2行目: 具体的な発見・理由（なぜ似てるのか/どこが魅力か）
+3行目: AV女優名 + レビュー数字で信頼担保
+4行目: 「詳細はリプ欄👇」で誘導
+
+## バズ事例（参考）
+- 「新垣結衣そっくりの子がいて頭おかしくなった」→ いいね2000超
+- 「石原さとみ似の女優、見つけてしまったすまない」→ RT1500超
+- 「綾瀬はるかに似すぎてて笑えない件」→ インプ30万超
+
+## 絶対ルール
+- 必ず 🔞 から始める（1文字目）
+- ハッシュタグ（#）は絶対に入れない
+- 日本語で110文字以内（短いほど良い）
+- 絵文字は2〜4個まで
+- 「リプ欄へ👇」または「詳細はリプ欄👇」で締める
+- 「人気女優」「トップ女優」等の曖昧な表現禁止
+- AV女優名を必ず入れる
+
+ツイート本文だけ出力してください（説明文不要）:`;
+
+    const message = await claude.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: '🔞' },
+      ],
+    });
+
+    const block = message.content[0];
+    if (block.type !== 'text') return fallback;
+    const raw = ('🔞' + block.text).trim();
+    const text = raw.replace(/#[\w\u3000-\u9fff\uff01-\uff60]+/g, '').replace(/\s+\n/g, '\n').trim();
+
+    if (text.length < 15 || text.length > 450) return fallback;
+    if (isRefusal(text)) { console.warn('  ⚠ 芸能人ツイートClaude拒否 → テンプレート使用'); return fallback; }
+    console.log('  ✨ [芸能人] Claude生成成功');
+    return text;
+  } catch (e: any) {
+    console.warn(`  ⚠ 芸能人ツイートClaude失敗 → テンプレート使用: ${e.message}`);
+    return fallback;
+  }
 }
 
-export function generateCelebrityIntroReply(introLine: string, item: any): string {
-  const title = item.title?.slice(0, 30) ?? '';
+export async function generateCelebrityIntroReply(introLine: string, item: any): Promise<string> {
+  const title = item.title?.slice(0, 35) ?? '';
   const actress = item.actress?.map((a: any) => a.name).join('・') || shortTitle(item.title, 15);
-  return [
+  const reviewAvg = item.review?.average ?? '4.5';
+  const reviewCount = item.review?.count ?? 0;
+
+  const fallback = [
     introLine,
     ``,
     `👤 ${actress}`,
     `🎬 「${title}」`,
   ].join('\n');
+
+  const claude = makeAnthropicClient();
+  if (!claude) return fallback;
+
+  try {
+    const prompt = `以下の情報をもとに、Xのリプライツイート（自己リプ）を1件作成してください。
+メインツイートで「芸能人に似た女優を発見した」と書いた続きのリプライです。
+
+## 作品情報
+- 出演女優: ${actress}
+- 作品タイトル: ${title}
+- レビュー: ⭐${reviewAvg}点（${reviewCount}件）
+- 紹介文のヒント: 「${introLine}」
+
+## このリプライの目的
+- 女優の具体的な魅力・特徴を伝える
+- 「見たい！」と思わせる
+- 次のリプライ（URLリンク）への橋渡し
+
+## ルール
+- ハッシュタグ（#）絶対禁止
+- 絵文字2〜5個
+- 100文字以内
+- 女優名・作品名・レビュー数字を必ず入れる
+- 最後は「🔗次のポストにリンクあります」または「↓リンクはこの下」で締める
+
+リプライ本文だけ出力してください:`;
+
+    const message = await claude.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 250,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const block = message.content[0];
+    if (block.type !== 'text') return fallback;
+    const raw = block.text.trim();
+    const text = raw.replace(/#[\w\u3000-\u9fff\uff01-\uff60]+/g, '').replace(/\s+\n/g, '\n').trim();
+    if (text.length < 10 || text.length > 400) return fallback;
+    if (isRefusal(text)) return fallback;
+    console.log('  ✨ [芸能人リプライ] Claude生成成功');
+    return text;
+  } catch (e: any) {
+    console.warn(`  ⚠ 芸能人リプライClaude失敗 → テンプレート使用: ${e.message}`);
+    return fallback;
+  }
 }
 
 // ─── メインエクスポート────────────────────────────────────────────────────

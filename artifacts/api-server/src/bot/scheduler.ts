@@ -114,15 +114,15 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
 
   console.log(`  🎭 [${label}] 芸能人スロット: ${mapping.celebrity} → "${hook.slice(0, 20)}..."`);
 
-  // ツイート①：芸能人フック + 女優サンプル画像
-  const mainText = generateCelebrityMainTweet(mapping.celebrity, hook, item);
+  // ツイート①：芸能人フック + 女優サンプル画像（Claude AI生成）
+  const mainText = await generateCelebrityMainTweet(mapping.celebrity, hook, item);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(mainText, mediaIds);
 
-  // リプライ①：女優紹介（30〜90秒後）
+  // リプライ①：女優紹介（30〜90秒後、Claude AI生成）
   await randomSleep(30, 90);
-  const introText = generateCelebrityIntroReply(introLine, item);
+  const introText = await generateCelebrityIntroReply(introLine, item);
   const introReplyId = await replyToTweet(tweetId, introText);
 
   // リプライ②：アフィリエイトリンク（20〜60秒後）
