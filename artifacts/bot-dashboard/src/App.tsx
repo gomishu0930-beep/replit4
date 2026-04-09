@@ -776,8 +776,28 @@ function Dashboard() {
 
   // 手動ツイート登録
   const [manualId, setManualId] = useState("");
-  const [manualStatus, setManualStatus] = useState<{type:"ok"|"err"|"dup"; msg:string}|null>(null);
+  const [manualStatus, setManualStatus] = useState<{type:"ok"|"err"|"dup"|"sync"; msg:string}|null>(null);
   const [registering, setRegistering] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  async function syncTimeline() {
+    setSyncing(true);
+    setManualStatus(null);
+    try {
+      const r = await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) {
+        setManualStatus({ type: "err", msg: d.error ?? "同期失敗" });
+      } else {
+        setManualStatus({ type: "sync", msg: `同期完了 — 新規 ${d.newCount}件 / 更新 ${d.updatedCount}件（計${d.total}件取得）` });
+        refetchPosts();
+      }
+    } catch {
+      setManualStatus({ type: "err", msg: "通信エラー" });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function registerManual() {
     const id = manualId.trim().replace(/\D/g, "");
@@ -2258,12 +2278,36 @@ function Dashboard() {
         {/* ════════════════════ 投稿履歴タブ ════════════════════ */}
         {tab === "posts" && (
             <div className="space-y-4">
-              {/* 手動ツイート登録フォーム */}
-              <div className="rounded-xl border border-white/12 bg-white/5 p-4">
-                <h2 className="text-xs font-semibold text-white/60 mb-3">📥 手動投稿を検証データに追加</h2>
-                <p className="text-[11px] text-white/40 mb-3">
-                  手動でXに投稿したツイートのIDを入力すると、インプレッション数などを自動取得して検証データに組み込みます。
-                </p>
+              {/* タイムライン同期・手動登録 */}
+              <div className="rounded-xl border border-white/12 bg-white/5 p-4 space-y-4">
+                <h2 className="text-xs font-semibold text-white/60">📥 投稿データ取込</h2>
+
+                {/* 自動同期ボタン */}
+                <div>
+                  <button
+                    onClick={syncTimeline}
+                    disabled={syncing}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-indigo-500/25 border border-indigo-500/40 text-indigo-200 text-[13px] font-semibold disabled:opacity-40 hover:bg-indigo-500/35 active:scale-[0.98] transition-all"
+                  >
+                    {syncing ? (
+                      <><span className="animate-spin inline-block">⟳</span> タイムライン取得中...</>
+                    ) : (
+                      <>🔄 タイムラインを自動同期（直近50件）</>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-white/30 mt-1.5 text-center">
+                    @gomi_shu_god の直近ツイートをまとめて取得・登録します
+                  </p>
+                </div>
+
+                {/* 区切り */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-white/8" />
+                  <span className="text-[10px] text-white/25">または個別ID入力</span>
+                  <div className="flex-1 h-px bg-white/8" />
+                </div>
+
+                {/* 個別ID入力 */}
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -2276,23 +2320,23 @@ function Dashboard() {
                   <button
                     onClick={registerManual}
                     disabled={registering || !manualId.trim()}
-                    className="px-4 py-2 rounded-lg bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-[12px] font-medium disabled:opacity-40 hover:bg-indigo-500/40 transition-colors shrink-0"
+                    className="px-4 py-2 rounded-lg bg-white/10 border border-white/15 text-white/70 text-[12px] font-medium disabled:opacity-40 hover:bg-white/15 transition-colors shrink-0"
                   >
                     {registering ? "取得中..." : "登録"}
                   </button>
                 </div>
+
+                {/* フィードバック */}
                 {manualStatus && (
-                  <div className={`mt-2 text-[11px] px-3 py-1.5 rounded-lg border ${
-                    manualStatus.type === "ok"  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300" :
-                    manualStatus.type === "dup" ? "bg-amber-500/10 border-amber-500/25 text-amber-300" :
-                                                  "bg-red-500/10 border-red-500/25 text-red-300"
+                  <div className={`text-[11px] px-3 py-1.5 rounded-lg border ${
+                    manualStatus.type === "sync" ? "bg-indigo-500/10 border-indigo-500/25 text-indigo-300" :
+                    manualStatus.type === "ok"   ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300" :
+                    manualStatus.type === "dup"  ? "bg-amber-500/10 border-amber-500/25 text-amber-300" :
+                                                   "bg-red-500/10 border-red-500/25 text-red-300"
                   }`}>
                     {manualStatus.msg}
                   </div>
                 )}
-                <p className="text-[10px] text-white/25 mt-2">
-                  ツイートIDはXのURLの末尾の数字です（例: x.com/user/status/<strong>1234567890</strong>）
-                </p>
               </div>
 
               {/* 投稿履歴 */}

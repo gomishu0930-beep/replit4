@@ -4,7 +4,7 @@ import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
 import { collectAlgoNews } from '../bot/algo-news.js';
-import { getMyUsername, getAccountInfo, getTweetById } from '../bot/twitter.js';
+import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets } from '../bot/twitter.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
@@ -59,6 +59,30 @@ router.get('/bot/status', async (_req, res) => {
 router.get('/bot/posts', (_req, res) => {
   const posts = getAllPosts().slice(-50).reverse();
   res.json({ posts });
+});
+
+router.post('/bot/posts/sync-timeline', async (_req, res) => {
+  console.log('  🔄 [タイムライン同期] 直近ツイートを取得中...');
+  try {
+    const tweets = await getOwnRecentTweets(50);
+    let newCount = 0;
+    let updatedCount = 0;
+    for (const t of tweets) {
+      const metrics = t.public_metrics ?? null;
+      const { isNew } = recordPostManual({
+        tweetId: t.id,
+        text: t.text,
+        postedAt: (t as any).created_at ?? new Date().toISOString(),
+        metrics: metrics as any,
+      });
+      if (isNew) newCount++; else updatedCount++;
+    }
+    console.log(`  ✅ [タイムライン同期] 新規: ${newCount}件 / 更新: ${updatedCount}件`);
+    return res.json({ success: true, total: tweets.length, newCount, updatedCount });
+  } catch (e: any) {
+    console.error(`  ❌ [タイムライン同期] 失敗: ${e.message}`);
+    return res.status(500).json({ error: e.message ?? 'タイムライン取得失敗' });
+  }
 });
 
 router.post('/bot/posts/register-manual', async (req, res) => {
