@@ -2805,51 +2805,62 @@ function Dashboard() {
         {tab === "directives" && (() => {
           const allDirectives = directivesData?.directives ?? [];
           const priSort = (a: MeetingDirective, b: MeetingDirective) => {
-            const p = { high: 0, medium: 1, low: 2 };
+            const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
             return (p[a.priority] ?? 1) - (p[b.priority] ?? 1);
           };
 
-          const aiRunning   = allDirectives.filter(d => d.status === "active" && d.assignee === "ai").sort(priSort);
-          const userPending = allDirectives.filter(d => d.status === "active" && d.assignee === "user").sort(priSort);
-          const onHold      = allDirectives.filter(d => d.status === "active" && (!d.assignee || d.assignee === "others")).sort(priSort);
-          const completed   = allDirectives.filter(d => d.status === "completed");
-          const cancelled   = allDirectives.filter(d => d.status === "cancelled");
+          const active    = allDirectives.filter(d => d.status === "active").sort(priSort);
+          const completed = allDirectives.filter(d => d.status === "completed");
+          const cancelled = allDirectives.filter(d => d.status === "cancelled");
 
-          const catLabel: Record<string, string> = {
-            strategy: "🎯 戦略", content: "✍️ コンテンツ",
-            timing: "🕐 タイミング", recovery: "🛡️ リスク管理", other: "📌 その他",
+          const aiCount   = active.filter(d => d.assignee === "ai").length;
+          const userCount = active.filter(d => d.assignee === "user").length;
+          const holdCount = active.filter(d => !d.assignee || d.assignee === "others").length;
+
+          const CAT_DEF: { key: string; label: string; desc: string; headerCls: string; borderCls: string }[] = [
+            { key: "strategy", label: "🎯 戦略",     desc: "アカウント成長・フェーズ移行の方針",     headerCls: "bg-indigo-500/15 border-indigo-500/30 text-indigo-200", borderCls: "border-indigo-500/20" },
+            { key: "content",  label: "✍️ コンテンツ", desc: "投稿ネタ・テンプレート・ハッシュタグ管理", headerCls: "bg-pink-500/15 border-pink-500/30 text-pink-200",     borderCls: "border-pink-500/20"    },
+            { key: "timing",   label: "🕐 タイミング", desc: "投稿スロット・投稿頻度・スケジュール",     headerCls: "bg-amber-500/15 border-amber-500/30 text-amber-200",  borderCls: "border-amber-500/20"   },
+            { key: "recovery", label: "🛡️ リスク管理", desc: "シャドウバン回避・BAN対策・安全運用",     headerCls: "bg-red-500/15 border-red-500/30 text-red-200",        borderCls: "border-red-500/20"     },
+            { key: "other",    label: "📌 その他",    desc: "ツール整備・外部連携・計測・報告",         headerCls: "bg-white/8 border-white/15 text-white/50",            borderCls: "border-white/10"       },
+          ];
+
+          const STATUS_BADGE: Record<string, string> = {
+            ai:     "bg-emerald-500/20 text-emerald-300 border-emerald-400/30",
+            user:   "bg-amber-500/20 text-amber-300 border-amber-400/30",
+            others: "bg-white/10 text-white/40 border-white/20",
           };
-          const catPill: Record<string, string> = {
-            strategy: "bg-indigo-500/20 text-indigo-300 border-indigo-400/30",
-            content:  "bg-pink-500/20 text-pink-300 border-pink-400/30",
-            timing:   "bg-amber-500/20 text-amber-300 border-amber-400/30",
-            recovery: "bg-red-500/20 text-red-300 border-red-400/30",
-            other:    "bg-white/10 text-white/40 border-white/20",
+          const STATUS_LABEL: Record<string, string> = {
+            ai: "🤖 AI実行中", user: "👤 あなたの対応", others: "⏸ 保留中",
           };
           const priDot: Record<string, string> = {
-            high: "bg-red-400", medium: "bg-amber-400", low: "bg-white/30",
+            high: "bg-red-400", medium: "bg-amber-400", low: "bg-white/25",
           };
 
-          function DCard({ d, accent }: { d: MeetingDirective; accent: string }) {
+          function DCard2({ d }: { d: MeetingDirective }) {
+            const assignee = d.assignee ?? "others";
+            const cardBorder = assignee === "ai" ? "border-l-2 border-l-emerald-500/60"
+              : assignee === "user" ? "border-l-2 border-l-amber-500/60"
+              : "border-l-2 border-l-white/15";
             return (
-              <div className={`rounded-xl border p-3 ${accent}`}>
-                <div className="flex items-start gap-2.5">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${priDot[d.priority] ?? "bg-white/30"}`} />
+              <div className={`rounded-r-xl rounded-bl-xl border border-white/10 bg-white/4 p-3 ${cardBorder}`}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${STATUS_BADGE[assignee]}`}>
+                    {STATUS_LABEL[assignee]}
+                  </span>
+                  {d.priority === "high" && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded border bg-red-500/15 text-red-300 border-red-400/25 shrink-0">優先度 高</span>
+                  )}
+                  <span className="text-[9px] text-white/20 font-mono ml-auto shrink-0">{fmtDate(d.createdAt)}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${priDot[d.priority] ?? "bg-white/25"}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] text-white/90 leading-relaxed">{d.text}</p>
-                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catPill[d.category ?? "other"]}`}>
-                        {catLabel[d.category ?? "other"]}
-                      </span>
-                      {d.priority === "high" && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded border bg-red-500/15 text-red-300 border-red-400/25">優先度 高</span>
-                      )}
-                      <span className="text-[9px] text-white/25 font-mono ml-auto">{fmtDate(d.createdAt)}</span>
-                    </div>
                     {d.executionLog && d.executionLog.length > 0 && (
-                      <p className="text-[10px] text-emerald-400/70 mt-1.5">
+                      <p className="text-[10px] text-emerald-400/65 mt-1.5">
                         ✓ 最終実行: {fmtDate(d.executionLog[d.executionLog.length - 1].at)}
-                        {" — "}{d.executionLog[d.executionLog.length - 1].summary?.slice(0, 40)}
+                        {d.executionLog[d.executionLog.length - 1].summary ? ` — ${d.executionLog[d.executionLog.length - 1].summary.slice(0, 40)}` : ""}
                       </p>
                     )}
                   </div>
@@ -2858,52 +2869,93 @@ function Dashboard() {
             );
           }
 
-          function Section({ title, count, color, children, defaultOpen = true }: {
-            title: string; count: number; color: string; children: React.ReactNode; defaultOpen?: boolean;
-          }) {
-            const [open, setOpen] = useState(defaultOpen);
+          function CatSection({ cat }: { cat: typeof CAT_DEF[0] }) {
+            const items = active.filter(d => (d.category ?? "other") === cat.key);
+            const [open, setOpen] = useState(true);
+            if (items.length === 0) return null;
             return (
-              <section>
+              <section className="rounded-xl overflow-hidden border border-white/8">
                 <button
                   onClick={() => setOpen(v => !v)}
-                  className="w-full flex items-center justify-between mb-2 group"
+                  className={`w-full flex items-center justify-between px-4 py-3 border-b ${cat.headerCls}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`text-[11px] font-bold ${color}`}>{title}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${color} opacity-70`}>{count}件</span>
+                    <span className="text-[13px] font-bold">{cat.label}</span>
+                    <span className="text-[10px] opacity-60 font-mono">{items.length}件</span>
                   </div>
-                  <span className="text-[10px] text-white/25 group-hover:text-white/50">{open ? "▲" : "▼"}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[9px] opacity-50 hidden sm:block">{cat.desc}</span>
+                    <span className="text-[10px] opacity-50">{open ? "▲" : "▼"}</span>
+                  </div>
                 </button>
-                {open && children}
+                {open && (
+                  <div className="p-3 space-y-2 bg-white/2">
+                    {items.map(d => <DCard2 key={d.id} d={d} />)}
+                  </div>
+                )}
+              </section>
+            );
+          }
+
+          function CompletedSection() {
+            const [open, setOpen] = useState(false);
+            if (completed.length === 0) return null;
+            return (
+              <section className="rounded-xl overflow-hidden border border-white/8">
+                <button
+                  onClick={() => setOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-blue-500/8 border-b border-blue-500/20 text-blue-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-bold">✅ 完了済み</span>
+                    <span className="text-[10px] opacity-60 font-mono">{completed.length}件</span>
+                  </div>
+                  <span className="text-[10px] opacity-50">{open ? "▲" : "▼"}</span>
+                </button>
+                {open && (
+                  <div className="p-3 space-y-2 bg-white/2">
+                    {completed.slice().reverse().map(d => {
+                      const cat = CAT_DEF.find(c => c.key === (d.category ?? "other")) ?? CAT_DEF[4];
+                      return (
+                        <div key={d.id} className={`rounded-xl border border-l-2 border-white/8 ${cat.borderCls} bg-white/3 p-3 opacity-60`}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[9px] text-white/35">{cat.label}</span>
+                            <span className="text-[9px] text-blue-400/60 ml-auto font-mono">完了 {fmtDate(d.updatedAt)}</span>
+                          </div>
+                          <p className="text-[11px] text-white/55 leading-relaxed">{d.text.slice(0, 100)}{d.text.length > 100 ? "…" : ""}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             );
           }
 
           return (
-            <div className="space-y-5 py-4">
-              {/* ヘッダー + サマリーバー */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h2 className="text-base font-bold text-white">📋 決定事項</h2>
-                    <p className="text-[11px] text-white/35 mt-0.5">30秒ごとに自動更新</p>
+            <div className="space-y-4 py-4">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white">📋 決定事項</h2>
+                  <p className="text-[11px] text-white/35 mt-0.5">目標領域ごとに整理 · 30秒自動更新</p>
+                </div>
+                <span className="text-[10px] text-white/25 font-mono">{allDirectives.length}件 合計</span>
+              </div>
+
+              {/* ステータスサマリーバー */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "🤖 AI実行中", count: aiCount,        color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
+                  { label: "👤 対応待ち",  count: userCount,      color: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+                  { label: "⏸ 保留中",    count: holdCount,      color: "border-white/20 bg-white/5 text-white/50" },
+                  { label: "✅ 完了",      count: completed.length, color: "border-blue-500/30 bg-blue-500/8 text-blue-300" },
+                ].map(s => (
+                  <div key={s.label} className={`rounded-xl border p-2.5 text-center ${s.color}`}>
+                    <p className="text-[8px] opacity-65 mb-1">{s.label}</p>
+                    <p className="text-xl font-bold font-mono">{s.count}</p>
                   </div>
-                  <span className="text-[10px] text-white/25 font-mono">{allDirectives.length}件 合計</span>
-                </div>
-                {/* ステータスサマリーバー */}
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { label: "🤖 AI実行中", count: aiRunning.length,   color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
-                    { label: "👤 対応待ち",  count: userPending.length, color: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
-                    { label: "⏸ 保留中",    count: onHold.length,      color: "border-white/20 bg-white/5 text-white/50" },
-                    { label: "✅ 完了",      count: completed.length,   color: "border-blue-500/30 bg-blue-500/8 text-blue-300" },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
-                      <p className="text-[9px] opacity-70 mb-1">{s.label}</p>
-                      <p className="text-xl font-bold font-mono">{s.count}</p>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
 
               {/* 長期目標（コンパクト） */}
@@ -2925,9 +2977,9 @@ function Dashboard() {
                 <div className="grid grid-cols-4 gap-1.5">
                   {[
                     { name: "Phase-0", kpi: "IP150 SBI=0", now: true },
-                    { name: "Phase-1", kpi: "EV5≥10", now: false },
+                    { name: "Phase-1", kpi: "EV5≥10",      now: false },
                     { name: "Phase-2", kpi: "FW100 IP500", now: false },
-                    { name: "Phase-3", kpi: "収益化", now: false },
+                    { name: "Phase-3", kpi: "収益化",      now: false },
                   ].map(ph => (
                     <div key={ph.name} className={`rounded-lg border p-1.5 text-center ${ph.now ? "border-emerald-500/40 bg-emerald-500/10" : "border-white/8 bg-white/3"}`}>
                       <p className={`text-[9px] font-bold ${ph.now ? "text-emerald-300" : "text-white/40"}`}>{ph.name}</p>
@@ -2938,61 +2990,13 @@ function Dashboard() {
                 </div>
               </div>
 
-              {/* 🤖 AI実行中 */}
-              <Section title="🤖 AI自律実行中" count={aiRunning.length} color="text-emerald-300" defaultOpen={true}>
-                {aiRunning.length === 0 ? (
-                  <p className="text-[11px] text-white/25 py-3 text-center">なし</p>
-                ) : (
-                  <div className="space-y-2">
-                    {aiRunning.map(d => (
-                      <DCard key={d.id} d={d} accent="border-emerald-500/25 bg-emerald-500/5" />
-                    ))}
-                  </div>
-                )}
-              </Section>
+              {/* カテゴリ別グループ */}
+              {CAT_DEF.map(cat => <CatSection key={cat.key} cat={cat} />)}
 
-              {/* 👤 あなたの対応待ち */}
-              <Section title="👤 あなたの対応待ち" count={userPending.length} color="text-amber-300" defaultOpen={true}>
-                {userPending.length === 0 ? (
-                  <p className="text-[11px] text-white/25 py-3 text-center">なし</p>
-                ) : (
-                  <div className="space-y-2">
-                    {userPending.map(d => (
-                      <DCard key={d.id} d={d} accent="border-amber-500/25 bg-amber-500/5" />
-                    ))}
-                  </div>
-                )}
-              </Section>
+              {/* 完了済み */}
+              <CompletedSection />
 
-              {/* ⏸ 保留・検討中 */}
-              {onHold.length > 0 && (
-                <Section title="⏸ 保留・検討中" count={onHold.length} color="text-white/50" defaultOpen={false}>
-                  <div className="space-y-2">
-                    {onHold.map(d => (
-                      <DCard key={d.id} d={d} accent="border-white/10 bg-white/4" />
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* ✅ 完了済み */}
-              {completed.length > 0 && (
-                <Section title="✅ 完了済み" count={completed.length} color="text-blue-300" defaultOpen={false}>
-                  <div className="space-y-2">
-                    {completed.slice().reverse().map(d => (
-                      <div key={d.id} className="rounded-xl border border-blue-500/15 bg-blue-500/5 p-3 opacity-60">
-                        <p className="text-[11px] text-white/55 leading-relaxed">{d.text.slice(0, 100)}{d.text.length > 100 ? "…" : ""}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catPill[d.category ?? "other"]}`}>{catLabel[d.category ?? "other"]}</span>
-                          <span className="text-[9px] text-blue-400/60 ml-auto">完了 {fmtDate(d.updatedAt)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* キャンセル件数のみ表示 */}
+              {/* キャンセル件数のみ */}
               {cancelled.length > 0 && (
                 <p className="text-[10px] text-white/20 text-center pb-2">
                   キャンセル済み {cancelled.length}件（非表示）
