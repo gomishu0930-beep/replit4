@@ -2804,149 +2804,199 @@ function Dashboard() {
         {/* ════════════════════ 決定事項タブ ════════════════════ */}
         {tab === "directives" && (() => {
           const allDirectives = directivesData?.directives ?? [];
-          const active    = allDirectives.filter(d => d.status === "active").sort((a, b) => {
-            const pOrder = { high: 0, medium: 1, low: 2 };
-            return (pOrder[a.priority] ?? 1) - (pOrder[b.priority] ?? 1);
-          });
-          const completed = allDirectives.filter(d => d.status === "completed");
-          const cancelled = allDirectives.filter(d => d.status === "cancelled");
+          const priSort = (a: MeetingDirective, b: MeetingDirective) => {
+            const p = { high: 0, medium: 1, low: 2 };
+            return (p[a.priority] ?? 1) - (p[b.priority] ?? 1);
+          };
+
+          const aiRunning   = allDirectives.filter(d => d.status === "active" && d.assignee === "ai").sort(priSort);
+          const userPending = allDirectives.filter(d => d.status === "active" && d.assignee === "user").sort(priSort);
+          const onHold      = allDirectives.filter(d => d.status === "active" && (!d.assignee || d.assignee === "others")).sort(priSort);
+          const completed   = allDirectives.filter(d => d.status === "completed");
+          const cancelled   = allDirectives.filter(d => d.status === "cancelled");
 
           const catLabel: Record<string, string> = {
             strategy: "🎯 戦略", content: "✍️ コンテンツ",
             timing: "🕐 タイミング", recovery: "🛡️ リスク管理", other: "📌 その他",
           };
-          const catColor: Record<string, string> = {
-            strategy: "border-indigo-500/30 bg-indigo-500/8 text-indigo-300",
-            content:  "border-pink-500/30 bg-pink-500/8 text-pink-300",
-            timing:   "border-amber-500/30 bg-amber-500/8 text-amber-300",
-            recovery: "border-red-500/30 bg-red-500/8 text-red-300",
-            other:    "border-white/15 bg-white/5 text-white/50",
+          const catPill: Record<string, string> = {
+            strategy: "bg-indigo-500/20 text-indigo-300 border-indigo-400/30",
+            content:  "bg-pink-500/20 text-pink-300 border-pink-400/30",
+            timing:   "bg-amber-500/20 text-amber-300 border-amber-400/30",
+            recovery: "bg-red-500/20 text-red-300 border-red-400/30",
+            other:    "bg-white/10 text-white/40 border-white/20",
           };
-          const priColor: Record<string, string> = {
-            high:   "bg-red-500/20 text-red-300 border-red-400/30",
-            medium: "bg-amber-500/20 text-amber-300 border-amber-400/30",
-            low:    "bg-white/10 text-white/40 border-white/20",
+          const priDot: Record<string, string> = {
+            high: "bg-red-400", medium: "bg-amber-400", low: "bg-white/30",
           };
-          const priLabel: Record<string, string> = { high: "優先度: 高", medium: "優先度: 中", low: "優先度: 低" };
-          const assigneeLabel: Record<string, string> = { ai: "🤖 自律実行", user: "👤 あなた", others: "📋 検討中" };
 
-          const grouped = active.reduce<Record<string, MeetingDirective[]>>((acc, d) => {
-            const cat = d.category ?? "other";
-            if (!acc[cat]) acc[cat] = [];
-            acc[cat].push(d);
-            return acc;
-          }, {});
+          function DCard({ d, accent }: { d: MeetingDirective; accent: string }) {
+            return (
+              <div className={`rounded-xl border p-3 ${accent}`}>
+                <div className="flex items-start gap-2.5">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${priDot[d.priority] ?? "bg-white/30"}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] text-white/90 leading-relaxed">{d.text}</p>
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catPill[d.category ?? "other"]}`}>
+                        {catLabel[d.category ?? "other"]}
+                      </span>
+                      {d.priority === "high" && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded border bg-red-500/15 text-red-300 border-red-400/25">優先度 高</span>
+                      )}
+                      <span className="text-[9px] text-white/25 font-mono ml-auto">{fmtDate(d.createdAt)}</span>
+                    </div>
+                    {d.executionLog && d.executionLog.length > 0 && (
+                      <p className="text-[10px] text-emerald-400/70 mt-1.5">
+                        ✓ 最終実行: {fmtDate(d.executionLog[d.executionLog.length - 1].at)}
+                        {" — "}{d.executionLog[d.executionLog.length - 1].summary?.slice(0, 40)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
-          const catOrder = ["strategy", "content", "timing", "recovery", "other"];
+          function Section({ title, count, color, children, defaultOpen = true }: {
+            title: string; count: number; color: string; children: React.ReactNode; defaultOpen?: boolean;
+          }) {
+            const [open, setOpen] = useState(defaultOpen);
+            return (
+              <section>
+                <button
+                  onClick={() => setOpen(v => !v)}
+                  className="w-full flex items-center justify-between mb-2 group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] font-bold ${color}`}>{title}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${color} opacity-70`}>{count}件</span>
+                  </div>
+                  <span className="text-[10px] text-white/25 group-hover:text-white/50">{open ? "▲" : "▼"}</span>
+                </button>
+                {open && children}
+              </section>
+            );
+          }
 
           return (
-            <div className="space-y-6 py-4">
-              {/* ヘッダー */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">📋 決定事項一覧</h2>
-                  <p className="text-[11px] text-white/35 mt-0.5">
-                    会議で決定した全方針 — 30秒ごとに自動更新
-                  </p>
+            <div className="space-y-5 py-4">
+              {/* ヘッダー + サマリーバー */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="text-base font-bold text-white">📋 決定事項</h2>
+                    <p className="text-[11px] text-white/35 mt-0.5">30秒ごとに自動更新</p>
+                  </div>
+                  <span className="text-[10px] text-white/25 font-mono">{allDirectives.length}件 合計</span>
                 </div>
-                <div className="text-right text-[10px] text-white/30 space-y-0.5">
-                  <p>✅ 完了 {completed.length}件</p>
-                  <p>🔄 アクティブ {active.length}件</p>
-                  <p>❌ キャンセル {cancelled.length}件</p>
-                </div>
-              </div>
-
-              {/* 長期目標サマリー */}
-              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/8 p-4 space-y-3">
-                <h3 className="text-sm font-bold text-indigo-200">🏆 長期収益目標（承認済み）</h3>
-                <div className="grid grid-cols-3 gap-3">
+                {/* ステータスサマリーバー */}
+                <div className="grid grid-cols-4 gap-2">
                   {[
-                    { label: "初回収益", values: ["3ヶ月後", "2ヶ月後", "1ヶ月後"] },
-                    { label: "月5万円", values: ["9ヶ月後", "6ヶ月後", "4ヶ月後"] },
-                    { label: "月10万円", values: ["15ヶ月後", "10ヶ月後", "7ヶ月後"] },
-                  ].map(goal => (
-                    <div key={goal.label} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                      <p className="text-[10px] text-white/40 mb-2">{goal.label}</p>
-                      {["保守", "現実", "楽観"].map((s, i) => (
-                        <div key={s} className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] text-white/35">{s}</span>
-                          <span className={`text-[10px] font-mono font-bold ${i === 1 ? "text-indigo-300" : "text-white/50"}`}>{goal.values[i]}</span>
-                        </div>
-                      ))}
+                    { label: "🤖 AI実行中", count: aiRunning.length,   color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
+                    { label: "👤 対応待ち",  count: userPending.length, color: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+                    { label: "⏸ 保留中",    count: onHold.length,      color: "border-white/20 bg-white/5 text-white/50" },
+                    { label: "✅ 完了",      count: completed.length,   color: "border-blue-500/30 bg-blue-500/8 text-blue-300" },
+                  ].map(s => (
+                    <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
+                      <p className="text-[9px] opacity-70 mb-1">{s.label}</p>
+                      <p className="text-xl font-bold font-mono">{s.count}</p>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-4 gap-2 mt-1">
+              </div>
+
+              {/* 長期目標（コンパクト） */}
+              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/8 p-3">
+                <p className="text-[10px] font-bold text-indigo-300 mb-2">🏆 承認済み長期収益目標（現実シナリオ）</p>
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   {[
-                    { name: "Phase-0", kpi: "IP 150 & SBI=0", period: "1週間" },
-                    { name: "Phase-1", kpi: "EV5 ≥ 10", period: "2週間" },
-                    { name: "Phase-2", kpi: "FW 100 & IP 500", period: "1ヶ月" },
-                    { name: "Phase-3", kpi: "収益化", period: "継続" },
+                    { label: "初回収益", val: "2ヶ月後", sub: "保守3M / 楽観1M" },
+                    { label: "月5万円",  val: "6ヶ月後", sub: "保守9M / 楽観4M" },
+                    { label: "月10万円", val: "10ヶ月後", sub: "保守15M / 楽観7M" },
+                  ].map(g => (
+                    <div key={g.label} className="rounded-lg bg-white/5 border border-white/8 p-2 text-center">
+                      <p className="text-[9px] text-white/40">{g.label}</p>
+                      <p className="text-[13px] font-bold text-indigo-200 font-mono">{g.val}</p>
+                      <p className="text-[8px] text-white/25 mt-0.5">{g.sub}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { name: "Phase-0", kpi: "IP150 SBI=0", now: true },
+                    { name: "Phase-1", kpi: "EV5≥10", now: false },
+                    { name: "Phase-2", kpi: "FW100 IP500", now: false },
+                    { name: "Phase-3", kpi: "収益化", now: false },
                   ].map(ph => (
-                    <div key={ph.name} className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-2 text-center">
-                      <p className="text-[10px] font-bold text-indigo-300">{ph.name}</p>
-                      <p className="text-[9px] text-white/40 mt-0.5">{ph.period}</p>
-                      <p className="text-[9px] text-indigo-200/60 mt-1 font-mono">{ph.kpi}</p>
+                    <div key={ph.name} className={`rounded-lg border p-1.5 text-center ${ph.now ? "border-emerald-500/40 bg-emerald-500/10" : "border-white/8 bg-white/3"}`}>
+                      <p className={`text-[9px] font-bold ${ph.now ? "text-emerald-300" : "text-white/40"}`}>{ph.name}</p>
+                      <p className="text-[8px] text-white/30 font-mono mt-0.5">{ph.kpi}</p>
+                      {ph.now && <p className="text-[8px] text-emerald-400 mt-0.5">← 現在</p>}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* アクティブ決定事項（カテゴリ別） */}
-              <section>
-                <h3 className="text-sm font-bold text-white mb-3">🔄 アクティブ決定事項 ({active.length}件)</h3>
-                {active.length === 0 && (
-                  <div className="text-center py-8 text-xs text-white/30">アクティブな決定事項はありません</div>
+              {/* 🤖 AI実行中 */}
+              <Section title="🤖 AI自律実行中" count={aiRunning.length} color="text-emerald-300" defaultOpen={true}>
+                {aiRunning.length === 0 ? (
+                  <p className="text-[11px] text-white/25 py-3 text-center">なし</p>
+                ) : (
+                  <div className="space-y-2">
+                    {aiRunning.map(d => (
+                      <DCard key={d.id} d={d} accent="border-emerald-500/25 bg-emerald-500/5" />
+                    ))}
+                  </div>
                 )}
-                <div className="space-y-5">
-                  {catOrder.filter(cat => grouped[cat]?.length > 0).map(cat => (
-                    <div key={cat}>
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border mb-2 ${catColor[cat]}`}>
-                        {catLabel[cat]}
-                        <span className="opacity-60">({grouped[cat].length}件)</span>
-                      </div>
-                      <div className="space-y-2">
-                        {grouped[cat].map(d => (
-                          <div key={d.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[12px] text-white/90 leading-relaxed">{d.text}</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  <span className={`text-[9px] px-1.5 py-0.5 rounded border ${priColor[d.priority]}`}>
-                                    {priLabel[d.priority]}
-                                  </span>
-                                  <span className="text-[9px] text-white/35">{assigneeLabel[d.assignee ?? "others"]}</span>
-                                  <span className="text-[9px] text-white/20 font-mono">{fmtDate(d.createdAt)}</span>
-                                  {d.source && (
-                                    <span className="text-[9px] text-white/20">出所: {d.source}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              </Section>
 
-              {/* 完了済み */}
+              {/* 👤 あなたの対応待ち */}
+              <Section title="👤 あなたの対応待ち" count={userPending.length} color="text-amber-300" defaultOpen={true}>
+                {userPending.length === 0 ? (
+                  <p className="text-[11px] text-white/25 py-3 text-center">なし</p>
+                ) : (
+                  <div className="space-y-2">
+                    {userPending.map(d => (
+                      <DCard key={d.id} d={d} accent="border-amber-500/25 bg-amber-500/5" />
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              {/* ⏸ 保留・検討中 */}
+              {onHold.length > 0 && (
+                <Section title="⏸ 保留・検討中" count={onHold.length} color="text-white/50" defaultOpen={false}>
+                  <div className="space-y-2">
+                    {onHold.map(d => (
+                      <DCard key={d.id} d={d} accent="border-white/10 bg-white/4" />
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {/* ✅ 完了済み */}
               {completed.length > 0 && (
-                <section>
-                  <h3 className="text-sm font-bold text-white/50 mb-3">✅ 完了済み ({completed.length}件)</h3>
+                <Section title="✅ 完了済み" count={completed.length} color="text-blue-300" defaultOpen={false}>
                   <div className="space-y-2">
                     {completed.slice().reverse().map(d => (
-                      <div key={d.id} className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3 opacity-70">
-                        <p className="text-[11px] text-white/60 leading-relaxed line-through decoration-white/20">{d.text.slice(0, 120)}{d.text.length > 120 ? "…" : ""}</p>
+                      <div key={d.id} className="rounded-xl border border-blue-500/15 bg-blue-500/5 p-3 opacity-60">
+                        <p className="text-[11px] text-white/55 leading-relaxed">{d.text.slice(0, 100)}{d.text.length > 100 ? "…" : ""}</p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catColor[d.category ?? "other"]}`}>{catLabel[d.category ?? "other"]}</span>
-                          <span className="text-[9px] text-emerald-400/60">完了: {fmtDate(d.updatedAt)}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${catPill[d.category ?? "other"]}`}>{catLabel[d.category ?? "other"]}</span>
+                          <span className="text-[9px] text-blue-400/60 ml-auto">完了 {fmtDate(d.updatedAt)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                </section>
+                </Section>
+              )}
+
+              {/* キャンセル件数のみ表示 */}
+              {cancelled.length > 0 && (
+                <p className="text-[10px] text-white/20 text-center pb-2">
+                  キャンセル済み {cancelled.length}件（非表示）
+                </p>
               )}
             </div>
           );
