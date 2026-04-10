@@ -15,6 +15,8 @@ import { contact, sendMetricsReport, MetricsReportPost } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 import { autoCompleteTask } from './tasks.js';
+import { loadSchedulerOverrides } from './codex-agent.js';
+import { appendPostLog, isSheetsConfigured } from './sheets-writer.js';
 
 let isPosting = false;
 let _postingStartedAt: number | null = null;
@@ -140,6 +142,18 @@ async function postCelebrityItem(item: any, label: string, mapping: CelebrityMap
 
   recordPost({ tweetId, replyId: introReplyId, item, text: mainText, type: 'celebrity' });
   console.log(`  ✅ [${label}] 芸能人スロット投稿完了 (${tweetId})`);
+
+  // Google Sheets に自動記入
+  if (isSheetsConfigured()) {
+    appendPostLog({
+      postedAt: new Date().toISOString(),
+      celebrity: mapping.celebrity,
+      itemTitle: item.title,
+      tweetText: mainText,
+      tweetId,
+      postType: 'celebrity',
+    }).catch(() => {});
+  }
 }
 
 export async function postCelebritySlotNow(label: string) {
@@ -342,6 +356,18 @@ export function startScheduler() {
   loadStrategyConfig().catch((e: any) =>
     console.warn('  ⚠ 戦略設定読み込み失敗 (デフォルト値で動作):', e.message),
   );
+
+  // ── Codexエージェントのスケジューラーオーバーライドを読み込む ──────────────
+  loadSchedulerOverrides().catch((e: any) =>
+    console.warn('  ⚠ Codexスケジューラーオーバーライド読み込み失敗:', e.message),
+  );
+
+  // ── Google Sheets 設定状態をログに出力 ───────────────────────────────────
+  if (isSheetsConfigured()) {
+    console.log('  📊 [Sheets] Google Sheets 連携: 有効 (投稿ログ・決定事項を自動転記)');
+  } else {
+    console.log('  ℹ️  [Sheets] Google Sheets 連携: 未設定 (GOOGLE_SERVICE_ACCOUNT_JSON / GOOGLE_SHEET_ID が必要)');
+  }
 
   // ── ウォッチドッグにスケジューラーフックを注入して起動 ────────────────────
   injectSchedulerHooks({
