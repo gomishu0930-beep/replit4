@@ -184,6 +184,254 @@ export async function appendDecisionLog(entry: DecisionLogEntry): Promise<void> 
   }
 }
 
+// ─── アカウントメトリクスをシートに追記 ───────────────────────────────────────
+
+export interface AccountMetricsEntry {
+  recordedAt: string;        // ISO8601 UTC
+  followersCount: number;
+  followingCount: number;
+  tweetCount: number;
+  avgImpressions: number;    // 直近7日間平均インプ（計測できない場合は0）
+  totalPostsToday: number;
+  note?: string;
+}
+
+export async function appendAccountMetrics(entry: AccountMetricsEntry): Promise<void> {
+  if (!SA_JSON || !SHEET_ID) return;
+
+  try {
+    const sheets = getSheetsClient();
+    const jst = new Date(new Date(entry.recordedAt).getTime() + 9 * 3600000)
+      .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'AccountMetrics!A:H',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[
+          jst,
+          entry.followersCount,
+          entry.followingCount,
+          entry.tweetCount,
+          entry.avgImpressions || '',
+          entry.totalPostsToday,
+          entry.note ?? '',
+        ]],
+      },
+    });
+
+    console.log(`  📊 [Sheets] AccountMetrics記録: フォロワー${entry.followersCount}人`);
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] AccountMetrics書き込み失敗: ${e.message}`);
+  }
+}
+
+export async function readAccountMetrics(limit = 14): Promise<Array<{
+  recordedAt: string; followersCount: number; followingCount: number;
+  tweetCount: number; avgImpressions: number; totalPostsToday: number; note: string;
+}>> {
+  if (!SA_JSON || !SHEET_ID) return [];
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: 'AccountMetrics!A:G' });
+    const rows = resp.data.values ?? [];
+    const dataRows = rows.length > 1 && rows[0][0] === '日時(JST)' ? rows.slice(1) : rows;
+    return dataRows.slice(-limit).reverse().map(r => ({
+      recordedAt:      r[0] ?? '',
+      followersCount:  Number(r[1]) || 0,
+      followingCount:  Number(r[2]) || 0,
+      tweetCount:      Number(r[3]) || 0,
+      avgImpressions:  Number(r[4]) || 0,
+      totalPostsToday: Number(r[5]) || 0,
+      note:            r[6] ?? '',
+    }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] AccountMetrics読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
+
+// ─── 仮説状態をシートに全上書き ───────────────────────────────────────────────
+
+export interface HypothesisSheetRow {
+  id: string;
+  question: string;
+  status: string;
+  finding: string;
+  adjustment: string;
+  testedAt: string;
+}
+
+export async function upsertHypotheses(hypotheses: HypothesisSheetRow[]): Promise<void> {
+  if (!SA_JSON || !SHEET_ID || hypotheses.length === 0) return;
+
+  try {
+    const sheets = getSheetsClient();
+    const header = [['ID', '仮説', 'ステータス', '検証結果', '調整内容', '更新日時']];
+    const dataRows = hypotheses.map(h => [
+      h.id,
+      h.question,
+      h.status,
+      h.finding.slice(0, 120),
+      h.adjustment ?? '',
+      h.testedAt ? new Date(new Date(h.testedAt).getTime() + 9 * 3600000).toLocaleString('ja-JP') : '',
+    ]);
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Hypotheses!A1:F${1 + dataRows.length}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [...header, ...dataRows] },
+    });
+
+    console.log(`  📊 [Sheets] Hypotheses更新: ${hypotheses.length}件`);
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] Hypotheses書き込み失敗: ${e.message}`);
+  }
+}
+
+export async function readHypotheses(): Promise<HypothesisSheetRow[]> {
+  if (!SA_JSON || !SHEET_ID) return [];
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: 'Hypotheses!A:F' });
+    const rows = resp.data.values ?? [];
+    const dataRows = rows.length > 1 && rows[0][0] === 'ID' ? rows.slice(1) : rows;
+    return dataRows.filter(r => r[0]).map(r => ({
+      id:         r[0] ?? '',
+      question:   r[1] ?? '',
+      status:     r[2] ?? '',
+      finding:    r[3] ?? '',
+      adjustment: r[4] ?? '',
+      testedAt:   r[5] ?? '',
+    }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] Hypotheses読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
+
+// ─── 週次会議ログをシートに追記 ────────────────────────────────────────────────
+
+export interface MeetingLogEntry {
+  meetingId: string;
+  runAt: string;
+  title: string;
+  topicSummary: string;     // 議題サマリー（先頭120文字）
+  totalDecisions: number;
+  autoExecuted: number;
+  autoSucceeded: number;
+  manualItems: number;
+  duration_min: number;
+}
+
+export async function appendMeetingLog(entry: MeetingLogEntry): Promise<void> {
+  if (!SA_JSON || !SHEET_ID) return;
+
+  try {
+    const sheets = getSheetsClient();
+    const jst = new Date(new Date(entry.runAt).getTime() + 9 * 3600000)
+      .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'MeetingLog!A:I',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[
+          jst,
+          entry.meetingId,
+          entry.title,
+          entry.topicSummary.slice(0, 120),
+          entry.totalDecisions,
+          entry.autoExecuted,
+          entry.autoSucceeded,
+          entry.manualItems,
+          entry.duration_min,
+        ]],
+      },
+    });
+
+    console.log(`  📊 [Sheets] MeetingLog記録: ${entry.title}`);
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] MeetingLog書き込み失敗: ${e.message}`);
+  }
+}
+
+export async function readMeetingLog(limit = 5): Promise<MeetingLogEntry[]> {
+  if (!SA_JSON || !SHEET_ID) return [];
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: 'MeetingLog!A:I' });
+    const rows = resp.data.values ?? [];
+    const dataRows = rows.length > 1 && rows[0][0] === '日時(JST)' ? rows.slice(1) : rows;
+    return dataRows.slice(-limit).reverse().map(r => ({
+      meetingId:      r[1] ?? '',
+      runAt:          r[0] ?? '',
+      title:          r[2] ?? '',
+      topicSummary:   r[3] ?? '',
+      totalDecisions: Number(r[4]) || 0,
+      autoExecuted:   Number(r[5]) || 0,
+      autoSucceeded:  Number(r[6]) || 0,
+      manualItems:    Number(r[7]) || 0,
+      duration_min:   Number(r[8]) || 0,
+    }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] MeetingLog読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
+
+// ─── アルゴ解析結果をシートに追記 ─────────────────────────────────────────────
+
+export interface AlgoInsightEntry {
+  generatedAt: string;
+  sampleSize: number;
+  briefingSummary: string;  // 先頭200文字
+}
+
+export async function appendAlgoInsight(entry: AlgoInsightEntry): Promise<void> {
+  if (!SA_JSON || !SHEET_ID) return;
+
+  try {
+    const sheets = getSheetsClient();
+    const jst = new Date(new Date(entry.generatedAt).getTime() + 9 * 3600000)
+      .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'AlgoInsights!A:C',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[jst, entry.sampleSize, entry.briefingSummary.slice(0, 200)]],
+      },
+    });
+
+    console.log(`  📊 [Sheets] AlgoInsights記録 (n=${entry.sampleSize})`);
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] AlgoInsights書き込み失敗: ${e.message}`);
+  }
+}
+
+export async function readAlgoInsights(limit = 3): Promise<AlgoInsightEntry[]> {
+  if (!SA_JSON || !SHEET_ID) return [];
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: 'AlgoInsights!A:C' });
+    const rows = resp.data.values ?? [];
+    const dataRows = rows.length > 1 && rows[0][0] === '日時(JST)' ? rows.slice(1) : rows;
+    return dataRows.slice(-limit).reverse().map(r => ({
+      generatedAt:     r[0] ?? '',
+      sampleSize:      Number(r[1]) || 0,
+      briefingSummary: r[2] ?? '',
+    }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] AlgoInsights読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
+
 // ─── シートの初期ヘッダーを作成（初回セットアップ時に呼ぶ） ──────────────────
 
 export async function initSheetHeaders(): Promise<void> {
@@ -194,26 +442,25 @@ export async function initSheetHeaders(): Promise<void> {
 
   try {
     const sheets = getSheetsClient();
+    const updates = [
+      { range: 'PostLog!A1:J1',        values: [['日時(JST)', '芸能人', '作品タイトル', '投稿文(先頭80文字)', 'tweetId', 'いいね', 'RT', 'インプレッション', 'クリック(Rebrandly)', '投稿種別']] },
+      { range: 'DecisionLog!A1:G1',    values: [['日時(JST)', 'ソース', '決定事項', 'カテゴリ', '優先度', '実行方法', '結果']] },
+      { range: 'AccountMetrics!A1:G1', values: [['日時(JST)', 'フォロワー', 'フォロー中', 'ツイート数', '平均インプ(7日)', '本日投稿数', 'メモ']] },
+      { range: 'Hypotheses!A1:F1',     values: [['ID', '仮説', 'ステータス', '検証結果', '調整内容', '更新日時']] },
+      { range: 'MeetingLog!A1:I1',     values: [['日時(JST)', '会議ID', 'タイトル', '議題サマリー', '決定数', '自動実行数', '自動成功数', '手動確認数', '所要時間(分)']] },
+      { range: 'AlgoInsights!A1:C1',   values: [['日時(JST)', 'サンプル数', '解析サマリー(先頭200文字)']] },
+    ];
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: 'PostLog!A1:J1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [['日時(JST)', '芸能人', '作品タイトル', '投稿文(先頭80文字)', 'tweetId', 'いいね', 'RT', 'インプレッション', 'クリック(Rebrandly)', '投稿種別']],
-      },
-    });
+    for (const u of updates) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: u.range,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: u.values },
+      });
+    }
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: 'DecisionLog!A1:G1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [['日時(JST)', 'ソース', '決定事項', 'カテゴリ', '優先度', '実行方法', '結果']],
-      },
-    });
-
-    console.log('  ✅ [Sheets] ヘッダー初期化完了');
+    console.log('  ✅ [Sheets] 全シートヘッダー初期化完了 (6タブ)');
   } catch (e: any) {
     console.warn(`  ⚠ [Sheets] ヘッダー初期化失敗: ${e.message}`);
   }

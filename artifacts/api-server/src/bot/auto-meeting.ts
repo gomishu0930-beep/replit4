@@ -40,7 +40,16 @@ import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroR
 import { pickCelebrity, pickRandom, getCelebrityLikeItems } from './celebrity.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { getSampleImages } from './fanza.js';
-import { readPostLog, readDecisionLog, isSheetsConfigured } from './sheets-writer.js';
+import {
+  readPostLog,
+  readDecisionLog,
+  readAccountMetrics,
+  readHypotheses,
+  readMeetingLog,
+  readAlgoInsights,
+  appendMeetingLog,
+  isSheetsConfigured,
+} from './sheets-writer.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -92,33 +101,86 @@ async function buildWeeklyAgenda(): Promise<string> {
   const latestInsight = getLatestAlgoInsight();
   const abWeek = getABTestWeek();
 
-  // ── Google Sheets データ読み込み ──────────────────────────────────────────
-  let sheetsPostLogSection = '';
-  let sheetsDecisionLogSection = '';
+  // ── Google Sheets 全データ読み込み（Sheetsが唯一の情報源）──────────────────
+  let sheetsPostLogSection      = '';
+  let sheetsDecisionLogSection  = '';
+  let sheetsAccountSection      = '';
+  let sheetsHypothesesSection   = '';
+  let sheetsMeetingLogSection   = '';
+  let sheetsAlgoSection         = '';
+
   if (isSheetsConfigured()) {
-    console.log('  📊 [週次会議] Google Sheetsからデータ読み込み中...');
+    console.log('  📊 [週次会議] Google Sheets 全シートからデータ読み込み中...');
     try {
-      const [sheetsPosts, sheetsDecisions] = await Promise.all([
+      const [sheetsPosts, sheetsDecisions, sheetsMetrics, sheetsHypo, sheetsMeetings, sheetsAlgo] = await Promise.all([
         readPostLog(14),
         readDecisionLog(10),
+        readAccountMetrics(14),
+        readHypotheses(),
+        readMeetingLog(4),
+        readAlgoInsights(2),
       ]);
 
+      // PostLog
       if (sheetsPosts.length > 0) {
         const rows = sheetsPosts.map(p => {
-          const imp  = p.impressions > 0 ? p.impressions : '未計測';
-          const clk  = p.clicks > 0 ? `クリック:${p.clicks}` : '';
-          return `  - [${p.postType || '不明'}] ${p.postedAt.slice(0, 10)} | 芸能人:${p.celebrity || '-'} | インプ:${imp} | ❤${p.likes} RT:${p.retweets} ${clk} | 「${p.tweetText.slice(0, 50)}」`;
+          const imp = p.impressions > 0 ? p.impressions : '未計測';
+          const clk = p.clicks > 0 ? ` クリック:${p.clicks}` : '';
+          return `  - [${p.postType || '-'}] ${p.postedAt.slice(0, 10)} | ${p.celebrity || '-'} | インプ:${imp} | ❤${p.likes} RT:${p.retweets}${clk} | 「${p.tweetText.slice(0, 50)}」`;
         }).join('\n');
-        sheetsPostLogSection = `\n### 📊 Sheetsデータ: 直近PostLog（実績）\n${rows}`;
-        console.log(`  ✅ [週次会議] PostLog ${sheetsPosts.length}件 読み込み完了`);
+        sheetsPostLogSection = `\n### 📊 PostLog（直近${sheetsPosts.length}件・実績つき）\n${rows}`;
+        console.log(`  ✅ [週次会議] PostLog ${sheetsPosts.length}件`);
       }
 
+      // DecisionLog
       if (sheetsDecisions.length > 0) {
         const rows = sheetsDecisions.map(d =>
           `  - [${d.priority}/${d.executionType}] ${d.decidedAt.slice(0, 10)} | ${d.text.slice(0, 70)} → ${d.result ? d.result.slice(0, 40) : '結果未記録'}`
         ).join('\n');
-        sheetsDecisionLogSection = `\n### 📋 Sheetsデータ: 直近DecisionLog（実施状況）\n${rows}`;
-        console.log(`  ✅ [週次会議] DecisionLog ${sheetsDecisions.length}件 読み込み完了`);
+        sheetsDecisionLogSection = `\n### 📋 DecisionLog（直近${sheetsDecisions.length}件）\n${rows}`;
+        console.log(`  ✅ [週次会議] DecisionLog ${sheetsDecisions.length}件`);
+      }
+
+      // AccountMetrics
+      if (sheetsMetrics.length > 0) {
+        const latest = sheetsMetrics[0];
+        const prev   = sheetsMetrics[1];
+        const followerTrend = prev
+          ? `(${latest.followersCount - prev.followersCount >= 0 ? '+' : ''}${latest.followersCount - prev.followersCount}人/日)`
+          : '';
+        const rows = sheetsMetrics.slice(0, 7).map(m =>
+          `  - ${m.recordedAt.slice(0, 10)} | フォロワー:${m.followersCount}人 | 平均インプ:${m.avgImpressions || '未計測'} | 本日投稿:${m.totalPostsToday}件`
+        ).join('\n');
+        sheetsAccountSection = `\n### 👥 AccountMetrics（直近7日間）\n- 最新: ${latest.followersCount}人 ${followerTrend} / ツイート総数:${latest.tweetCount}件\n${rows}`;
+        console.log(`  ✅ [週次会議] AccountMetrics ${sheetsMetrics.length}件`);
+      }
+
+      // Hypotheses
+      if (sheetsHypo.length > 0) {
+        const statusIcon = (s: string) => s === 'confirmed' ? '✅' : s === 'rejected' ? '❌' : s === 'adjusted' ? '🔧' : '⏳';
+        const rows = sheetsHypo.map(h =>
+          `  ${statusIcon(h.status)} [${h.id}] ${h.question} → ${h.finding.slice(0, 60) || '未検証'}`
+        ).join('\n');
+        sheetsHypothesesSection = `\n### 🧪 Hypotheses（仮説 ${sheetsHypo.length}件）\n${rows}`;
+        console.log(`  ✅ [週次会議] Hypotheses ${sheetsHypo.length}件`);
+      }
+
+      // MeetingLog
+      if (sheetsMeetings.length > 0) {
+        const rows = sheetsMeetings.map(m =>
+          `  - ${m.runAt.slice(0, 10)} | ${m.title} | 決定${m.totalDecisions}件 (自動実行${m.autoSucceeded}/${m.autoExecuted}件成功)`
+        ).join('\n');
+        sheetsMeetingLogSection = `\n### 🤝 MeetingLog（直近${sheetsMeetings.length}回）\n${rows}`;
+        console.log(`  ✅ [週次会議] MeetingLog ${sheetsMeetings.length}件`);
+      }
+
+      // AlgoInsights
+      if (sheetsAlgo.length > 0) {
+        const rows = sheetsAlgo.map(a =>
+          `  - ${a.generatedAt.slice(0, 10)} | n=${a.sampleSize} | ${a.briefingSummary.slice(0, 100)}`
+        ).join('\n');
+        sheetsAlgoSection = `\n### 🔬 AlgoInsights（直近${sheetsAlgo.length}回）\n${rows}`;
+        console.log(`  ✅ [週次会議] AlgoInsights ${sheetsAlgo.length}件`);
       }
     } catch (e: any) {
       console.warn('  ⚠ [週次会議] Sheets読み込み失敗 (スキップ):', e.message);
@@ -165,29 +227,35 @@ async function buildWeeklyAgenda(): Promise<string> {
     : '';
 
   return `【FANZA Xボット 週次戦略会議】${new Date().toLocaleDateString('ja-JP')} 自動開催
+【データソース: Google Sheets (PostLog/DecisionLog/AccountMetrics/Hypotheses/MeetingLog/AlgoInsights)】
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-## Phase 1: 先週の投稿検証（まず全員でレビューすること）
+## Phase 1: 先週の投稿検証 / アカウント状況（全員でレビュー）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-### アカウント概況
+### アカウント概況（内部GCSデータ）
 - @gomi_shu_god / フォロワー${snapshot?.followersCount ?? '不明'}人
-- A/Bテスト: ${abWeek}（W1=10:30枠 / W2=05:00枠 / W3以降=投稿会議3スロット）
+- A/Bテスト: ${abWeek}（W1=20:00枠 / W2=05:00枠 / W3以降=投稿会議3スロット）
 - 先週の投稿数: ${lastWeekPosts.length}件 / 7日間平均インプ: ${avgImp}（${trend}）
 - 累計投稿数: ${stats.totalPosts}件 / 累計いいね: ${stats.totalLikes}件
 - 戦略: ${strategyStr}
+${sheetsAccountSection}
 
-### 先週の投稿一覧（実績つき）
+### 先週の投稿一覧（GCS内部記録）
 ${postSummary}
 ${algoCtx}
 ${sheetsPostLogSection}
 ${sheetsDecisionLogSection}
+${sheetsHypothesesSection}
+${sheetsMeetingLogSection}
+${sheetsAlgoSection}
 
 **全員がまずPhase 1を分析し、以下を明確にすること:**
-1. 最もインプが高かった投稿 — タイプ・時間帯・テキストパターンの共通点は？
-2. 最もインプが低かった投稿 — 失敗要因は何か？
-3. 先週の施策決定事項は実施されたか？未実施のものはなぜか？（↑DecisionLogも参照）
-4. Sheetsの実績数値（いいね/RT/インプ/クリック）から読み取れる傾向は？
+1. PostLogの実績数値（インプ/いいね/RT/クリック）から何が読み取れるか？
+2. AccountMetricsのフォロワー増減トレンドをどう評価するか？
+3. Hypothesesで「pending」の仮説のうち、今週検証できるものはどれか？
+4. DecisionLogの直近決定事項は実施されたか？未実施の理由は？
+5. 前回MeetingLogの成果と今週の改善点は？
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## Phase 2: 現在のXの状況（Grokが以下をリアルタイムで報告）
@@ -346,6 +414,21 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
   }
 
   console.log(`  ✅ [週次会議] 完了: 自動実行${autoExecuted.length}件 / 手動確認${manualItems.length}件 (${Math.round(duration_ms / 1000)}秒)`);
+
+  // ── Sheets: MeetingLog 書き込み ────────────────────────────────────────────
+  if (isSheetsConfigured()) {
+    appendMeetingLog({
+      meetingId:      session.id,
+      runAt,
+      title,
+      topicSummary:   topic.slice(0, 120),
+      totalDecisions: candidates.length,
+      autoExecuted:   autoExecuted.length,
+      autoSucceeded:  autoExecuted.filter(r => r.success).length,
+      manualItems:    manualItems.length,
+      duration_min:   Math.round(duration_ms / 60000),
+    }).catch((e: any) => console.warn('  ⚠ [Sheets] MeetingLog書き込み失敗:', e.message));
+  }
 
   return {
     meetingId: session.id, title, runAt, topic,

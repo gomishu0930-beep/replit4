@@ -3,7 +3,7 @@ import cron from 'node-cron';
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateCelebrityMainTweet, generateCelebrityIntroReply, generateImpressionTweet, getLastContentType, buildManualPostFeedback } from './ai.js';
-import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData } from './storage.js';
+import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, getDynamicTemplatesInfo, getExternalPatternsInfo, recordAccountSnapshot, getCelebPostedDate, setCelebPostedDate, recordManualFeedback, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
@@ -12,11 +12,18 @@ import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
 import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact, sendMetricsReport, MetricsReportPost } from './contact.js';
-import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs } from './strategy.js';
+import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs, getStrategySummary } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 import { autoCompleteTask } from './tasks.js';
 import { loadSchedulerOverrides } from './codex-agent.js';
-import { appendPostLog, isSheetsConfigured } from './sheets-writer.js';
+import {
+  appendPostLog,
+  appendAccountMetrics,
+  upsertHypotheses,
+  appendAlgoInsight,
+  initSheetHeaders,
+  isSheetsConfigured,
+} from './sheets-writer.js';
 
 let isPosting = false;
 let _postingStartedAt: number | null = null;
@@ -362,9 +369,15 @@ export function startScheduler() {
     console.warn('  ⚠ Codexスケジューラーオーバーライド読み込み失敗:', e.message),
   );
 
-  // ── Google Sheets 設定状態をログに出力 ───────────────────────────────────
+  // ── Google Sheets 設定状態をログに出力 + ヘッダー自動初期化 ──────────────
   if (isSheetsConfigured()) {
-    console.log('  📊 [Sheets] Google Sheets 連携: 有効 (投稿ログ・決定事項を自動転記)');
+    console.log('  📊 [Sheets] Google Sheets 連携: 有効 (6タブ自動転記: PostLog / DecisionLog / AccountMetrics / Hypotheses / MeetingLog / AlgoInsights)');
+    // ヘッダーは冪等なので毎起動時に安全に初期化
+    sleep(30 * 1000).then(() =>
+      initSheetHeaders().catch((e: any) =>
+        console.warn('  ⚠ [Sheets] ヘッダー初期化失敗:', e.message),
+      ),
+    );
   } else {
     console.log('  ℹ️  [Sheets] Google Sheets 連携: 未設定 (GOOGLE_SERVICE_ACCOUNT_JSON / GOOGLE_SHEET_ID が必要)');
   }
@@ -518,6 +531,26 @@ export function startScheduler() {
         }
         console.log(`  📊 [日次スナップ] フォロワー: ${info.followersCount}人 (${delta >= 0 ? '+' : ''}${delta}人)`);
       }
+
+      // ── Sheets: AccountMetrics 書き込み ──────────────────────────────────
+      if (isSheetsConfigured()) {
+        const snaps = getDailyImpressionSnapshots(7);
+        const avgImp = snaps.length > 0
+          ? Math.round(snaps.reduce((a, b) => a + b.avgImpressions, 0) / snaps.length)
+          : 0;
+        const nowJst = new Date(Date.now() + 9 * 3600000);
+        const todayStart = new Date(Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate()) - 9 * 3600000);
+        const todayPosts = getPostsAfter(todayStart).length;
+        await appendAccountMetrics({
+          recordedAt:      new Date().toISOString(),
+          followersCount:  info.followersCount,
+          followingCount:  info.followingCount,
+          tweetCount:      info.tweetCount,
+          avgImpressions:  avgImp,
+          totalPostsToday: todayPosts,
+          note:            '日次自動記録',
+        }).catch((e: any) => console.warn('  ⚠ [Sheets] AccountMetrics書き込み失敗:', e.message));
+      }
     } catch (e: any) {
       console.warn('  ⚠ 日次スナップ失敗:', e.message);
     }
@@ -593,6 +626,15 @@ export function startScheduler() {
       if (applyResult.applied) {
         console.log(`  ✅ [アルゴ自動適用] ${applyResult.summary}`);
         await contact.systemAlert('🤖 アルゴ推奨自動適用', applyResult.summary);
+      }
+
+      // ── Sheets: AlgoInsights 書き込み ────────────────────────────────────
+      if (isSheetsConfigured()) {
+        await appendAlgoInsight({
+          generatedAt:     new Date().toISOString(),
+          sampleSize:      insight.sampleSize ?? 0,
+          briefingSummary: (insight.briefing ?? '').slice(0, 200),
+        }).catch((e: any) => console.warn('  ⚠ [Sheets] AlgoInsights書き込み失敗:', e.message));
       }
     } catch (e: any) {
       console.error(`  ❌ [アルゴ解析] エラー: ${e.message}`);
@@ -679,6 +721,23 @@ export function startScheduler() {
     console.log('\n  🌙 [日次評価] 夜間自律改善サイクル開始');
     try {
       await runDailyEvaluation();
+
+      // ── Sheets: Hypotheses 全上書き ───────────────────────────────────────
+      if (isSheetsConfigured()) {
+        const strategy = getStrategySummary();
+        if ((strategy.hypotheses ?? []).length > 0) {
+          await upsertHypotheses(
+            strategy.hypotheses.map((h: any) => ({
+              id:         h.id,
+              question:   h.question,
+              status:     h.status,
+              finding:    h.finding ?? '',
+              adjustment: h.adjustment ?? '',
+              testedAt:   h.testedAt ?? new Date().toISOString(),
+            })),
+          ).catch((e: any) => console.warn('  ⚠ [Sheets] Hypotheses書き込み失敗:', e.message));
+        }
+      }
     } catch (e: any) {
       console.error(`  ❌ 日次評価エラー: ${e.message}`);
     }
