@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-09T18:00:20.942Z",
+  "lastCheckAt": "2026-04-10T02:33:57.041Z",
   "lastIssueAt": "2026-04-09T12:17:41.808Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
   "status": "healthy",
@@ -7,26 +7,6 @@
   "recoveryCount": 8,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-09T11:10:22.968Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-09T11:10:22.968Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-09T11:10:28.536Z",
-      "level": "recovery",
-      "detail": "✅ 自動回復成功 (通算 5回目)"
-    },
-    {
-      "at": "2026-04-09T11:35:39.545Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
     {
       "at": "2026-04-09T11:35:39.546Z",
       "level": "warn",
@@ -256,6 +236,26 @@
       "at": "2026-04-09T18:00:20.943Z",
       "level": "info",
       "detail": "最終投稿から 0.1h — 正常範囲"
+    },
+    {
+      "at": "2026-04-10T02:11:56.916Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-10T02:11:56.916Z",
+      "level": "info",
+      "detail": "最終投稿から 8.3h — 正常範囲"
+    },
+    {
+      "at": "2026-04-10T02:33:57.041Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-10T02:33:57.042Z",
+      "level": "info",
+      "detail": "最終投稿から 8.7h — 正常範囲"
     }
   ]
 }
