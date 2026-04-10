@@ -10,6 +10,7 @@ import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '..
 import { runApiResearchMeeting } from '../bot/api-research.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
+import { diagnoseSheetsConnection } from '../bot/sheets-writer.js';
 
 const router = Router();
 
@@ -450,6 +451,12 @@ router.post('/trigger/resume', auth, async (_req, res) => {
 // GET /api/bot/pause-status — 停止状態を確認（認証不要）
 router.get('/bot/pause-status', (_req, res) => {
   res.json({ paused: isBotPaused(), reason: getPausedReason() });
+});
+
+// GET /api/sheets-test — Google Sheets 接続診断（認証不要）
+router.get('/sheets-test', async (_req, res) => {
+  const result = await diagnoseSheetsConnection();
+  res.json(result);
 });
 
 export default router;

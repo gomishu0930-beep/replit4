@@ -484,7 +484,33 @@ export async function initSheetHeaders(): Promise<void> {
 
     console.log('  ✅ [Sheets] 全シートヘッダー初期化完了 (6タブ)');
   } catch (e: any) {
+    const saEmail = (() => {
+      try { return JSON.parse(SA_JSON).client_email ?? '不明'; } catch { return '解析失敗'; }
+    })();
     console.warn(`  ⚠ [Sheets] ヘッダー初期化失敗: ${e.message}`);
+    console.warn(`  ℹ️  [Sheets診断] SHEET_ID先頭8文字: ${SHEET_ID.slice(0, 8)}...`);
+    console.warn(`  ℹ️  [Sheets診断] サービスアカウント: ${saEmail}`);
+    console.warn(`  ℹ️  [Sheets診断] → このアカウントをスプレッドシートの「編集者」として共有してください`);
+  }
+}
+
+export async function diagnoseSheetsConnection(): Promise<{ ok: boolean; sheetIdPrefix: string; serviceAccount: string; error?: string; existingTabs?: string[] }> {
+  const saEmail = (() => {
+    try { return JSON.parse(SA_JSON).client_email ?? '不明'; } catch { return '解析失敗'; }
+  })();
+  const sheetIdPrefix = SHEET_ID.slice(0, 12) + '...';
+
+  if (!SA_JSON || !SHEET_ID) {
+    return { ok: false, sheetIdPrefix, serviceAccount: saEmail, error: 'GOOGLE_SERVICE_ACCOUNT_JSON または GOOGLE_SHEET_ID が未設定' };
+  }
+
+  try {
+    const sheets = getSheetsClient();
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const existingTabs = (meta.data.sheets ?? []).map((s: any) => s.properties?.title ?? '');
+    return { ok: true, sheetIdPrefix, serviceAccount: saEmail, existingTabs };
+  } catch (e: any) {
+    return { ok: false, sheetIdPrefix, serviceAccount: saEmail, error: e.message };
   }
 }
 
