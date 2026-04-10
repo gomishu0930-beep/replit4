@@ -9,6 +9,7 @@ import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
 import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision } from './auto-execute.js';
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
+import { runBudgetReview } from './budget-review.js';
 import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact, sendMetricsReport, MetricsReportPost } from './contact.js';
@@ -553,6 +554,18 @@ export function startScheduler() {
       }
     } catch (e: any) {
       console.warn('  ⚠ 日次スナップ失敗:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 毎月1日 02:00 JST — 💰 月次予算会議
+  // X API + AI API の全コストを集計・評価し、翌月の予算配分を決定
+  cron.schedule('0 2 1 * *', async () => {
+    console.log('\n  💰 [月次予算会議] 自動実行開始 (毎月1日 02:00 JST)');
+    try {
+      const result = await runBudgetReview();
+      console.log(`  ✅ [月次予算会議] 完了: 月間推計 $${result.estimate.grandTotal.toFixed(2)} / 状況: ${result.estimate.budgetStatus}`);
+    } catch (e: any) {
+      console.error(`  ❌ [月次予算会議] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

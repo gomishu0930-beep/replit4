@@ -37,6 +37,7 @@ import { getGrokXBriefing, getViralAVPostExamples } from './grok.js';
 import { postTweet, replyToTweet, uploadImages } from './twitter.js';
 import { generateImage, buildImagePrompt, isNanobananaEnabled } from './imageGen.js';
 import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroReply, generateCelebrityMainTweet } from './ai.js';
+import { getBudgetBriefing } from './budget-review.js';
 import { pickCelebrity, pickRandom, getCelebrityLikeItems } from './celebrity.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { getSampleImages } from './fanza.js';
@@ -258,6 +259,14 @@ async function buildWeeklyAgenda(): Promise<string> {
     grokContext = '（Grokリアルタイムデータ取得失敗 — 会議中に補足してください）';
   }
 
+  // ── 予算ブリーフィング（月次予算会議の最新決定を引き継ぎ）────────────────
+  let budgetBriefing = '';
+  try {
+    budgetBriefing = await getBudgetBriefing();
+  } catch (e: any) {
+    budgetBriefing = '（予算情報取得失敗）';
+  }
+
   const algoCtx = latestInsight
     ? `\n### アルゴ解析（${new Date(latestInsight.generatedAt).toLocaleDateString('ja-JP')}）\n${latestInsight.briefing?.slice(0, 400) ?? ''}`
     : '';
@@ -298,6 +307,16 @@ ${sheetsAlgoSection}
 3. Hypothesesで「pending」の仮説のうち、今週検証できるものはどれか？
 4. DecisionLogの直近決定事項は実施されたか？未実施の理由は？
 5. 前回MeetingLogの成果と今週の改善点は？
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## Phase 1.5: 予算状況（月次予算会議より引き継ぎ）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${budgetBriefing}
+
+**予算に関する確認事項:**
+- 現在の日次コストは$1.00/日の上限内か？
+- 今週の運用でコスト増加が見込まれる場合、代替案はあるか？
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## Phase 2: 現在のXの状況（Grokが以下をリアルタイムで報告）

@@ -15,6 +15,7 @@ import { getAllPosts } from '../bot/storage.js';
 import { getDirectives } from '../bot/meeting.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { checkTwitterApiAccess } from '../bot/twitter.js';
+import { runBudgetReview, estimateMonthlyCost } from '../bot/budget-review.js';
 
 const router = Router();
 
@@ -230,6 +231,33 @@ router.post('/trigger/metrics', auth, async (_req, res) => {
     console.log('\n[指標更新] 手動トリガー');
     await refreshRecentMetrics();
     res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// 月次予算会議（手動トリガー）
+router.post('/trigger/budget-review', auth, async (_req, res) => {
+  try {
+    console.log('\n[月次予算会議] 手動トリガー');
+    const result = await runBudgetReview();
+    res.json({
+      ok: true,
+      estimate: result.estimate,
+      decision: result.decision,
+      adjustments: result.adjustments,
+      nextMonthGuideline: result.nextMonthGuideline,
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// 予算コスト試算のみ（会議なし・メール通知なし）
+router.get('/trigger/budget-estimate', auth, async (_req, res) => {
+  try {
+    const est = await estimateMonthlyCost(30);
+    res.json({ ok: true, estimate: est });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
