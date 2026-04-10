@@ -80,6 +80,12 @@ let config: StrategyConfig = { ...DEFAULT_CONFIG };
 
 export async function loadStrategyConfig(): Promise<void> {
   config = await readJson<StrategyConfig>('strategy-config.json', DEFAULT_CONFIG);
+  // 予算制約: 保存値が最低間隔を下回っている場合は強制修正して保存
+  if (config.monitorIntervalHours < BUDGET_MIN_INTERVAL_HOURS) {
+    console.log(`  ⚠️  [予算制約] 監視間隔 ${config.monitorIntervalHours}h → ${BUDGET_MIN_INTERVAL_HOURS}h に強制修正`);
+    config.monitorIntervalHours = BUDGET_MIN_INTERVAL_HOURS;
+    await writeJson('strategy-config.json', config);
+  }
   console.log(
     `  🧠 戦略設定読み込み: 監視間隔 ${config.monitorIntervalHours}h / 仮説 ${config.hypotheses.length}件 / サイクル ${config.cycleStats.totalCycles}回`,
   );

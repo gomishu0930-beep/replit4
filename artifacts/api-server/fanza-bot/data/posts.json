@@ -11,7 +11,15 @@
         "affiliateURL": ""
       },
       "postedAt": "2026-04-08T02:40:13.282Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 31,
+        "checkedAt": "2026-04-10T16:00:03.528Z"
+      }
     },
     {
       "tweetId": "2041718273440350713",
@@ -24,7 +32,15 @@
         "affiliateURL": ""
       },
       "postedAt": "2026-04-08T03:22:24.558Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 31,
+        "checkedAt": "2026-04-10T16:00:05.090Z"
+      }
     },
     {
       "tweetId": "2042215541209784834",
@@ -37,7 +53,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dipvr00272&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-09T12:20:22.037Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 22,
+        "checkedAt": "2026-04-10T16:00:06.662Z"
+      }
     },
     {
       "tweetId": "2042264847828525379",
@@ -50,7 +74,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3D1dldss00045&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-09T15:36:09.172Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 16,
+        "checkedAt": "2026-04-10T16:00:08.246Z"
+      }
     },
     {
       "tweetId": "2042275018676019323",
@@ -76,7 +108,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dssis00129&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-09T17:54:50.175Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 23,
+        "checkedAt": "2026-04-10T16:00:11.430Z"
+      }
     },
     {
       "tweetId": "2042585026806653283",
@@ -89,7 +129,15 @@
         "affiliateURL": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dh_346rebd00387&af_id=bigshu0930-990&ch=api"
       },
       "postedAt": "2026-04-10T12:47:53.172Z",
-      "metrics": null
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 12,
+        "checkedAt": "2026-04-10T16:00:12.993Z"
+      }
     }
   ]
 }

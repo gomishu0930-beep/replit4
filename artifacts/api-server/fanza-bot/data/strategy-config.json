@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 1,
+  "monitorIntervalHours": 8,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
