@@ -14,6 +14,7 @@ import { diagnoseSheetsConnection, backfillAllData } from '../bot/sheets-writer.
 import { getAllPosts } from '../bot/storage.js';
 import { getDirectives } from '../bot/meeting.js';
 import { getStrategySummary } from '../bot/strategy.js';
+import { checkTwitterApiAccess } from '../bot/twitter.js';
 
 const router = Router();
 
@@ -459,6 +460,12 @@ router.get('/bot/pause-status', (_req, res) => {
 // GET /api/sheets-test — Google Sheets 接続診断（認証不要）
 router.get('/sheets-test', async (_req, res) => {
   const result = await diagnoseSheetsConnection();
+  res.json(result);
+});
+
+// GET /api/twitter-access — Twitter API アクセスレベル診断（認証不要）
+router.get('/twitter-access', async (_req, res) => {
+  const result = await checkTwitterApiAccess();
   res.json(result);
 });
 

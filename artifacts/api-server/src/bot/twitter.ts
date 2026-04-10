@@ -151,8 +151,24 @@ export async function getTweetMetrics(tweetId: string) {
     });
     return res.data?.public_metrics ?? null;
   } catch (e: any) {
-    console.error(`  ⚠ 指標取得失敗 (${tweetId}): ${e.message}`);
+    const code = e?.code ?? e?.status ?? e?.statusCode ?? '?';
+    const detail = e?.data?.detail ?? e?.errors?.[0]?.message ?? '';
+    console.error(`  ⚠ 指標取得失敗 (${tweetId}): HTTP ${code} ${e.message}${detail ? ' | ' + detail : ''}`);
     return null;
+  }
+}
+
+export async function checkTwitterApiAccess(): Promise<{ ok: boolean; plan?: string; error?: string; code?: number }> {
+  try {
+    // 自分のツイートを1件読み込むだけのテスト
+    const userId = await getMyNumericId();
+    const res = await rw.v2.userTimeline(userId, { max_results: 5, 'tweet.fields': ['public_metrics'] });
+    const count = res.data?.data?.length ?? 0;
+    return { ok: true, plan: `読み取り成功 (${count}件取得)` };
+  } catch (e: any) {
+    const code = e?.code ?? e?.status ?? e?.statusCode ?? 0;
+    const detail = e?.data?.detail ?? e?.errors?.[0]?.message ?? e?.message ?? '不明';
+    return { ok: false, code: Number(code), error: detail };
   }
 }
 
