@@ -9,7 +9,7 @@ import { runAlgoAnalysis } from './algo.js';
 import { collectAlgoNews } from './algo-news.js';
 import { runAutoDirectiveExecution, applyAlgoRecommendations, runABTestDecision } from './auto-execute.js';
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
-import { refreshExternalPatterns, checkShadowbanRecovery } from './analytics.js';
+import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics } from './analytics.js';
 import { pickCelebrity, pickRandom, getBestPostingHour, getCelebrityLikeItems, CelebrityMapping } from './celebrity.js';
 import { contact, sendMetricsReport, MetricsReportPost } from './contact.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs, getStrategySummary } from './strategy.js';
@@ -726,6 +726,23 @@ export function startScheduler() {
       autoCompleteTask('daily-shadowban-check', 'daily').catch(() => {});
     } catch (e: any) {
       console.error(`  ❌ 回復チェックエラー: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 毎日 23:10 JST — 投稿指標更新（W2以降: 4/14〜）
+  // 予算: 7件 × $0.005 = $0.035/日
+  cron.schedule('10 23 * * *', async () => {
+    const nowJst = new Date(Date.now() + 9 * 3600000);
+    const dateKey = nowJst.toISOString().slice(0, 10);
+    if (dateKey < '2026-04-14') {
+      return; // W1期間中はスキップ（クレジット節約）
+    }
+    console.log('\n  📊 [指標更新] 23:10 自動実行開始');
+    try {
+      await refreshRecentMetrics();
+      console.log('  ✅ [指標更新] 完了');
+    } catch (e: any) {
+      console.error(`  ❌ [指標更新] エラー: ${e.message}`);
     }
   }, { timezone: 'Asia/Tokyo' });
 

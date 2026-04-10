@@ -63,7 +63,7 @@ export async function refreshExternalPatterns() {
   if (searchSupported) {
     for (const query of SEARCH_QUERIES) {
       try {
-        const tweets = await searchTweetsByHashtag(query, 50);
+        const tweets = await searchTweetsByHashtag(query, 10);
         const scored = tweets
           .map((t) => ({ ...t, tweetId: t.id, score: calcScore(t) }));
         // スコア0でも収集（エンゲージメントがなくても文章パターンを学習）

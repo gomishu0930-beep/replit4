@@ -89,8 +89,12 @@ async function saveConfig(): Promise<void> {
   await writeJson('strategy-config.json', config);
 }
 
+// 予算上限: $1/日。検索1サイクル=$0.20(4クエリ×10件×$0.005)、最大3回/日=8h間隔
+const BUDGET_MIN_INTERVAL_HOURS = 8;
+
 export function getMonitorIntervalMs(): number {
-  return config.monitorIntervalHours * 60 * 60 * 1000;
+  const h = Math.max(config.monitorIntervalHours, BUDGET_MIN_INTERVAL_HOURS);
+  return h * 60 * 60 * 1000;
 }
 
 export function getTypeWeights(): Record<string, number> {
@@ -165,13 +169,13 @@ function evaluateMonitorInterval(newPatternsThisCycle: number): string | null {
 
   let newInterval = current;
 
-  if (avg < 2 && current < 6) {
+  if (avg < 2 && current < 24) {
     // 収集効率が低い（平均2件未満）→ 間隔を延ばして無駄なAPIコールを削減
-    newInterval = clamp(current + 1, 1, 6);
+    newInterval = clamp(current + 1, BUDGET_MIN_INTERVAL_HOURS, 24);
     adjustment = `監視間隔を ${current}h → ${newInterval}h に延長（平均新規パターン ${avg.toFixed(1)}件/サイクル）`;
-  } else if (avg >= 15 && current > 1) {
-    // 収集効率が高い（平均15件以上）→ 間隔を縮めてより多くのデータを収集
-    newInterval = clamp(current - 1, 1, 6);
+  } else if (avg >= 15 && current > BUDGET_MIN_INTERVAL_HOURS) {
+    // 収集効率が高い（平均15件以上）→ 間隔を縮めてより多くのデータを収集（予算下限: 8h）
+    newInterval = clamp(current - 1, BUDGET_MIN_INTERVAL_HOURS, 24);
     adjustment = `監視間隔を ${current}h → ${newInterval}h に短縮（平均新規パターン ${avg.toFixed(1)}件/サイクル）`;
   } else {
     adjustment = null;
@@ -649,7 +653,7 @@ export async function patchStrategyConfig(patch: StrategyPatch, reason: string, 
   const changes: string[] = [];
 
   if (patch.monitorIntervalHours !== undefined) {
-    const clamped = clamp(patch.monitorIntervalHours, 0.5, 24);
+    const clamped = clamp(patch.monitorIntervalHours, BUDGET_MIN_INTERVAL_HOURS, 24);
     if (clamped !== config.monitorIntervalHours) {
       changes.push(`監視間隔: ${config.monitorIntervalHours}h → ${clamped}h`);
       config.monitorIntervalHours = clamped;
