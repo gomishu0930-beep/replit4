@@ -242,11 +242,15 @@ function getABTestWeek(): 'W1' | 'W2' | 'normal' {
   return 'normal';
 }
 
-// ─── 取りこぼしスロット補完（起動時チェック）────────────────────────────────
-// A/Bテスト週: 当日スロット時刻を判定して補完
+// ─── 取りこぼしスロット補完（起動時 + 定期チェック）────────────────────────
+// 対策: デプロイ・開発再起動でcronが消えても最大6h以内なら自動補完
+// A/Bテスト週: 当日スロット時刻を判定して補完 (ウィンドウ: 6h)
 // 通常週: 動的芸能人スロット (20:00前後) の取りこぼしのみ補完
 
-async function catchUpMissedSlots() {
+// 補完失敗時に30分後に再試行するためのフラグ
+let _catchUpRetryScheduled = false;
+
+async function catchUpMissedSlots(isRetry = false) {
   const nowUtc = Date.now();
   const jstOffset = 9 * 60 * 60 * 1000;
   const nowJst = new Date(nowUtc + jstOffset);
@@ -258,11 +262,12 @@ async function catchUpMissedSlots() {
 
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
   const week = getABTestWeek();
+  const retryTag = isRetry ? ' [リトライ]' : '';
 
   // A/Bテスト週: 今日の投稿済みフラグがあればスキップ
   if (week === 'W1' || week === 'W2') {
     if (getCelebPostedDate() === todayKey) {
-      console.log(`  ✅ [補完チェック] ${week} 本日分投稿済み → スキップ`);
+      console.log(`  ✅ [補完チェック${retryTag}] ${week} 本日分投稿済み → スキップ`);
       return;
     }
     // A/Bテスト週の補完対象スロット時刻 (W1: 20:00 JST / W2: 05:00 JST)
@@ -271,24 +276,35 @@ async function catchUpMissedSlots() {
     const slotTime = new Date(todayMidnightJst.getTime() + (slotHour * 60 + slotMin) * 60 * 1000);
     const slotPastMs = nowUtc - slotTime.getTime();
     if (slotPastMs < 0) {
-      console.log(`  ℹ️  [補完チェック] ${week} スロットはまだ先 → スキップ`);
+      console.log(`  ℹ️  [補完チェック${retryTag}] ${week} スロットはまだ先 → スキップ`);
       return;
     }
-    if (slotPastMs > 4 * 60 * 60 * 1000) {
-      console.log(`  ℹ️  [補完チェック] ${week} スロットから4時間超過 → スキップ`);
+    // ⬆ ウィンドウ 4h → 6h に延長（デプロイ直後の長めのダウンにも対応）
+    if (slotPastMs > 6 * 60 * 60 * 1000) {
+      console.log(`  ℹ️  [補完チェック${retryTag}] ${week} スロットから6時間超過 → スキップ`);
       return;
     }
-    console.log(`\n[${jst()}] ⚡ 取りこぼし検出: ${week} スロット → 補完投稿会議開始`);
+    console.log(`\n[${jst()}] ⚡ 取りこぼし検出${retryTag}: ${week} スロット → 補完投稿会議開始`);
     setCelebPostedDate(todayKey);
     try {
       const result = await runMeetingAndPost({ bypassDailyLimit: true });
       if (result.posted) {
         console.log(`  ✅ [補完投稿会議] 投稿完了: ${result.tweetId}`);
+        _catchUpRetryScheduled = false;
       } else {
         console.log(`  ℹ️  [補完投稿会議] スキップ: ${result.reason ?? '不明'}`);
       }
     } catch (e: any) {
       console.error(`  ❌ 補完投稿会議失敗 [${week}スロット]: ${e.message}`);
+      // 失敗時: まだ6hウィンドウ内なら30分後に1回だけリトライ
+      if (!_catchUpRetryScheduled && slotPastMs < 5.5 * 60 * 60 * 1000) {
+        _catchUpRetryScheduled = true;
+        console.log(`  ♻️  [補完リトライ] 30分後に再試行をスケジュール`);
+        sleep(30 * 60 * 1000).then(() => {
+          _catchUpRetryScheduled = false;
+          catchUpMissedSlots(true);
+        });
+      }
     }
     return;
   }
@@ -298,19 +314,19 @@ async function catchUpMissedSlots() {
   const slotTime = new Date(todayMidnightJst.getTime() + celebSlotHour * 60 * 60 * 1000);
   const slotPastMs = nowUtc - slotTime.getTime();
   if (slotPastMs < 0) {
-    console.log(`  ℹ️  [補完チェック] 投稿会議スロットはまだ先 → スキップ`);
+    console.log(`  ℹ️  [補完チェック${retryTag}] 投稿会議スロットはまだ先 → スキップ`);
     return;
   }
   if (slotPastMs > 6 * 60 * 60 * 1000) {
-    console.log(`  ℹ️  [補完チェック] 投稿会議スロットから6時間超過 → スキップ`);
+    console.log(`  ℹ️  [補完チェック${retryTag}] 投稿会議スロットから6時間超過 → スキップ`);
     return;
   }
   const celebPostsAfter = getPostsAfter(slotTime).filter((p: any) => p.type === 'celebrity' || p.type === 'meeting-post');
   if (celebPostsAfter.length > 0) {
-    console.log(`  ✅ [補完チェック] 本日投稿済み確認 → スキップ`);
+    console.log(`  ✅ [補完チェック${retryTag}] 本日投稿済み確認 → スキップ`);
     return;
   }
-  console.log(`\n[${jst()}] ⚡ 取りこぼし検出: 通常週スロット → 補完投稿会議開始`);
+  console.log(`\n[${jst()}] ⚡ 取りこぼし検出${retryTag}: 通常週スロット → 補完投稿会議開始`);
   try {
     const result = await runMeetingAndPost();
     if (result.posted) {
@@ -352,6 +368,17 @@ export function startScheduler() {
 
   // ── 起動2分後に取りこぼしチェック ───────────────────────────────────────
   sleep(2 * 60 * 1000).then(() => catchUpMissedSlots());
+
+  // ── 30分ごとの定期補完チェック ────────────────────────────────────────
+  // デプロイ・再起動でcronが消えた場合でも最大30分以内に自動復旧
+  // 深夜〜早朝 (W2スロット 05:00前後) にも対応するため全時間帯で実行
+  cron.schedule('*/30 * * * *', async () => {
+    try {
+      await catchUpMissedSlots();
+    } catch (e: any) {
+      console.warn('  ⚠ [30min補完チェック] エラー:', e.message);
+    }
+  }, { timezone: 'Asia/Tokyo' });
 
   // ── 起動10分後にキャンペーンID探索（キャッシュが新鮮な場合はスキップ）──
   sleep(10 * 60 * 1000).then(() =>
