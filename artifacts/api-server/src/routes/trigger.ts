@@ -10,7 +10,10 @@ import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '..
 import { runApiResearchMeeting } from '../bot/api-research.js';
 
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
-import { diagnoseSheetsConnection } from '../bot/sheets-writer.js';
+import { diagnoseSheetsConnection, backfillAllData } from '../bot/sheets-writer.js';
+import { getAllPosts } from '../bot/storage.js';
+import { getDirectives } from '../bot/meeting.js';
+import { getStrategySummary } from '../bot/strategy.js';
 
 const router = Router();
 
@@ -457,6 +460,48 @@ router.get('/bot/pause-status', (_req, res) => {
 router.get('/sheets-test', async (_req, res) => {
   const result = await diagnoseSheetsConnection();
   res.json(result);
+});
+
+// POST /trigger/sheets-backfill — 過去データを全件Sheetsへ書き込む
+router.post('/trigger/sheets-backfill', auth, async (_req, res) => {
+  try {
+    const posts     = getAllPosts();
+    const directives = getDirectives();
+    const { hypotheses } = getStrategySummary();
+
+    const result = await backfillAllData({
+      posts: posts.map(p => ({
+        tweetId:   p.tweetId,
+        tweetText: p.text,
+        postedAt:  p.postedAt,
+        type:      p.type,
+        itemTitle: p.item?.title,
+        metrics:   p.metrics,
+      })),
+      directives: directives.map(d => ({
+        id:           d.id,
+        text:         d.text,
+        category:     d.category,
+        priority:     d.priority,
+        status:       d.status,
+        source:       d.source,
+        createdAt:    d.createdAt,
+        autoExecuted: (d.executionLog?.length ?? 0) > 0,
+      })),
+      hypotheses: hypotheses.map(h => ({
+        id:         h.id,
+        question:   h.question,
+        status:     h.status,
+        finding:    h.finding,
+        adjustment: h.adjustment ?? '',
+        testedAt:   h.testedAt,
+      })),
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 export default router;

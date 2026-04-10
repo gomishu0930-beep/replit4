@@ -518,6 +518,149 @@ export function isSheetsConfigured(): boolean {
   return Boolean(SA_JSON && SHEET_ID);
 }
 
+// ─── 過去データ一括バックフィル ────────────────────────────────────────────────
+
+export interface BackfillPost {
+  tweetId: string;
+  tweetText: string;
+  postedAt: string;
+  type: string;
+  itemTitle?: string;
+  metrics?: { like_count?: number; retweet_count?: number; impression_count?: number } | null;
+}
+
+export interface BackfillDirective {
+  id: string;
+  text: string;
+  category: string;
+  priority: string;
+  status: string;
+  source: string;
+  createdAt: string;
+  autoExecuted?: boolean;
+}
+
+export interface BackfillHypothesis {
+  id: string;
+  question: string;
+  status: string;
+  finding?: string;
+  adjustment?: string;
+  testedAt?: string;
+}
+
+export async function backfillAllData(opts: {
+  posts: BackfillPost[];
+  directives: BackfillDirective[];
+  hypotheses: BackfillHypothesis[];
+}): Promise<{ postsAdded: number; decisionsAdded: number; hypothesesUpdated: number }> {
+  if (!SA_JSON || !SHEET_ID) throw new Error('Sheets未設定');
+
+  const sheets = getSheetsClient();
+  let postsAdded = 0;
+  let decisionsAdded = 0;
+  let hypothesesUpdated = 0;
+
+  // ── 1. PostLog: 既存tweetId取得 → 未記録分だけ追記 ──────────────────────────
+  const existingPostResp = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'PostLog!E:E',
+  });
+  const existingTweetIds = new Set(
+    (existingPostResp.data.values ?? []).slice(1).map((r: string[]) => r[0] ?? ''),
+  );
+
+  const newPosts = opts.posts.filter(p => p.tweetId && !existingTweetIds.has(p.tweetId));
+  if (newPosts.length > 0) {
+    // 古い順にソート
+    newPosts.sort((a, b) => new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime());
+    const rows = newPosts.map(p => {
+      const jst = new Date(new Date(p.postedAt).getTime() + 9 * 3600000)
+        .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+      return [
+        jst,
+        '',                                  // celebrity
+        p.itemTitle ?? '',
+        p.tweetText.slice(0, 80),
+        p.tweetId,
+        p.metrics?.like_count ?? '',
+        p.metrics?.retweet_count ?? '',
+        p.metrics?.impression_count ?? '',
+        '',                                  // clicks
+        p.type,
+      ];
+    });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'PostLog!A:J',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: rows },
+    });
+    postsAdded = newPosts.length;
+  }
+
+  // ── 2. DecisionLog: 既存decision text取得 → 未記録分だけ追記 ─────────────────
+  const existingDecResp = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'DecisionLog!C:C',
+  });
+  const existingDecTexts = new Set(
+    (existingDecResp.data.values ?? []).slice(1).map((r: string[]) => r[0] ?? ''),
+  );
+
+  const newDirs = opts.directives.filter(
+    d => !existingDecTexts.has(d.text.slice(0, 120)),
+  );
+  if (newDirs.length > 0) {
+    newDirs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const rows = newDirs.map(d => {
+      const jst = new Date(new Date(d.createdAt).getTime() + 9 * 3600000)
+        .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+      return [
+        jst,
+        d.source,
+        d.text.slice(0, 120),
+        d.category,
+        d.priority,
+        d.autoExecuted ? '自動実行' : '手動',
+        d.status,
+      ];
+    });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: 'DecisionLog!A:G',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: rows },
+    });
+    decisionsAdded = newDirs.length;
+  }
+
+  // ── 3. Hypotheses: 全件上書き ─────────────────────────────────────────────────
+  if (opts.hypotheses.length > 0) {
+    const header = [['ID', '仮説', 'ステータス', '検証結果', '調整内容', '更新日時']];
+    const dataRows = opts.hypotheses.map(h => [
+      h.id,
+      h.question,
+      h.status,
+      (h.finding ?? '').slice(0, 120),
+      h.adjustment ?? '',
+      h.testedAt
+        ? new Date(new Date(h.testedAt).getTime() + 9 * 3600000).toLocaleString('ja-JP')
+        : '',
+    ]);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Hypotheses!A1:F${1 + dataRows.length}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [...header, ...dataRows] },
+    });
+    hypothesesUpdated = opts.hypotheses.length;
+  }
+
+  console.log(`  ✅ [Sheets] バックフィル完了: PostLog+${postsAdded}件 / DecisionLog+${decisionsAdded}件 / Hypotheses${hypothesesUpdated}件更新`);
+  return { postsAdded, decisionsAdded, hypothesesUpdated };
+}
+
 // ─── PostLog を読み込む（会議コンテキスト用） ───────────────────────────────────
 
 export interface PostLogRow {
