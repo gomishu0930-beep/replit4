@@ -440,23 +440,45 @@ export async function initSheetHeaders(): Promise<void> {
     return;
   }
 
+  const REQUIRED_SHEETS = [
+    { title: 'PostLog',        headers: ['日時(JST)', '芸能人', '作品タイトル', '投稿文(先頭80文字)', 'tweetId', 'いいね', 'RT', 'インプレッション', 'クリック(Rebrandly)', '投稿種別'] },
+    { title: 'DecisionLog',    headers: ['日時(JST)', 'ソース', '決定事項', 'カテゴリ', '優先度', '実行方法', '結果'] },
+    { title: 'AccountMetrics', headers: ['日時(JST)', 'フォロワー', 'フォロー中', 'ツイート数', '平均インプ(7日)', '本日投稿数', 'メモ'] },
+    { title: 'Hypotheses',     headers: ['ID', '仮説', 'ステータス', '検証結果', '調整内容', '更新日時'] },
+    { title: 'MeetingLog',     headers: ['日時(JST)', '会議ID', 'タイトル', '議題サマリー', '決定数', '自動実行数', '自動成功数', '手動確認数', '所要時間(分)'] },
+    { title: 'AlgoInsights',   headers: ['日時(JST)', 'サンプル数', '解析サマリー(先頭200文字)'] },
+  ];
+
   try {
     const sheets = getSheetsClient();
-    const updates = [
-      { range: 'PostLog!A1:J1',        values: [['日時(JST)', '芸能人', '作品タイトル', '投稿文(先頭80文字)', 'tweetId', 'いいね', 'RT', 'インプレッション', 'クリック(Rebrandly)', '投稿種別']] },
-      { range: 'DecisionLog!A1:G1',    values: [['日時(JST)', 'ソース', '決定事項', 'カテゴリ', '優先度', '実行方法', '結果']] },
-      { range: 'AccountMetrics!A1:G1', values: [['日時(JST)', 'フォロワー', 'フォロー中', 'ツイート数', '平均インプ(7日)', '本日投稿数', 'メモ']] },
-      { range: 'Hypotheses!A1:F1',     values: [['ID', '仮説', 'ステータス', '検証結果', '調整内容', '更新日時']] },
-      { range: 'MeetingLog!A1:I1',     values: [['日時(JST)', '会議ID', 'タイトル', '議題サマリー', '決定数', '自動実行数', '自動成功数', '手動確認数', '所要時間(分)']] },
-      { range: 'AlgoInsights!A1:C1',   values: [['日時(JST)', 'サンプル数', '解析サマリー(先頭200文字)']] },
-    ];
 
-    for (const u of updates) {
+    // 1. 既存シート一覧を取得
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+    const existingTitles = new Set(
+      (meta.data.sheets ?? []).map((s: any) => s.properties?.title ?? ''),
+    );
+
+    // 2. 存在しないシートを作成
+    const missing = REQUIRED_SHEETS.filter(s => !existingTitles.has(s.title));
+    if (missing.length > 0) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: {
+          requests: missing.map(s => ({
+            addSheet: { properties: { title: s.title } },
+          })),
+        },
+      });
+      console.log(`  📊 [Sheets] シート作成: ${missing.map(s => s.title).join(', ')}`);
+    }
+
+    // 3. 全シートのヘッダー行を書き込み（冪等）
+    for (const s of REQUIRED_SHEETS) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: u.range,
+        range: `${s.title}!A1:${String.fromCharCode(64 + s.headers.length)}1`,
         valueInputOption: 'USER_ENTERED',
-        requestBody: { values: u.values },
+        requestBody: { values: [s.headers] },
       });
     }
 
