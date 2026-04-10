@@ -569,9 +569,16 @@ export function startScheduler() {
   }, { timezone: 'Asia/Tokyo' });
 
   // 火・木 20:00 JST — 🎙→🚀 会議→投稿サイクル（頭→手）
-  // W1/W2期間（本日投稿済み）→ 会議＋情報収集のみ・投稿スキップ
+  // W1/W2期間（専用スロット担当 & setCelebPostedDate済み）→ スキップ
   // W3以降 or 本日未投稿       → 会議 → Grok裁定ツイート → X即時投稿
   cron.schedule('0 20 * * 2,4', async () => {
+    const week = getABTestWeek();
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    // W1/W2期間は専用スロットcron（19:40/04:40）が担当。celebPostedDateが設定済みならスキップ
+    if ((week === 'W1' || week === 'W2') && getCelebPostedDate() === todayKey) {
+      console.log(`  ℹ️  [20:00 火/木会議] ${week}期間・本日投稿会議開始済み → スキップ（専用スロット担当）`);
+      return;
+    }
     console.log('\n  🎙 [会議→投稿] 火/木 自律フルサイクル開始...');
     try {
       const result = await runMeetingAndPost();
@@ -588,6 +595,12 @@ export function startScheduler() {
   // 土曜 21:00 JST — 🎙→🚀 週末会議→投稿サイクル（頭→手）
   // 週末のXアクティブ時間帯に合わせた自律投稿
   cron.schedule('0 21 * * 6', async () => {
+    const week = getABTestWeek();
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    if ((week === 'W1' || week === 'W2') && getCelebPostedDate() === todayKey) {
+      console.log(`  ℹ️  [21:00 土曜会議] ${week}期間・本日投稿会議開始済み → スキップ`);
+      return;
+    }
     console.log('\n  🎙 [会議→投稿] 土曜 自律フルサイクル開始...');
     try {
       const result = await runMeetingAndPost();

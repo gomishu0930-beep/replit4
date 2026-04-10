@@ -728,110 +728,121 @@ async function extractTweetFromDirective(directive: string): Promise<string> {
  * - W3以降 or 本日未投稿      → Phase 1-4フル実行
  * - bypassDailyLimit=true     → 投稿制限を無視して必ずPhase 4まで実行
  */
+let _isMeetingRunning = false;
+
 export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }): Promise<MeetingPostResult> {
   const jst = () => new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  if (_isMeetingRunning) {
+    console.log(`[${jst()}] ⚠ [投稿会議] 既に会議実行中 → 重複スキップ`);
+    return { meetingId: '', posted: false, reason: '会議実行中（重複防止）' };
+  }
+  _isMeetingRunning = true;
   console.log(`\n[${jst()}] 🎙 [投稿会議] 3者会議フロー（Grok→GPT→Claude）開始`);
 
-  // ── Phase 1: 芸能人・作品の選定 ─────────────────────────────────────────
-  const mapping = pickCelebrity();
-  const items = await getCelebrityLikeItems(mapping, 1);
-  if (items.length === 0) {
-    console.warn(`[${jst()}] ⚠ [投稿会議] 対象作品が見つかりませんでした`);
-    return { meetingId: '', posted: false, reason: '対象作品なし' };
-  }
-  const item = items[0];
-  const celebrity = mapping.celebrity;
-  const actress = item.actress?.map((a: any) => a.name).join('・') || item.title.slice(0, 20);
-  console.log(`[${jst()}] 🎭 [投稿会議] 対象: ${celebrity} / ${actress}`);
-
-  // 会議セッション作成
-  const title = `【3者投稿会議】${celebrity} / ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
-  const session = await createMeetingSession(title);
-
-  // ── Phase 2: 3者順次会議（Grok→GPT→Claude）────────────────────────────
-  console.log(`[${jst()}] 💬 [投稿会議] Phase 2: Grok→GPT→Claude 3者会議開始...`);
-  let meetingResult: { grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string };
   try {
-    meetingResult = await runThreeAIPostMeeting(celebrity, item, session.id, mapping.hooks);
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [投稿会議] 3者会議エラー: ${e.message}`);
-    return { meetingId: session.id, posted: false, reason: `3者会議エラー: ${e.message}` };
-  }
+    // ── Phase 1: 芸能人・作品の選定 ─────────────────────────────────────────
+    const mapping = pickCelebrity();
+    const items = await getCelebrityLikeItems(mapping, 1);
+    if (items.length === 0) {
+      console.warn(`[${jst()}] ⚠ [投稿会議] 対象作品が見つかりませんでした`);
+      return { meetingId: '', posted: false, reason: '対象作品なし' };
+    }
+    const item = items[0];
+    const celebrity = mapping.celebrity;
+    const actress = item.actress?.map((a: any) => a.name).join('・') || item.title.slice(0, 20);
+    console.log(`[${jst()}] 🎭 [投稿会議] 対象: ${celebrity} / ${actress}`);
 
-  const { finalTweet, introReply, grokRefs, gptAnalysis } = meetingResult;
-  if (!finalTweet || finalTweet.length < 5) {
-    console.error(`[${jst()}] ❌ [投稿会議] Claudeのツイート本文が空`);
-    return { meetingId: session.id, posted: false, reason: 'Claude生成ツイートが空' };
-  }
-  console.log(`\n[${jst()}] 📝 [投稿会議] Claude確定ツイート: "${finalTweet.slice(0, 80)}..."`);
+    // 会議セッション作成
+    const title = `【3者投稿会議】${celebrity} / ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
+    const session = await createMeetingSession(title);
 
-  // ── Phase 3: 投稿可否チェック ────────────────────────────────────────────
-  const abWeek = getABTestWeek();
-  const todayCount = getTodayPostCount();
-  if (!options?.bypassDailyLimit && abWeek !== 'normal' && todayCount >= 1) {
-    console.log(`[${jst()}] ℹ [投稿会議] ${abWeek}・本日${todayCount}件投稿済み → 投稿スキップ`);
-    setLastPostMeetingResult({
-      celebrity, actress, title: item.title ?? '',
-      generatedAt: new Date().toISOString(),
-      step1Grok: grokRefs, step2GPT: gptAnalysis,
-      step3Claude: finalTweet, finalTweet, introReply,
-      meetingId: session.id,
-    });
-    await contact.systemAlert(
-      '🎙 3者投稿会議完了（投稿スキップ）',
-      `${abWeek}制限中のため投稿はスキップ（会議は完了）。\n\nClaude確定ツイート: ${finalTweet}\n\n次回W3以降またはbypassモードで投稿。`,
-    );
-    return { meetingId: session.id, directive: finalTweet, posted: false, reason: `${abWeek}制限・本日${todayCount}件投稿済み` };
-  }
+    // ── Phase 2: 3者順次会議（Grok→GPT→Claude）────────────────────────────
+    console.log(`[${jst()}] 💬 [投稿会議] Phase 2: Grok→GPT→Claude 3者会議開始...`);
+    let meetingResult: { grokRefs: string; gptAnalysis: string; finalTweet: string; introReply: string };
+    try {
+      meetingResult = await runThreeAIPostMeeting(celebrity, item, session.id, mapping.hooks);
+    } catch (e: any) {
+      console.error(`[${jst()}] ❌ [投稿会議] 3者会議エラー: ${e.message}`);
+      return { meetingId: session.id, posted: false, reason: `3者会議エラー: ${e.message}` };
+    }
 
-  // ── Phase 4: X投稿（芸能人3連フォーマット）──────────────────────────────
-  const tweetText = finalTweet;
-  console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿 → "${tweetText.slice(0, 60)}..."`);
-  try {
-    // ① メインツイート（サンプル画像付き）
-    const imageUrls = getSampleImages(item);
-    const mediaIds = await uploadImages(imageUrls);
-    const tweetId = await postTweet(tweetText, mediaIds);
+    const { finalTweet, introReply, grokRefs, gptAnalysis } = meetingResult;
+    if (!finalTweet || finalTweet.length < 5) {
+      console.error(`[${jst()}] ❌ [投稿会議] Claudeのツイート本文が空`);
+      return { meetingId: session.id, posted: false, reason: 'Claude生成ツイートが空' };
+    }
+    console.log(`\n[${jst()}] 📝 [投稿会議] Claude確定ツイート: "${finalTweet.slice(0, 80)}..."`);
 
-    // ② リプライ①: 女優紹介（30〜90秒後）
-    const waitMs = (30 + Math.floor(Math.random() * 60)) * 1000;
-    await new Promise(r => setTimeout(r, waitMs));
-    const finalIntroReply = introReply || `👤 ${actress}\n🎬「${item.title?.slice(0, 30)}」\n⭐${item.review?.average ?? '4.5'}点（${item.review?.count ?? 0}件）\n🔗次のリプにリンクあります`;
-    const introReplyId = await replyToTweet(tweetId, finalIntroReply);
+    // ── Phase 3: 投稿可否チェック ────────────────────────────────────────────
+    const abWeek = getABTestWeek();
+    const todayCount = getTodayPostCount();
+    if (!options?.bypassDailyLimit && abWeek !== 'normal' && todayCount >= 1) {
+      console.log(`[${jst()}] ℹ [投稿会議] ${abWeek}・本日${todayCount}件投稿済み → 投稿スキップ`);
+      setLastPostMeetingResult({
+        celebrity, actress, title: item.title ?? '',
+        generatedAt: new Date().toISOString(),
+        step1Grok: grokRefs, step2GPT: gptAnalysis,
+        step3Claude: finalTweet, finalTweet, introReply,
+        meetingId: session.id,
+      });
+      await contact.systemAlert(
+        '🎙 3者投稿会議完了（投稿スキップ）',
+        `${abWeek}制限中のため投稿はスキップ（会議は完了）。\n\nClaude確定ツイート: ${finalTweet}\n\n次回W3以降またはbypassモードで投稿。`,
+      );
+      return { meetingId: session.id, directive: finalTweet, posted: false, reason: `${abWeek}制限・本日${todayCount}件投稿済み` };
+    }
 
-    // ③ リプライ②: アフィリエイトリンク（20〜60秒後）
-    await new Promise(r => setTimeout(r, (20 + Math.floor(Math.random() * 40)) * 1000));
-    const reviewAvg2 = parseFloat(item.review?.average ?? '0');
-    const reviewCount2 = item.review?.count ?? 0;
-    const isHighScore2 = reviewAvg2 >= 4.3 && reviewCount2 >= 25;
-    const affiliateURL = await resolveShortUrl(
-      item.affiliateURL ?? '',
-      isHighScore2 ? (item.content_id ?? item.id) : undefined,
-      isHighScore2 ? item.title : undefined,
-    );
-    await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+    // ── Phase 4: X投稿（芸能人3連フォーマット）──────────────────────────────
+    const tweetText = finalTweet;
+    console.log(`\n[${jst()}] 🚀 [投稿会議] Phase 4: X投稿 → "${tweetText.slice(0, 60)}..."`);
+    try {
+      // ① メインツイート（サンプル画像付き）
+      const imageUrls = getSampleImages(item);
+      const mediaIds = await uploadImages(imageUrls);
+      const tweetId = await postTweet(tweetText, mediaIds);
 
-    // 記録
-    recordPost({ tweetId, replyId: introReplyId, item, text: tweetText, type: 'celebrity' });
+      // ② リプライ①: 女優紹介（30〜90秒後）
+      const waitMs = (30 + Math.floor(Math.random() * 60)) * 1000;
+      await new Promise(r => setTimeout(r, waitMs));
+      const finalIntroReply = introReply || `👤 ${actress}\n🎬「${item.title?.slice(0, 30)}」\n⭐${item.review?.average ?? '4.5'}点（${item.review?.count ?? 0}件）\n🔗次のリプにリンクあります`;
+      const introReplyId = await replyToTweet(tweetId, finalIntroReply);
 
-    // 投稿会議結果を保存
-    setLastPostMeetingResult({
-      celebrity, actress, title: item.title ?? '',
-      generatedAt: new Date().toISOString(),
-      step1Grok: grokRefs, step2GPT: gptAnalysis,
-      step3Claude: tweetText, finalTweet: tweetText,
-      introReply: finalIntroReply, tweetId, meetingId: session.id,
-    });
+      // ③ リプライ②: アフィリエイトリンク（20〜60秒後）
+      await new Promise(r => setTimeout(r, (20 + Math.floor(Math.random() * 40)) * 1000));
+      const reviewAvg2 = parseFloat(item.review?.average ?? '0');
+      const reviewCount2 = item.review?.count ?? 0;
+      const isHighScore2 = reviewAvg2 >= 4.3 && reviewCount2 >= 25;
+      const affiliateURL = await resolveShortUrl(
+        item.affiliateURL ?? '',
+        isHighScore2 ? (item.content_id ?? item.id) : undefined,
+        isHighScore2 ? item.title : undefined,
+      );
+      await replyToTweet(introReplyId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
-    console.log(`\n[${jst()}] 🏁 [投稿会議] Phase 4完了！ tweetId: ${tweetId}`);
-    await contact.systemAlert(
-      `🏁 3者投稿会議→投稿完了`,
-      `Grok(参考)→GPT(分析)→Claude(生成) フルサイクル完了。\n\n📝 メインツイート:\n${tweetText}\n\n🔗 tweetId: ${tweetId}`,
-    );
-    return { meetingId: session.id, directive: tweetText, tweetText, tweetId, posted: true };
-  } catch (e: any) {
-    console.error(`[${jst()}] ❌ [投稿会議] 投稿エラー: ${e.message}`);
-    return { meetingId: session.id, directive: tweetText, tweetText, posted: false, reason: `投稿エラー: ${e.message}` };
+      // 記録
+      recordPost({ tweetId, replyId: introReplyId, item, text: tweetText, type: 'celebrity' });
+
+      // 投稿会議結果を保存
+      setLastPostMeetingResult({
+        celebrity, actress, title: item.title ?? '',
+        generatedAt: new Date().toISOString(),
+        step1Grok: grokRefs, step2GPT: gptAnalysis,
+        step3Claude: tweetText, finalTweet: tweetText,
+        introReply: finalIntroReply, tweetId, meetingId: session.id,
+      });
+
+      console.log(`\n[${jst()}] 🏁 [投稿会議] Phase 4完了！ tweetId: ${tweetId}`);
+      await contact.systemAlert(
+        `🏁 3者投稿会議→投稿完了`,
+        `Grok(参考)→GPT(分析)→Claude(生成) フルサイクル完了。\n\n📝 メインツイート:\n${tweetText}\n\n🔗 tweetId: ${tweetId}`,
+      );
+      return { meetingId: session.id, directive: tweetText, tweetText, tweetId, posted: true };
+    } catch (e: any) {
+      console.error(`[${jst()}] ❌ [投稿会議] 投稿エラー: ${e.message}`);
+      return { meetingId: session.id, directive: tweetText, tweetText, posted: false, reason: `投稿エラー: ${e.message}` };
+    }
+  } finally {
+    _isMeetingRunning = false;
   }
 }
 
