@@ -78,8 +78,32 @@ const IMPRESSION_TEMPLATES: string[] = [
   '🔞正直に言います\n\n好きな人が他の誰かと\n楽しそうにしてるのを見ると\n胸がざわつく\n\nこれ、わかる人いますか？',
 ];
 
-export function generateImpressionTweet(): string {
-  return IMPRESSION_TEMPLATES[Math.floor(Math.random() * IMPRESSION_TEMPLATES.length)];
+// ─── グローバルリーチ A/Bテスト（W2〜）────────────────────────────────────
+// X自動翻訳（Grok）により日本語ポストが海外TLに推薦表示される機能を活用。
+// バリアントB: インプ投稿末尾に英語タグを追加し、海外いいね→アカウント評価UPを狙う。
+// バリアントA: 従来通りの純日本語（コントロール）
+//
+// 使用タグ選定理由:
+//   #LateNightThoughts … 深夜共感系の投稿と相性◎ / 海外でエンゲージ率が高いタグ
+//   #Japanese          … Japaneseコンテンツファンへのリーチ
+//   #Love              … 恋愛・感情系テンプレートの内容と一致
+
+const GLOBAL_REACH_TAG_SETS: string[] = [
+  '#LateNightThoughts #Japanese #Love',
+  '#LateNight #Japanese #Relatable',
+  '#NightThoughts #Japanese #Love',
+  '#Feelings #Japanese #LateNightThoughts',
+];
+
+/** インプ狙い投稿を生成する
+ * @param globalReach true のとき英語タグ付きバリアントB（W2以降のA/Bテスト用）
+ * @returns { text, variant } variant は 'A'（日本語のみ）or 'B'（英語タグ付き）
+ */
+export function generateImpressionTweet(globalReach = false): { text: string; variant: 'A' | 'B' } {
+  const base = IMPRESSION_TEMPLATES[Math.floor(Math.random() * IMPRESSION_TEMPLATES.length)];
+  if (!globalReach) return { text: base, variant: 'A' };
+  const tags = GLOBAL_REACH_TAG_SETS[Math.floor(Math.random() * GLOBAL_REACH_TAG_SETS.length)];
+  return { text: `${base}\n\n${tags}`, variant: 'B' };
 }
 
 // ─── 5型コンテンツトラッカー ─────────────────────────────────────────────────

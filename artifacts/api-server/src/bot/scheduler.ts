@@ -210,11 +210,20 @@ async function postImpressionSlot(label: string) {
   try {
     const jst = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
     console.log(`\n[${jst}] ${label} インプ狙い投稿開始`);
-    const text = generateImpressionTweet();
+
+    // グローバルリーチ A/Bテスト: W2（4/14〜）から50%でバリアントBを使用
+    const week = getABTestWeek();
+    const globalReach = (week !== 'W1') && (Math.random() < 0.5);
+    const { text, variant } = generateImpressionTweet(globalReach);
+    if (globalReach) {
+      console.log(`  🌏 [グローバルリーチ] バリアントB（英語タグ付き）を使用`);
+    }
+
     const tweetId = await postTweet(text, []);
-    // ① 投稿記録（item なし: アフィリリンクなしの純粋な会話投稿）
-    recordPost({ tweetId, replyId: '', text, type: 'impression' });
-    console.log(`  ✅ [${label}] インプ狙い投稿完了 (${tweetId})`);
+    // 投稿記録: バリアントをcontentTypeに付与して効果測定可能にする
+    const contentType = globalReach ? 'impression-global' : 'impression';
+    recordPost({ tweetId, replyId: '', text, type: contentType });
+    console.log(`  ✅ [${label}] インプ狙い投稿完了 variant:${variant} (${tweetId})`);
   } catch (e: any) {
     console.error(`  ❌ [${label}] エラー: ${e.message}`);
     await contact.postingFailed(label, e.message);
