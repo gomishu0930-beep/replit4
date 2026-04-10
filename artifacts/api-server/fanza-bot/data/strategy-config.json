@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 198,
-    "avgNewPatterns": 191.37931049937995,
-    "totalCycles": 193
+    "lastNewPatterns": 197,
+    "avgNewPatterns": 194.24586214469616,
+    "totalCycles": 195
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 1h）は最適か？",
       "status": "confirmed",
-      "finding": "193サイクル実績 / 平均新規パターン 191.4件/サイクル",
+      "finding": "195サイクル実績 / 平均新規パターン 194.2件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-10T12:49:18.473Z"
+      "testedAt": "2026-04-10T13:09:39.971Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-10T12:49:18.473Z"
+      "testedAt": "2026-04-10T13:09:40.171Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-10T12:49:18.473Z"
+      "testedAt": "2026-04-10T13:09:40.171Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-10T13:09:40.171Z",
+      "cycle": 195,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-10T12:58:11.598Z",
+      "cycle": 194,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-10T12:49:18.473Z",
       "cycle": 193,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-08T03:45:46.600Z",
-      "cycle": 146,
-      "decisions": [
-        "監視間隔を 2h → 1h に短縮（平均新規パターン 93.1件/サイクル）"
-      ]
-    },
-    {
-      "at": "2026-04-08T03:22:58.842Z",
-      "cycle": 145,
-      "decisions": [
-        "監視間隔を 3h → 2h に短縮（平均新規パターン 60.2件/サイクル）"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-10T12:49:18.473Z",
-  "version": 196,
+  "lastEvaluatedAt": "2026-04-10T13:09:40.171Z",
+  "version": 198,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
