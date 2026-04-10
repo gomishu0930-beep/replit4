@@ -30,7 +30,7 @@ import {
   pushMessageToSession,
 } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
-import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, recordPost, resetBotData, setLastPostMeetingResult } from './storage.js';
+import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, getAllPosts, getRebrandlyData, recordPost, resetBotData, setLastPostMeetingResult } from './storage.js';
 import { getStrategySummary, getImagePolicy } from './strategy.js';
 import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing, getViralAVPostExamples } from './grok.js';
@@ -211,6 +211,42 @@ async function buildWeeklyAgenda(): Promise<string> {
 
   const strategyStr = `監視間隔${strategyObj.monitorIntervalHours}h / 仮説${(strategyObj.hypotheses ?? []).length}件`;
 
+  // ── Rebrandly クリック集計 ──────────────────────────────────────────────────
+  const rebrandly = getRebrandlyData();
+  let rebrandlyAgendaSection = '  データなし（/trigger/metrics 実行で更新）';
+  if (rebrandly.links.length > 0) {
+    const totalClicks = rebrandly.links.reduce((s: number, l: any) => s + l.clicks, 0);
+    const topLinks = [...rebrandly.links]
+      .sort((a: any, b: any) => b.clicks - a.clicks)
+      .slice(0, 5)
+      .map((l: any) => `  - ${l.clicks}クリック | ${l.title.slice(0, 40)}`)
+      .join('\n');
+    rebrandlyAgendaSection = `  合計: ${totalClicks}クリック (${rebrandly.links.length}リンク)\n${topLinks}`;
+  }
+
+  // ── 時間帯別エンゲージメント（JST・全投稿集計）────────────────────────────
+  let hourlyAgendaSection = '  計測済み投稿なし';
+  const allPosts = getAllPosts();
+  const postsWithM = allPosts.filter((p: any) => p.metrics);
+  if (postsWithM.length > 0) {
+    const buckets: Record<number, { count: number; sumImp: number; sumScore: number }> = {};
+    for (const p of postsWithM) {
+      const h = (new Date(p.postedAt).getUTCHours() + 9) % 24;
+      if (!buckets[h]) buckets[h] = { count: 0, sumImp: 0, sumScore: 0 };
+      const m = p.metrics;
+      const score = (m.like_count || 0) + (m.retweet_count || 0) * 3 + (m.bookmark_count || 0) * 2;
+      buckets[h].count++;
+      buckets[h].sumImp   += m.impression_count || 0;
+      buckets[h].sumScore += score;
+    }
+    const sorted = Object.entries(buckets)
+      .map(([h, v]) => ({ hour: Number(h), count: v.count, avgImp: Math.round(v.sumImp / v.count), avgScore: Math.round(v.sumScore / v.count * 10) / 10 }))
+      .sort((a, b) => b.avgScore - a.avgScore);
+    hourlyAgendaSection = sorted
+      .map(r => `  ${String(r.hour).padStart(2, '0')}:00 JST | n=${r.count} | 平均インプ:${r.avgImp} | スコア:${r.avgScore}`)
+      .join('\n');
+  }
+
   // ── Phase 2: Xリアルタイム情報（Grokが取得）──────────────────────────────
   console.log('  🦅 [週次会議] GrokでXリアルタイムデータ取得中...');
   let grokContext = '';
@@ -240,6 +276,12 @@ async function buildWeeklyAgenda(): Promise<string> {
 - 累計投稿数: ${stats.totalPosts}件 / 累計いいね: ${stats.totalLikes}件
 - 戦略: ${strategyStr}
 ${sheetsAccountSection}
+
+### Rebrandlyクリック（FANZAアフィリリンク実績）
+${rebrandlyAgendaSection}
+
+### 時間帯別エンゲージメント（JST・スコア順・全期間集計）
+${hourlyAgendaSection}
 
 ### 先週の投稿一覧（GCS内部記録）
 ${postSummary}

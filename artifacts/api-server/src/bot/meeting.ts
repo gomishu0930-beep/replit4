@@ -14,7 +14,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { queryGrok } from './grok.js';
 import { readJson, writeJson } from './cloudStore.js';
-import { getAllPosts, getStats, getExternalPatternsInfo, getDailyImpressionSnapshots, getObservations } from './storage.js';
+import { getAllPosts, getStats, getExternalPatternsInfo, getDailyImpressionSnapshots, getObservations, getRebrandlyData } from './storage.js';
 import { getStrategySummary } from './strategy.js';
 
 // ─── クライアント初期化 ──────────────────────────────────────────────────────
@@ -132,6 +132,7 @@ export function buildBotContext(): string {
   const snapshots = getDailyImpressionSnapshots(14);
   const observations = getObservations().slice(-10);
   const activeDirectives = cache.directives.filter((d) => d.status === 'active');
+  const rebrandly = getRebrandlyData();
 
   const recentPosts = posts.slice(-20).reverse().map((p) => {
     const m = p.metrics;
@@ -186,6 +187,50 @@ export function buildBotContext(): string {
   const now = new Date();
   const weekStr = now >= new Date('2026-04-14') ? 'W2(05:00枠)実施中' : 'W1(10:30枠)実施中';
 
+  // ── Rebrandly クリック集計 ──────────────────────────────────────────────────
+  let rebrandlySection = '  データなし';
+  if (rebrandly.links.length > 0) {
+    const totalClicks = rebrandly.links.reduce((s, l) => s + l.clicks, 0);
+    const topLinks = [...rebrandly.links]
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 5)
+      .map(l => `  - ${l.clicks}クリック | ${l.title.slice(0, 40)} | rebrand.ly/${l.slashtag}`)
+      .join('\n');
+    const syncedAt = rebrandly.lastSyncedAt
+      ? new Date(new Date(rebrandly.lastSyncedAt).getTime() + 9 * 3600000).toLocaleString('ja-JP')
+      : '不明';
+    rebrandlySection = `  合計: ${totalClicks}クリック (${rebrandly.links.length}リンク) / 最終同期: ${syncedAt}\n${topLinks}`;
+  }
+
+  // ── 時間帯別エンゲージメント（JST・全投稿集計）────────────────────────────
+  let hourlySection = '  計測済み投稿なし';
+  const postsWithMetrics = posts.filter(p => p.metrics);
+  if (postsWithMetrics.length > 0) {
+    const hourBuckets: Record<number, { count: number; sumImp: number; sumLikes: number; sumScore: number }> = {};
+    for (const p of postsWithMetrics) {
+      const jstHour = (new Date(p.postedAt).getUTCHours() + 9) % 24;
+      if (!hourBuckets[jstHour]) hourBuckets[jstHour] = { count: 0, sumImp: 0, sumLikes: 0, sumScore: 0 };
+      const m = p.metrics!;
+      const score = (m.like_count || 0) + (m.retweet_count || 0) * 3 + (m.bookmark_count || 0) * 2 + (m.reply_count || 0);
+      hourBuckets[jstHour].count++;
+      hourBuckets[jstHour].sumImp   += m.impression_count || 0;
+      hourBuckets[jstHour].sumLikes += m.like_count || 0;
+      hourBuckets[jstHour].sumScore += score;
+    }
+    const sorted = Object.entries(hourBuckets)
+      .map(([h, v]) => ({
+        hour: Number(h),
+        count: v.count,
+        avgImp:   Math.round(v.sumImp   / v.count),
+        avgLikes: Math.round(v.sumLikes / v.count * 10) / 10,
+        avgScore: Math.round(v.sumScore / v.count * 10) / 10,
+      }))
+      .sort((a, b) => b.avgScore - a.avgScore);
+    hourlySection = sorted.map(r =>
+      `  ${String(r.hour).padStart(2, '0')}:00 JST | n=${r.count} | インプ${r.avgImp} | ❤${r.avgLikes} | スコア:${r.avgScore}`
+    ).join('\n');
+  }
+
   return `## ボット現状（${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}）
 
 ### アカウント
@@ -198,6 +243,12 @@ ${snapshotSummary}
 
 ### 直近20件の投稿
 ${recentPosts || '  データなし'}
+
+### Rebrandlyクリック（FANZAアフィリリンク実績）
+${rebrandlySection}
+
+### 時間帯別エンゲージメント（JST・スコア順）
+${hourlySection}
 
 ### 外部パターン高スコアTOP5
 ${topExt}
