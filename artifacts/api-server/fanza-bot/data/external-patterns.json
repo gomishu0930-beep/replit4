@@ -1058,7 +1058,7 @@
       "retweet_count": 0,
       "reply_count": 1,
       "bookmark_count": 14,
-      "impression_count": 1156,
+      "impression_count": 1234,
       "createdAt": "2026-04-10T14:20:03.000Z",
       "tweetId": "2042608551919747441",
       "score": 39,
@@ -1501,7 +1501,7 @@
       "savedAt": "2026-04-09T07:24:00.952Z"
     }
   ],
-  "lastRefreshedAt": "2026-04-10T15:44:36.163Z",
+  "lastRefreshedAt": "2026-04-10T15:53:13.885Z",
   "queries": [
     "#FANZA",
     "#DMM",
