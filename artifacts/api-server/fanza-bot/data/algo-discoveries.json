@@ -1,4 +1,77 @@
 {
-  "discoveries": [],
-  "lastSearchAt": null
+  "discoveries": [
+    {
+      "id": "discovery-grok-1775787106034-695p",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "RT重み低下、いいね安定",
+      "detail": "2025年末、RTのエンゲージメント重み20%減。いいねは安定維持でアルゴバランス調整。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "likely",
+      "category": "scoring",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    },
+    {
+      "id": "discovery-grok-1775787106034-fcev",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "センシティブ：非フォロワー非表示",
+      "detail": "2026年予定、センシティブ設定投稿が非フォロワーにデフォルト非表示。ラベルでオプトアウト可能。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "rumored",
+      "category": "nsfw",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    },
+    {
+      "id": "discovery-grok-1775787106034-xf57",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "インプレッション：オリジナル優先",
+      "detail": "2025年、オリジナル投稿のインプレッション倍増。RT中心アカウントのリーチ30%減の新ルール適用。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "confirmed",
+      "category": "scoring",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    },
+    {
+      "id": "discovery-grok-1775787106034-wtti",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "シャドウバン：スパムリプライ3回超",
+      "detail": "最新ルール：同一トピックリプライ3回以上で24h visibility filter。2026年Q1にAI判定精度向上予定。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "confirmed",
+      "category": "nsfw",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    },
+    {
+      "id": "discovery-grok-1775787106034-jm60",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "NSFWコンテンツ自動ラベル必須",
+      "detail": "2025年後半、未ラベルNSFW投稿のリーチ50%減。AI検知強化で自動適用、違反繰り返しでシャドウバン。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "likely",
+      "category": "nsfw",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    },
+    {
+      "id": "discovery-grok-1775787106034-0yif",
+      "discoveredAt": "2026-04-10T02:11:46.034Z",
+      "title": "リプライ重み付けトップ（2025更新）",
+      "detail": "2025年Q1、アルゴリズムでリプライの重みがRTの2倍、いいねの4倍に強化。インプレッション20%向上。",
+      "sourceUrl": "",
+      "sourceDesc": "Grok 4.1 Fast（Xリアルタイムデータ）",
+      "confidence": "confirmed",
+      "category": "scoring",
+      "status": "pending",
+      "searchQuery": "Grok X direct search"
+    }
+  ],
+  "lastSearchAt": "2026-04-10T02:11:50.207Z"
 }
