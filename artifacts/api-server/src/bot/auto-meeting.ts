@@ -40,6 +40,7 @@ import { makeAnthropicClient, buildCelebrityPostContext, generateCelebrityIntroR
 import { pickCelebrity, pickRandom, getCelebrityLikeItems } from './celebrity.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { getSampleImages } from './fanza.js';
+import { readPostLog, readDecisionLog, isSheetsConfigured } from './sheets-writer.js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -90,6 +91,39 @@ async function buildWeeklyAgenda(): Promise<string> {
   const strategyObj = getStrategySummary();
   const latestInsight = getLatestAlgoInsight();
   const abWeek = getABTestWeek();
+
+  // ── Google Sheets データ読み込み ──────────────────────────────────────────
+  let sheetsPostLogSection = '';
+  let sheetsDecisionLogSection = '';
+  if (isSheetsConfigured()) {
+    console.log('  📊 [週次会議] Google Sheetsからデータ読み込み中...');
+    try {
+      const [sheetsPosts, sheetsDecisions] = await Promise.all([
+        readPostLog(14),
+        readDecisionLog(10),
+      ]);
+
+      if (sheetsPosts.length > 0) {
+        const rows = sheetsPosts.map(p => {
+          const imp  = p.impressions > 0 ? p.impressions : '未計測';
+          const clk  = p.clicks > 0 ? `クリック:${p.clicks}` : '';
+          return `  - [${p.postType || '不明'}] ${p.postedAt.slice(0, 10)} | 芸能人:${p.celebrity || '-'} | インプ:${imp} | ❤${p.likes} RT:${p.retweets} ${clk} | 「${p.tweetText.slice(0, 50)}」`;
+        }).join('\n');
+        sheetsPostLogSection = `\n### 📊 Sheetsデータ: 直近PostLog（実績）\n${rows}`;
+        console.log(`  ✅ [週次会議] PostLog ${sheetsPosts.length}件 読み込み完了`);
+      }
+
+      if (sheetsDecisions.length > 0) {
+        const rows = sheetsDecisions.map(d =>
+          `  - [${d.priority}/${d.executionType}] ${d.decidedAt.slice(0, 10)} | ${d.text.slice(0, 70)} → ${d.result ? d.result.slice(0, 40) : '結果未記録'}`
+        ).join('\n');
+        sheetsDecisionLogSection = `\n### 📋 Sheetsデータ: 直近DecisionLog（実施状況）\n${rows}`;
+        console.log(`  ✅ [週次会議] DecisionLog ${sheetsDecisions.length}件 読み込み完了`);
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ [週次会議] Sheets読み込み失敗 (スキップ):', e.message);
+    }
+  }
 
   // ── Phase 1: 先週の投稿一覧 ──────────────────────────────────────────────
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600000);
@@ -146,11 +180,14 @@ async function buildWeeklyAgenda(): Promise<string> {
 ### 先週の投稿一覧（実績つき）
 ${postSummary}
 ${algoCtx}
+${sheetsPostLogSection}
+${sheetsDecisionLogSection}
 
 **全員がまずPhase 1を分析し、以下を明確にすること:**
 1. 最もインプが高かった投稿 — タイプ・時間帯・テキストパターンの共通点は？
 2. 最もインプが低かった投稿 — 失敗要因は何か？
-3. 先週の施策決定事項は実施されたか？未実施のものはなぜか？
+3. 先週の施策決定事項は実施されたか？未実施のものはなぜか？（↑DecisionLogも参照）
+4. Sheetsの実績数値（いいね/RT/インプ/クリック）から読み取れる傾向は？
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## Phase 2: 現在のXの状況（Grokが以下をリアルタイムで報告）

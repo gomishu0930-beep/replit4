@@ -222,3 +222,96 @@ export async function initSheetHeaders(): Promise<void> {
 export function isSheetsConfigured(): boolean {
   return Boolean(SA_JSON && SHEET_ID);
 }
+
+// ─── PostLog を読み込む（会議コンテキスト用） ───────────────────────────────────
+
+export interface PostLogRow {
+  postedAt: string;
+  celebrity: string;
+  itemTitle: string;
+  tweetText: string;
+  tweetId: string;
+  likes: number;
+  retweets: number;
+  impressions: number;
+  clicks: number;
+  postType: string;
+}
+
+export async function readPostLog(limit = 20): Promise<PostLogRow[]> {
+  if (!SA_JSON || !SHEET_ID) return [];
+
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'PostLog!A:J',
+    });
+
+    const rows = resp.data.values ?? [];
+    // 1行目がヘッダーの場合はスキップ
+    const dataRows = rows.length > 1 && rows[0][0] === '日時(JST)' ? rows.slice(1) : rows;
+
+    return dataRows
+      .slice(-limit)
+      .reverse()
+      .map((r) => ({
+        postedAt:    r[0] ?? '',
+        celebrity:   r[1] ?? '',
+        itemTitle:   r[2] ?? '',
+        tweetText:   r[3] ?? '',
+        tweetId:     r[4] ?? '',
+        likes:       Number(r[5]) || 0,
+        retweets:    Number(r[6]) || 0,
+        impressions: Number(r[7]) || 0,
+        clicks:      Number(r[8]) || 0,
+        postType:    r[9] ?? '',
+      }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] PostLog読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
+
+// ─── DecisionLog を読み込む（会議コンテキスト用） ──────────────────────────────
+
+export interface DecisionLogRow {
+  decidedAt: string;
+  source: string;
+  text: string;
+  category: string;
+  priority: string;
+  executionType: string;
+  result: string;
+}
+
+export async function readDecisionLog(limit = 15): Promise<DecisionLogRow[]> {
+  if (!SA_JSON || !SHEET_ID) return [];
+
+  try {
+    const sheets = getSheetsClient();
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: 'DecisionLog!A:G',
+    });
+
+    const rows = resp.data.values ?? [];
+    const dataRows = rows.length > 1 && rows[0][0] === '日時(JST)' ? rows.slice(1) : rows;
+
+    return dataRows
+      .slice(-limit)
+      .reverse()
+      .map((r) => ({
+        decidedAt:     r[0] ?? '',
+        source:        r[1] ?? '',
+        text:          r[2] ?? '',
+        category:      r[3] ?? '',
+        priority:      r[4] ?? '',
+        executionType: r[5] ?? '',
+        result:        r[6] ?? '',
+      }));
+  } catch (e: any) {
+    console.warn(`  ⚠ [Sheets] DecisionLog読み込み失敗: ${e.message}`);
+    return [];
+  }
+}
