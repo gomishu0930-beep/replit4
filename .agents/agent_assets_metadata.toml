@@ -1,8 +1,19 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "VSd3aauJBSuJUBNs5pYyi"
+uri = "file://attached_assets/nostalgic_girl.png"
+type = "image"
+title = "nostalgic cute girl portrait"
 
 [[outputs]]
 id = "wfdAwBpJndMb9jPTDjCBd"
 uri = "file://fanza-bot.tar.gz"
 type = "unspecified"
 title = "fanza-bot（圧縮ファイル）"
+
+[[outputs]]
+id = "6b7U41we90qNjOJqqsmFP"
+uri = "file://attached_assets/nostalgic_girl.png"
+type = "image"
+title = "投稿用画像（現実路線・思い出感）"
