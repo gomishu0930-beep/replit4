@@ -194,7 +194,7 @@ export function buildBotContext(): string {
     const topLinks = [...rebrandly.links]
       .sort((a, b) => b.clicks - a.clicks)
       .slice(0, 5)
-      .map(l => `  - ${l.clicks}クリック | ${l.title.slice(0, 40)} | rebrand.ly/${l.slashtag}`)
+      .map(l => `  - ${l.clicks}クリック | ${(l.title ?? l.slashtag ?? '').slice(0, 40)} | rebrand.ly/${l.slashtag}`)
       .join('\n');
     const syncedAt = rebrandly.lastSyncedAt
       ? new Date(new Date(rebrandly.lastSyncedAt).getTime() + 9 * 3600000).toLocaleString('ja-JP')

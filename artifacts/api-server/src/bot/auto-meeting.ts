@@ -127,7 +127,7 @@ async function buildWeeklyAgenda(): Promise<string> {
         const rows = sheetsPosts.map(p => {
           const imp = p.impressions > 0 ? p.impressions : '未計測';
           const clk = p.clicks > 0 ? ` クリック:${p.clicks}` : '';
-          return `  - [${p.postType || '-'}] ${p.postedAt.slice(0, 10)} | ${p.celebrity || '-'} | インプ:${imp} | ❤${p.likes} RT:${p.retweets}${clk} | 「${p.tweetText.slice(0, 50)}」`;
+          return `  - [${p.postType || '-'}] ${(p.postedAt ?? '').slice(0, 10)} | ${p.celebrity || '-'} | インプ:${imp} | ❤${p.likes} RT:${p.retweets}${clk} | 「${(p.tweetText ?? '').slice(0, 50)}」`;
         }).join('\n');
         sheetsPostLogSection = `\n### 📊 PostLog（直近${sheetsPosts.length}件・実績つき）\n${rows}`;
         console.log(`  ✅ [週次会議] PostLog ${sheetsPosts.length}件`);
@@ -136,7 +136,7 @@ async function buildWeeklyAgenda(): Promise<string> {
       // DecisionLog
       if (sheetsDecisions.length > 0) {
         const rows = sheetsDecisions.map(d =>
-          `  - [${d.priority}/${d.executionType}] ${d.decidedAt.slice(0, 10)} | ${d.text.slice(0, 70)} → ${d.result ? d.result.slice(0, 40) : '結果未記録'}`
+          `  - [${d.priority}/${d.executionType}] ${(d.decidedAt ?? '').slice(0, 10)} | ${(d.text ?? '').slice(0, 70)} → ${d.result ? d.result.slice(0, 40) : '結果未記録'}`
         ).join('\n');
         sheetsDecisionLogSection = `\n### 📋 DecisionLog（直近${sheetsDecisions.length}件）\n${rows}`;
         console.log(`  ✅ [週次会議] DecisionLog ${sheetsDecisions.length}件`);
@@ -160,7 +160,7 @@ async function buildWeeklyAgenda(): Promise<string> {
       if (sheetsHypo.length > 0) {
         const statusIcon = (s: string) => s === 'confirmed' ? '✅' : s === 'rejected' ? '❌' : s === 'adjusted' ? '🔧' : '⏳';
         const rows = sheetsHypo.map(h =>
-          `  ${statusIcon(h.status)} [${h.id}] ${h.question} → ${h.finding.slice(0, 60) || '未検証'}`
+          `  ${statusIcon(h.status)} [${h.id}] ${h.question} → ${(h.finding ?? '').slice(0, 60) || '未検証'}`
         ).join('\n');
         sheetsHypothesesSection = `\n### 🧪 Hypotheses（仮説 ${sheetsHypo.length}件）\n${rows}`;
         console.log(`  ✅ [週次会議] Hypotheses ${sheetsHypo.length}件`);
@@ -169,7 +169,7 @@ async function buildWeeklyAgenda(): Promise<string> {
       // MeetingLog
       if (sheetsMeetings.length > 0) {
         const rows = sheetsMeetings.map(m =>
-          `  - ${m.runAt.slice(0, 10)} | ${m.title} | 決定${m.totalDecisions}件 (自動実行${m.autoSucceeded}/${m.autoExecuted}件成功)`
+          `  - ${(m.runAt ?? '').slice(0, 10)} | ${m.title} | 決定${m.totalDecisions}件 (自動実行${m.autoSucceeded}/${m.autoExecuted}件成功)`
         ).join('\n');
         sheetsMeetingLogSection = `\n### 🤝 MeetingLog（直近${sheetsMeetings.length}回）\n${rows}`;
         console.log(`  ✅ [週次会議] MeetingLog ${sheetsMeetings.length}件`);
@@ -178,7 +178,7 @@ async function buildWeeklyAgenda(): Promise<string> {
       // AlgoInsights
       if (sheetsAlgo.length > 0) {
         const rows = sheetsAlgo.map(a =>
-          `  - ${a.generatedAt.slice(0, 10)} | n=${a.sampleSize} | ${a.briefingSummary.slice(0, 100)}`
+          `  - ${(a.generatedAt ?? '').slice(0, 10)} | n=${a.sampleSize} | ${(a.briefingSummary ?? '').slice(0, 100)}`
         ).join('\n');
         sheetsAlgoSection = `\n### 🔬 AlgoInsights（直近${sheetsAlgo.length}回）\n${rows}`;
         console.log(`  ✅ [週次会議] AlgoInsights ${sheetsAlgo.length}件`);
@@ -220,7 +220,7 @@ async function buildWeeklyAgenda(): Promise<string> {
     const topLinks = [...rebrandly.links]
       .sort((a: any, b: any) => b.clicks - a.clicks)
       .slice(0, 5)
-      .map((l: any) => `  - ${l.clicks}クリック | ${l.title.slice(0, 40)}`)
+      .map((l: any) => `  - ${l.clicks}クリック | ${(l.title ?? l.slashtag ?? '').slice(0, 40)}`)
       .join('\n');
     rebrandlyAgendaSection = `  合計: ${totalClicks}クリック (${rebrandly.links.length}リンク)\n${topLinks}`;
   }
