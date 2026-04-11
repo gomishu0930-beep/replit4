@@ -361,14 +361,22 @@ function Dashboard() {
       const pendingId = data.session?.id;
       if (!pendingId) throw new Error("リサーチIDが取得できませんでした");
 
-      // Step2: result が埋まるまでポーリング（最大3分 / 5秒間隔）
+      // Step2: completedAt が埋まるまでポーリング（最大3分 / 5秒間隔）
       const maxAttempts = 36;
+      let consecutiveErrors = 0;
       for (let i = 0; i < maxAttempts; i++) {
         await new Promise((r) => setTimeout(r, 5000));
         const pollRes = await fetch(`${API}/api/bot/meeting/researches/${pendingId}`);
-        if (!pollRes.ok) continue;
+        if (!pollRes.ok) {
+          consecutiveErrors++;
+          if (consecutiveErrors >= 3) throw new Error(`ポーリングエラー (${pollRes.status})`);
+          continue;
+        }
+        consecutiveErrors = 0;
         const session = await pollRes.json();
-        if (session?.result && session.result.length > 0) {
+        if (session?.completedAt) {
+          // エラー結果はリサーチエラーとして扱う
+          if (session.result?.startsWith("❌")) throw new Error(session.result.replace(/^❌\s*/, ""));
           setResearchResult(session);
           return;
         }
@@ -400,7 +408,9 @@ function Dashboard() {
   }
 
   async function sendDebateRound() {
-    if (!meetingSession || debateRound >= 5) return;
+    if (!meetingSession || debateRound >= 5 || meetingLoading) return;
+    const sessionId = meetingSession.id;   // stale closure 防止
+    const sessionTitle = meetingSession.title;
     setMeetingLoading(true);
     const nextRound = debateRound + 1;
     setDebateRound(nextRound);
@@ -412,10 +422,10 @@ function Dashboard() {
       const lastClaudeReply = [...msgs].reverse().find(m => m.speaker === "claude")?.content ?? "";
       const lastGrokReply   = [...msgs].reverse().find(m => m.speaker === "grok")?.content   ?? "";
 
-      const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
+      const res = await fetch(`${API}/api/bot/meeting/sessions/${sessionId}/trialogue`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: meetingSession.title,
+          message: sessionTitle,
           round: nextRound,
           lastGptReply,
           lastClaudeReply,
@@ -439,7 +449,7 @@ function Dashboard() {
         setDebateCompleted(true);
         // 決定候補を別エンドポイントで抽出（失敗してもディベート完了は維持）
         try {
-          const extractRes = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/extract-decisions`, { method: "POST" });
+          const extractRes = await fetch(`${API}/api/bot/meeting/sessions/${sessionId}/extract-decisions`, { method: "POST" });
           if (extractRes.ok) {
             const extractData = await extractRes.json();
             const extracted: DecisionCandidate[] = extractData.candidates ?? [];
