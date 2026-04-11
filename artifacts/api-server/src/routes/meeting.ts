@@ -27,7 +27,8 @@ const router = Router();
 router.get('/bot/meeting/researches', (_req, res) => {
   res.json({ researches: getResearches().map((r) => ({
     id: r.id, topic: r.topic,
-    resultPreview: r.result.slice(0, 200) + '...',
+    status: r.completedAt ? 'completed' : 'pending',
+    resultPreview: r.result ? r.result.slice(0, 200) + (r.result.length > 200 ? '…' : '') : '（リサーチ中...）',
     model: r.model, startedAt: r.startedAt, completedAt: r.completedAt,
   })) });
 });

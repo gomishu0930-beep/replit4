@@ -152,15 +152,16 @@ router.post('/trigger/cid', auth, async (req, res) => {
     res.status(429).json({ ok: false, error: '別の投稿が進行中（スケジューラー含む）' });
     return;
   }
-  // A/Bテスト週: 1日1件制限チェック
+  // A/Bテスト週: 芸能人スロット投稿済みかどうかで制限チェック（buzz等はブロックしない）
   const abWeek = getABTestWeek();
   if (abWeek !== 'normal') {
-    const todayCount = getTodayPostCount();
-    if (todayCount >= 1) {
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    const celebPosted = getCelebPostedDate() === todayKey;
+    if (celebPosted) {
       res.status(429).json({
         ok: false,
-        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日すでに${todayCount}件投稿済みです。`,
-        todayCount,
+        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日の芸能人スロットはすでに投稿済みです。`,
+        celebPostedDate: todayKey,
       });
       return;
     }
