@@ -387,7 +387,7 @@ function Dashboard() {
     try {
       const res = await fetch(`${API}/api/bot/meeting/sessions`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ researchId: researchResult.id }),
+        body: JSON.stringify({ title: researchResult.topic, researchId: researchResult.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "会議作成エラー");
