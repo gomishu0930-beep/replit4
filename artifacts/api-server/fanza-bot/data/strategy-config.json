@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 8,
+  "monitorIntervalHours": 9,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 0,
-    "avgNewPatterns": 3.597128306224985,
-    "totalCycles": 234
+    "avgNewPatterns": 1.7625928700502425,
+    "totalCycles": 236
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
-      "status": "confirmed",
-      "finding": "234サイクル実績 / 平均新規パターン 3.6件/サイクル",
-      "adjustment": null,
-      "testedAt": "2026-04-11T10:59:52.855Z"
+      "status": "adjusted",
+      "finding": "236サイクル実績 / 平均新規パターン 1.8件/サイクル",
+      "adjustment": "監視間隔を 8h → 9h に延長（平均新規パターン 1.8件/サイクル）",
+      "testedAt": "2026-04-11T12:10:31.643Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-11T10:59:53.133Z"
+      "testedAt": "2026-04-11T12:10:31.643Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 21時 (avg 1.0) / 最低スロット: 21時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-11T10:59:53.133Z"
+      "testedAt": "2026-04-11T12:10:31.644Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-11T12:10:31.644Z",
+      "cycle": 236,
+      "decisions": [
+        "監視間隔を 8h → 9h に延長（平均新規パターン 1.8件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-11T11:06:49.430Z",
+      "cycle": 235,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-11T10:59:53.133Z",
       "cycle": 234,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-10T05:49:54.106Z",
-      "cycle": 186,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-10T05:21:32.523Z",
-      "cycle": 185,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-11T10:59:53.133Z",
-  "version": 237,
+  "lastEvaluatedAt": "2026-04-11T12:10:31.644Z",
+  "version": 239,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
