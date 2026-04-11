@@ -17,3 +17,33 @@ id = "6b7U41we90qNjOJqqsmFP"
 uri = "file://attached_assets/nostalgic_girl.png"
 type = "image"
 title = "投稿用画像（現実路線・思い出感）"
+
+[[outputs]]
+id = "i3321qA0-4rzUxDQ3TZGA"
+uri = "file://artifacts/api-server/fanza-bot/note-articles/01_top10_review_2026h1.md"
+type = "text"
+title = "【有料¥300】2026上半期 注目TOP10"
+
+[[outputs]]
+id = "t0yj5N8nWe9EdnS_YIq6h"
+uri = "file://artifacts/api-server/fanza-bot/note-articles/02_beginners_guide.md"
+type = "text"
+title = "【無料】FANZA初心者ガイド"
+
+[[outputs]]
+id = "UCaNo4m0GnaZCMSdubE_R"
+uri = "file://artifacts/api-server/fanza-bot/note-articles/03_cospa_ranking.md"
+type = "text"
+title = "【有料¥300】コスパ最強ランキング"
+
+[[outputs]]
+id = "G3erWDeG75JUfDN8rCl-9"
+uri = "file://artifacts/api-server/fanza-bot/note-articles/04_actress_solo.md"
+type = "text"
+title = "【無料】女優・単体おすすめ10選"
+
+[[outputs]]
+id = "ZPsU-lVgnqOIvaccs81jE"
+uri = "file://artifacts/api-server/fanza-bot/note-articles/05_vr_kikaku.md"
+type = "text"
+title = "【無料】VR・企画作品おすすめ10選"
