@@ -41,12 +41,23 @@ router.get('/bot/meeting/researches/:id', (req, res) => {
 router.post('/bot/meeting/research', async (req, res) => {
   const { topic } = req.body ?? {};
   if (!topic?.trim()) { res.status(400).json({ error: 'topic は必須です' }); return; }
-  try {
-    res.json(await runDeepResearch(topic.trim()));
-  } catch (e: any) {
-    console.error('  ❌ Deep Research エラー:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+
+  // ペンディングセッションを即時作成してキャッシュに登録
+  const pendingId = `research-${Date.now()}`;
+  const pendingSession = {
+    id: pendingId, topic: topic.trim(),
+    result: '', model: 'gpt-4o-search-preview',
+    startedAt: new Date().toISOString(), completedAt: '',
+  };
+  getResearches().unshift(pendingSession as any);
+
+  // 202 Accepted を即時返却（タイムアウトを回避）
+  res.status(202).json({ session: pendingSession });
+
+  // バックグラウンドでリサーチ実行（pendingIdを渡して既存エントリを更新）
+  runDeepResearch(topic.trim(), pendingId).catch((e: any) =>
+    console.error('  ❌ Deep Research エラー:', e.message),
+  );
 });
 
 // ─── Meeting Sessions ────────────────────────────────────────────────────────

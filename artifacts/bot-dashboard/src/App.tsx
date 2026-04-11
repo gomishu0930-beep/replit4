@@ -350,13 +350,30 @@ function Dashboard() {
     setMeetingSession(null); setDebateRound(0); setDebateCompleted(false);
     setQaRoundsLeft(2); setCandidates([]); setCumulativeScores({ gpt: 0, claude: 0 });
     try {
+      // Step1: POST でリサーチ開始（即時202が返る）
       const res = await fetch(`${API}/api/bot/meeting/research`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "リサーチエラー");
-      setResearchResult(data.session);
+
+      const pendingId = data.session?.id;
+      if (!pendingId) throw new Error("リサーチIDが取得できませんでした");
+
+      // Step2: result が埋まるまでポーリング（最大3分 / 5秒間隔）
+      const maxAttempts = 36;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const pollRes = await fetch(`${API}/api/bot/meeting/researches/${pendingId}`);
+        if (!pollRes.ok) continue;
+        const session = await pollRes.json();
+        if (session?.result && session.result.length > 0) {
+          setResearchResult(session);
+          return;
+        }
+      }
+      throw new Error("リサーチがタイムアウトしました（3分超過）");
     } catch (e: any) {
       setResearchError(e.message);
     } finally {

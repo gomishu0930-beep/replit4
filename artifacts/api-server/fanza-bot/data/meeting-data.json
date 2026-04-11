@@ -1,6 +1,22 @@
 {
   "researches": [
     {
+      "id": "research-1775888357790",
+      "topic": "テストリサーチ",
+      "result": "「テストリサーチ」という用語は、文脈によってさまざまな意味を持ちます。以下に主な解釈と関連情報を示します。\n\n1. **テストおよびリサーチ（試験・研究）**:\n   - **テストベッド**: JFEテクノリサーチは、土木・建築などの構造物に対する多様な載荷試験を可能とするテストベッドを提供しています。これにより、実際の使用環境を模擬した試験が可能となります。 ([jfe-tec.co.jp](https://www.jfe-tec.co.jp/stru-eval/testbed.html?utm_source=openai))\n   - **ホームユーステスト（HUT）**: GMOリサーチ＆AIは、消費者が自宅で商品を使用し、その体験を基に評価を収集する調査手法を提供しています。これにより、実際の使用状況における製品の受容性や改善点を把握できます。 ([gmo-research.ai](https://gmo-research.ai/service/offline/hut?utm_source=openai))\n\n2. **企業名としての「テストリサーチ」**:\n   - 台湾の企業「徳律科技（Test Research Inc.）」は、自動検査・試験機器の設計・製造を行っています。主にプリント基板の組立や集積回路のパッケージングに使用される製品を提供しています。 ([bloomberg.co.jp](https://www.bloomberg.co.jp/quote/3030%3ATT?utm_source=openai))\n\n3. **ゲームタイトルとしての「リサーチアンドデストロイ」**:\n   - 「RESEARCH and DESTROY」は、ターン制アクションゲームで、プレイヤーが科学者を操作し、新しい武器やガジェットを研究・開発し、超自然的な敵を破壊する内容です。 ([store.steampowered.com](https://store.steampowered.com/app/1279310/RESEARCH_and_DESTROY/?l=japanese&utm_source=openai))\n\n4. **医療分野でのテストとリサーチ**:\n   - ストレート・レッグ・レイズ（SLR）テストは、腰椎神経痛の検出に用いられる診断手法であり、その信頼性に関する研究が行われています。 ([physiotutors.com](https://www.physiotutors.com/ja/research/reliability-of-the-slr/?utm_source=openai))\n\nこれらの情報から、「テストリサーチ」という言葉は、試験・研究の手法、企業名、ゲームタイトル、医療診断法など、多岐にわたる文脈で使用されていることがわかります。 ",
+      "model": "gpt-4o-search-preview-2025-03-11",
+      "startedAt": "2026-04-11T06:19:17.792Z",
+      "completedAt": "2026-04-11T06:19:25.420Z"
+    },
+    {
+      "id": "research-1775888197875",
+      "topic": "テスト",
+      "result": "日本のX（旧Twitter）におけるアフィリエイトマーケティングは、近年急速に進化しています。以下に、最新の動向と戦略を具体的な数字と行動指針を交えてご紹介します。\n\n**1. 市場規模と成長予測**\n\n日本のアフィリエイト市場は、2023年度に4,116億円、2024年度には4,382億円と前年比6.5%増加し、2028年度には5,835億円に達すると予測されています。 ([bluepoint-ca.com](https://www.bluepoint-ca.com/news/nov25/1122?utm_source=openai))\n\n**2. インフルエンサーアフィリエイトの台頭**\n\nインフルエンサーを活用したアフィリエイトが注目を集めています。例えば、AnyMind Groupは2022年11月に成果報酬型インフルエンサーアフィリエイトサービス「AnyTag Affiliate」を提供開始しました。 ([anymindgroup.com](https://anymindgroup.com/ja/news/press-release/anytagaffiliate/?utm_source=openai))\n\n**3. AIとパーソナライゼーションの活用**\n\nAI技術の進化により、ユーザーの行動や嗜好に基づいた広告やコンテンツの最適化が進んでいます。これにより、X上でのアフィリエイト投稿の効果が向上しています。 ([note.com](https://note.com/willaugh/n/nab3ae2e06d97?utm_source=openai))\n\n**4. マルチチャネル戦略の重要性**\n\nXだけでなく、ブログ、YouTube、Instagramなど複数のプラットフォームを組み合わせた戦略が主流となっています。各チャネルに最適化されたコンテンツを提供することで、より高い成果が期待できます。 ([note.com](https://note.com/willaugh/n/nab3ae2e06d97?utm_source=openai))\n\n**5. SEOとコンテンツ品質の向上**\n\nGoogleのアルゴリズム更新により、質の高いコンテンツが求められています。X上での投稿も、ユーザーにとって有益で信頼性の高い情報を提供することが重要です。 ([afi7.xsrv.jp](https://afi7.xsrv.jp/kasegu/2025/?utm_source=openai))\n\n**6. アフィリエイト詐欺への対策強化**\n\n世界的にアフィリエイト詐欺が問題視されており、日本でも対策が強化されています。信頼性の高いプラットフォームやパートナーとの連携が求められます。 ([cheq.ai](https://cheq.ai/ja/blog/the-global-growth-of-affiliate-marketing/?utm_source=openai))\n\n**具体的な行動指針**\n\n- **インフルエンサーとの連携強化**：X上で影響力のあるインフルエンサーと協力し、信頼性の高い情報を発信する。\n\n- **AIツールの導入**：ユーザーの行動分析やコンテンツ最適化のために、AIを活用したツールを導入する。\n\n- **マルチチャネル展開**：Xだけでなく、他のSNSやブログ、動画プラットフォームも活用し、統合的なマーケティング戦略を構築する。\n\n- **コンテンツ品質の向上**：ユーザーにとって有益で信頼性の高い情報を提供し、SEO対策も強化する。\n\n- **詐欺対策の徹底**：信頼性の高いアフィリエイトプラットフォームやパートナーと連携し、不正行為を防止する。\n\nこれらの戦略を実施することで、X上でのアフィリエイトマーケティングの効果を最大化し、持続的な成長を目指すことができます。 ",
+      "model": "gpt-4o-search-preview-2025-03-11",
+      "startedAt": "2026-04-11T06:16:37.875Z",
+      "completedAt": "2026-04-11T06:16:57.529Z"
+    },
+    {
       "id": "research-1775887233527",
       "topic": "xで嘘のような本当の話を投稿したいです。\n\n・アダルトな要素を含む\n・写真1枚→可愛い女の子を生成(現実路線)\n・思い出のように語る",
       "result": "X（旧Twitter）で「嘘のような本当の話」を投稿する際、以下の手順で進めることをおすすめします。\n\n1. **AI画像生成ツールの活用**:\n   リアルな可愛い女の子の画像を生成するために、以下のAIツールを利用できます。\n\n   - **Carat AI**: アニメから実写スタイルまで、多様なモデルで高品質な画像を生成できます。 ([carat.im](https://carat.im/ja/generators/AI-Cute-Girl-Generator?utm_source=openai))\n\n   - **Diffus**: シティポップアートや西洋コミック風など、さまざまなスタイルの画像を提供しています。 ([diffus.me](https://www.diffus.me/ja/gallery/%E3%81%8B%E3%82%8F%E3%81%84%E3%81%84%E5%A5%B3%E3%81%AE%E5%AD%90%E3%81%AE%E3%82%B7%E3%83%86%E3%82%A3%E3%83%9D%E3%83%83%E3%83%97%E3%82%A2%E3%83%BC%E3%83%88?utm_source=openai))\n\n   - **ココナラのサービス**: 実写風の可愛い女の子の画像を生成するサービスもあります。 ([coconala.com](https://coconala.com/services/3759591?utm_source=openai))\n\n2. **プロンプトの工夫**:\n   画像生成時のプロンプト（指示文）を工夫することで、より理想的な画像を得られます。例えば、「小顔で大きな瞳の少女」「滑らかな肌と艶やかな髪の女性」など、具体的な特徴を盛り込むと効果的です。 ([ai-nante.com](https://ai-nante.com/cute-girl-ai-prompt/?utm_source=openai))\n\n3. **ストーリーの構築**:\n   生成した画像に合わせて、思い出話風のストーリーを作成します。例えば、「学生時代、図書館で偶然出会った彼女。彼女の笑顔が忘れられない夏の日だった。」といった具合です。\n\n4. **投稿の工夫**:\n   Xでの投稿時には、以下の点に注意してください。\n\n   - **センシティブな内容の取り扱い**: アダルトな要素を含む場合、Xのガイドラインに違反しないよう注意が必要です。センシティブな内容は適切にマークし、過度な表現は避けましょう。\n\n   - **ハッシュタグの活用**: 投稿のリーチを広げるために、関連するハッシュタグ（例：#思い出話 #AI生成）を活用すると良いでしょう。\n\nこれらの手順を踏むことで、X上で魅力的な「嘘のような本当の話」を投稿できるでしょう。 ",
@@ -143,22 +159,6 @@
       "model": "gpt-4o-search-preview-2025-03-11",
       "startedAt": "2026-04-07T10:12:54.704Z",
       "completedAt": "2026-04-07T10:13:19.408Z"
-    },
-    {
-      "id": "research-1775556510185",
-      "topic": "まずはジャンルを確定します。\n半年で10万円の収益を得れるジャンル\n楽天、Amazonアフィリエイト",
-      "result": "半年で10万円の収益を目指すためには、適切なジャンル選定が重要です。楽天アフィリエイトやAmazonアソシエイトを活用する際、以下のジャンルが特に効果的と考えられます。\n\n**1. 家電・ガジェット**\n\nスマートフォン、イヤホン、ロボット掃除機などの家電やガジェットは、単価が高く、需要も安定しています。これらの商品は、詳細なレビューや比較記事を通じて購買意欲を高めることが可能です。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\n**2. ペット用品**\n\nペットフード、おもちゃ、ケア用品などは、ペットを飼っている家庭での需要が高く、リピート購入も期待できます。愛犬・愛猫の写真を交えたレビュー記事が共感を呼びやすいです。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\n**3. アウトドア・キャンプ用品**\n\nテント、焚き火台、クーラーボックスなどのアウトドア用品は、趣味としての需要が高まりつつあります。実際の使用体験を基にしたレビューが購買意欲を刺激します。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\n**4. 健康食品・サプリメント**\n\n健康志向の高まりにより、サプリメントや健康食品の需要が増加しています。これらの商品は、定期購入が多く、継続的な収益が見込めます。 ([pasobiz.com](https://pasobiz.com/top-10-high-paying-affiliate-niches-2025-guide/?utm_source=openai))\n\n**5. 電子コミック**\n\nスマートフォンの普及に伴い、電子コミックの市場が拡大しています。新規登録や定期購読で高い報酬が設定されている場合が多いです。 ([pasobiz.com](https://pasobiz.com/affiliate-product-ranking-guide-monthly-income-boost/?utm_source=openai))\n\n**6. プログラミングスクール**\n\nIT人材の需要増加に伴い、プログラミングスクールの人気が高まっています。一件あたりの報酬が高く、収益性が高いジャンルです。 ([pasobiz.com](https://pasobiz.com/affiliate-product-ranking-guide-monthly-income-boost/?utm_source=openai))\n\n**7. サブスクリプションサービス**\n\n動画配信サービスや音楽ストリーミングなどのサブスクリプションサービスは、定期的な収益が期待できます。無料体験期間を活用したプロモーションが効果的です。 ([pasobiz.com](https://pasobiz.com/affiliate-product-ranking-guide-monthly-income-boost/?utm_source=openai))\n\n**8. 家具・インテリア**\n\nソファ、デスク、収納グッズなどの家具やインテリア用品は、単価が高く、報酬も大きいです。特に女性向けのSNSとの相性が良く、美容好きの読者を引きつけやすいです。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\n**9. ベビー・キッズ用品**\n\nおむつ、ベビーカー、おもちゃ、子ども服などのベビー・キッズ用品は、子育て中の人が情報を探しているため、検索されやすく、成長に合わせてリピート需要があります。ママ向けの体験談を交えた記事が効果的です。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\n**10. ゲーム・ホビー**\n\nゲームソフト、トレーディングカード、プラモデル、フィギュアなどのゲーム・ホビー関連商品は、新作発売タイミングでアクセスが急増します。マニアックなレビューで差別化を図ることが可能です。 ([note.com](https://note.com/goshq/n/n24e416453e81?utm_source=openai))\n\nこれらのジャンルは、需要が高く、報酬単価も比較的高いため、半年で10万円の収益を目指す際に適しています。自身の興味や知識と照らし合わせて、最適なジャンルを選定してください。 ",
-      "model": "gpt-4o-search-preview-2025-03-11",
-      "startedAt": "2026-04-07T10:08:30.185Z",
-      "completedAt": "2026-04-07T10:08:47.028Z"
-    },
-    {
-      "id": "research-1775556183456",
-      "topic": "スレッターズ、楽天、Amazonアフィリで月10万を達成できるジャンル",
-      "result": "スレッターズ、楽天、Amazonアフィリエイトを活用して月10万円の収益を達成するためには、以下のジャンルが有望と考えられます。\n\n**1. 高単価ジャンル**\n\n- **金融・投資系**：クレジットカード、FX、投資信託などは報酬単価が高く、特別単価も設定されやすい分野です。 ([sougokeiziban.com](https://www.sougokeiziban.com/bannerbridge-1/?utm_source=openai))\n\n- **転職・求人**：転職エージェントや求人サイトの紹介は、1件あたりの報酬が高めです。 ([tasukehub.com](https://tasukehub.com/articles/side-business-blog-conoha-wing?utm_source=openai))\n\n**2. 中単価ジャンル**\n\n- **美容・健康系**：ダイエットサプリやスキンケア商品などは、購買意欲の高い読者が多く、成約率が高い傾向にあります。 ([ameblo.jp](https://ameblo.jp/fukugyo2/entry-12921744514.html?utm_source=openai))\n\n- **エンタメ・サブスク系**：動画配信サービスや音楽ストリーミングサービスの紹介は、報酬単価が中程度で、需要が安定しています。 ([sougokeiziban.com](https://www.sougokeiziban.com/bannerbridge-1/?utm_source=openai))\n\n**3. 物販系ジャンル**\n\n- **ガジェットレビュー**：Amazonや楽天で取り扱われている最新のガジェットや家電製品のレビューは、読者の購買意欲を刺激しやすく、成約につながりやすいです。 ([tasukehub.com](https://tasukehub.com/articles/side-business-blog-conoha-wing?utm_source=openai))\n\n- **書籍紹介**：特定のジャンルや話題の書籍を紹介することで、安定した収益が期待できます。 ([tasukehub.com](https://tasukehub.com/articles/side-business-blog-conoha-wing?utm_source=openai))\n\n**成功のポイント**\n\n- **ジャンル選定**：自分が詳しい、または興味がある分野を選ぶことで、継続的なコンテンツ作成が可能となり、読者の信頼を得やすくなります。 ([tasukehub.com](https://tasukehub.com/articles/side-business-blog-conoha-wing?utm_source=openai))\n\n- **市場規模と競合分析**：選んだジャンルの市場規模が十分であり、競合が強すぎないことを確認することが重要です。 ([tasukehub.com](https://tasukehub.com/articles/side-business-blog-conoha-wing?utm_source=openai))\n\n- **コンテンツの質**：実際に商品を使用した体験談や詳細なレビューを提供することで、読者の信頼を獲得し、成約率を高めることができます。 ([atlas-ai.jp](https://atlas-ai.jp/blog-earn-100k-strategy/?utm_source=openai))\n\nこれらのジャンルとポイントを踏まえ、戦略的に取り組むことで、月10万円の収益達成が現実的となるでしょう。 ",
-      "model": "gpt-4o-search-preview-2025-03-11",
-      "startedAt": "2026-04-07T10:03:03.456Z",
-      "completedAt": "2026-04-07T10:03:22.652Z"
     }
   ],
   "meetings": [
@@ -1078,6 +1078,42 @@
     }
   ],
   "directives": [
+    {
+      "id": "dir-1775888160338",
+      "text": "【API実装候補】Adaptive Posting Scheduler (Anti-Shadowban): 1日2〜4件・17-22時投稿・ハッシュタグ1〜2個でスパム判定を回避し、安定した可視性を維持できる。",
+      "category": "tech",
+      "priority": "high",
+      "status": "active",
+      "assignee": "user",
+      "source": "API調査会議",
+      "platform": "x",
+      "createdAt": "2026-04-11T06:16:00.338Z",
+      "updatedAt": "2026-04-11T06:16:00.338Z"
+    },
+    {
+      "id": "dir-1775888160001",
+      "text": "【API実装候補】Reply-Centric Engagement Boost: 2024 アルゴ更新でリプライは 10 倍の重み。自動リプ生成を増やすだけでインプレッションが大幅増。",
+      "category": "tech",
+      "priority": "high",
+      "status": "active",
+      "assignee": "user",
+      "source": "API調査会議",
+      "platform": "x",
+      "createdAt": "2026-04-11T06:16:00.001Z",
+      "updatedAt": "2026-04-11T06:16:00.001Z"
+    },
+    {
+      "id": "dir-1775888159734",
+      "text": "【API実装候補】NSFW Content Labeling (possibly_sensitive & media alt_text): 成人向けFANZAリンクを含む投稿でも reach −90% ペナルティを回避し、通常インプレッションを確保できるため。",
+      "category": "tech",
+      "priority": "high",
+      "status": "active",
+      "assignee": "user",
+      "source": "API調査会議",
+      "platform": "x",
+      "createdAt": "2026-04-11T06:15:59.734Z",
+      "updatedAt": "2026-04-11T06:15:59.734Z"
+    },
     {
       "id": "dir-1775663739669",
       "text": "【分散いいねプロトコル】投稿後30〜60分以内に関連アカウント（#FANZA タグ付き）へSFWいいね3件を分散実施。新規NSFWアカの初動IP+185%実績あり（shadowban_jp集計）。SBI=0を維持すること。",

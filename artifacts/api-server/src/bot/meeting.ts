@@ -266,31 +266,50 @@ ${prevMeetingCtx}`.trim();
 
 // ─── Deep Research (GPT-4o + web search) ────────────────────────────────────
 
-export async function runDeepResearch(topic: string): Promise<ResearchSession> {
+export async function runDeepResearch(topic: string, pendingId?: string): Promise<ResearchSession> {
   const startedAt = new Date().toISOString();
-  const id = `research-${Date.now()}`;
+  const id = pendingId ?? `research-${Date.now()}`;
   const botContext = buildBotContext();
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-search-preview',
-    web_search_options: {},
-    messages: [
-      {
-        role: 'system',
-        content: `あなたは日本語Xアフィリエイトマーケティングのリサーチ専門家です。ウェブ検索で最新情報を調査してください。
+  // ペンディングセッションをキャッシュに即時登録（ポーリング用）
+  const pending: ResearchSession = { id, topic, result: '', model: 'gpt-4o-search-preview', startedAt, completedAt: '' };
+  if (!pendingId) {
+    // 新規作成の場合のみunshift（pendingIdが指定された場合はルートで登録済み）
+    cache.researches.unshift(pending);
+  }
+
+  let result = '';
+  let modelName = 'gpt-4o-search-preview';
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-search-preview',
+      web_search_options: {},
+      messages: [
+        {
+          role: 'system',
+          content: `あなたは日本語Xアフィリエイトマーケティングのリサーチ専門家です。ウェブ検索で最新情報を調査してください。
 ${botContext}
 この情報を踏まえ、具体的数字と行動指針を含む実用的な回答を日本語でしてください。
 また、会議の参加者であるClaudeが実装の観点から議論しやすいよう、論点を明確に整理してください。`,
-      },
-      { role: 'user', content: `調査テーマ：\n\n${topic}` },
-    ],
-  } as any);
+        },
+        { role: 'user', content: `調査テーマ：\n\n${topic}` },
+      ],
+    } as any);
+    result = response.choices[0]?.message?.content ?? '（応答なし）';
+    modelName = response.model;
+  } catch (e: any) {
+    result = `❌ リサーチエラー: ${e.message}`;
+  }
 
-  const result = response.choices[0]?.message?.content ?? '（応答なし）';
   const completedAt = new Date().toISOString();
-  const session: ResearchSession = { id, topic, result, model: response.model, startedAt, completedAt };
-
-  cache.researches.unshift(session);
+  // キャッシュ内の該当セッションを更新（ポーリング側が取得できるよう）
+  const idx = cache.researches.findIndex((r) => r.id === id);
+  const session: ResearchSession = { id, topic, result, model: modelName, startedAt, completedAt };
+  if (idx >= 0) {
+    cache.researches[idx] = session;
+  } else {
+    cache.researches.unshift(session);
+  }
   cache.researches = cache.researches.slice(0, 20);
   await saveData();
   return session;
