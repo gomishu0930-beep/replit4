@@ -467,7 +467,7 @@ export function startScheduler() {
     }
     setCelebPostedDate(todayKey); // 会議開始前にフラグ立て（重複防止）
     console.log('\n  🎙 [04:40 W2投稿会議] Phase 1-4 投稿会議開始...');
-    const result = await runMeetingAndPost();
+    const result = await runMeetingAndPost({ bypassDailyLimit: true });
     if (result.posted) {
       console.log(`  ✅ [W2投稿会議] 投稿完了: ${result.tweetId}`);
     } else {
@@ -488,7 +488,7 @@ export function startScheduler() {
       }
       setCelebPostedDate(todayKey); // 会議開始前にフラグ立て
       console.log('\n  🎙 [19:40 W1投稿会議] Phase 1-4 投稿会議開始...（プライムタイム 20:00目標）');
-      const result = await runMeetingAndPost();
+      const result = await runMeetingAndPost({ bypassDailyLimit: true });
       if (result.posted) {
         console.log(`  ✅ [W1投稿会議] 投稿完了: ${result.tweetId}`);
       } else {

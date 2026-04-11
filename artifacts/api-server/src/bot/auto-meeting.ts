@@ -30,7 +30,7 @@ import {
   pushMessageToSession,
 } from './meeting.js';
 import { executeDirective } from './directive-executor.js';
-import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, getAllPosts, getRebrandlyData, recordPost, resetBotData, setLastPostMeetingResult } from './storage.js';
+import { getStats, getDailyImpressionSnapshots, getLatestAlgoInsight, getLatestSnapshot, getPostsAfter, getAllPosts, getRebrandlyData, recordPost, resetBotData, setLastPostMeetingResult, getCelebPostedDate } from './storage.js';
 import { getStrategySummary, getImagePolicy } from './strategy.js';
 import { contact, sendMeetingFullLog } from './contact.js';
 import { getGrokXBriefing, getViralAVPostExamples } from './grok.js';
@@ -793,6 +793,9 @@ export async function runMeetingAndPost(options?: { bypassDailyLimit?: boolean }
     console.log(`\n[${jst()}] 📝 [投稿会議] Claude確定ツイート: "${finalTweet.slice(0, 80)}..."`);
 
     // ── Phase 3: 投稿可否チェック ────────────────────────────────────────────
+    // bypassDailyLimit=true の場合はスキップ（W1/W2 cron・catchup がセット済み）。
+    // 通常週は todayCount >= 1 で制限。
+    // W1/W2 の芸能人スロット重複防止は呼び出し元（cron/catchup）の celebPostedDate ガードで担保する。
     const abWeek = getABTestWeek();
     const todayCount = getTodayPostCount();
     if (!options?.bypassDailyLimit && abWeek !== 'normal' && todayCount >= 1) {
