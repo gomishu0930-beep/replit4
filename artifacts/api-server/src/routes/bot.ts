@@ -5,7 +5,8 @@ import { buildManualPostFeedback } from '../bot/ai.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
 import { collectAlgoNews } from '../bot/algo-news.js';
-import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets } from '../bot/twitter.js';
+import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
+import { generateImage } from '../bot/imageGen.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
@@ -453,6 +454,58 @@ router.get('/bot/vision-scoring/latest', requireAdminToken, (_req, res) => {
   const result = getLastVisionScoringResult();
   if (!result) { res.json({ ok: false, result: null }); return; }
   res.json({ ok: true, result });
+});
+
+// ── Nanobanana2 画像生成 ──────────────────────────────────────────────────────
+router.post('/bot/nanobanana/generate', async (req, res) => {
+  const { prompt } = req.body ?? {};
+  if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
+  try {
+    const imageUrl = await generateImage(prompt.trim());
+    res.json({ ok: true, imageUrl });
+  } catch (e: any) {
+    console.error('[Nanobanana] 生成エラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Nanobanana2 画像アップロード（X mediaId取得）──────────────────────────────
+router.post('/bot/nanobanana/upload', async (req, res) => {
+  const { imageUrl } = req.body ?? {};
+  if (!imageUrl?.trim()) { res.status(400).json({ error: 'imageUrl は必須です' }); return; }
+  try {
+    const mediaIds = await uploadImages([imageUrl.trim()]);
+    res.json({ ok: true, mediaId: mediaIds[0] ?? null, mediaIds });
+  } catch (e: any) {
+    console.error('[Nanobanana] アップロードエラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── カスタムツイート投稿（任意テキスト + 任意mediaIds）────────────────────────
+router.post('/bot/tweet', async (req, res) => {
+  const { text, mediaIds = [] } = req.body ?? {};
+  if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
+  try {
+    const tweetId = await postTweet(text.trim(), mediaIds);
+    res.json({ ok: true, tweetId });
+  } catch (e: any) {
+    console.error('[Tweet] 投稿エラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── リプライ投稿 ───────────────────────────────────────────────────────────────
+router.post('/bot/reply', async (req, res) => {
+  const { tweetId, text } = req.body ?? {};
+  if (!tweetId?.trim() || !text?.trim()) { res.status(400).json({ error: 'tweetId と text は必須です' }); return; }
+  try {
+    const replyId = await replyToTweet(tweetId.trim(), text.trim());
+    res.json({ ok: true, tweetId: replyId });
+  } catch (e: any) {
+    console.error('[Reply] 投稿エラー:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

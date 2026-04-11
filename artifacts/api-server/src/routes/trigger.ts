@@ -4,7 +4,7 @@ import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getCelebPostedDate } from '../bot/storage.js';
 import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot/contact.js';
-import { getMeetingById, getMeetings } from '../bot/meeting.js';
+import { getMeetingById, getMeetings, runTrialogueRound as _runTrialogueRound, TOTAL_ROUNDS as _TOTAL_ROUNDS } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
 import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
 import { runApiResearchMeeting } from '../bot/api-research.js';
@@ -16,6 +16,7 @@ import { getDirectives } from '../bot/meeting.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { checkTwitterApiAccess } from '../bot/twitter.js';
 import { runBudgetReview, estimateMonthlyCost } from '../bot/budget-review.js';
+import { generateImage } from '../bot/imageGen.js';
 
 const router = Router();
 
@@ -540,6 +541,122 @@ router.post('/trigger/sheets-backfill', auth, async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ── カスタム会議→投稿 フルサイクル（バックグラウンド実行）────────────────────
+const _customPostStatus: Map<string, { done: boolean; result?: any; error?: string }> = new Map();
+
+async function runCustomMeetingPost(sessionId: string): Promise<void> {
+  const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【最終ラウンド（R5）で必ず以下の形式で成果物を明示すること】\n【メインツイート】ここに本文（140字以内・具体的エピソード・えっちな表現OK）\n【リプライ1】ここに本文（140字以内・続き）\n【リプライ2】ここに本文（140字以内・FANZA作品URL誘導で締め）\n【画像プロンプト（英語）】ここにプロンプト（日本人女性・情緒的・ちょっとアダルト）\n\nトーン: 大人の男性が昔の甘酸っぱい体験を懐かしく振り返るスタイル。ハッシュタグなし。';
+
+  // セッション取得
+  const session = getMeetingById(sessionId);
+  if (!session) throw new Error(`セッションが見つかりません: ${sessionId}`);
+
+  const existing = session.messages ?? [];
+  const gptCount = existing.filter((m: any) => m.speaker === 'gpt').length;
+  const startRound = gptCount + 1;
+
+  let lastGpt    = [...existing].reverse().find((m: any) => m.speaker === 'gpt')?.content    ?? '';
+  let lastClaude = [...existing].reverse().find((m: any) => m.speaker === 'claude')?.content ?? '';
+  let lastGrok   = [...existing].reverse().find((m: any) => m.speaker === 'grok')?.content   ?? '';
+  let cumScores  = { gpt: 0, claude: 0 };
+
+  console.log(`\n[カスタム投稿] セッション=${sessionId} | 現在${existing.length}件 | R${startRound}から開始`);
+
+  for (let round = startRound; round <= 5; round++) {
+    console.log(`  [カスタム投稿] ラウンド ${round}/5 開始...`);
+    try {
+      const result = await _runTrialogueRound(
+        sessionId, AGENDA, round,
+        lastGpt.slice(0, 800), lastClaude.slice(0, 800), lastGrok.slice(0, 500),
+        cumScores,
+      );
+      const msgs = result.messages ?? [];
+      lastGpt    = [...msgs].reverse().find((m: any) => m.speaker === 'gpt')?.content    ?? lastGpt;
+      lastClaude = [...msgs].reverse().find((m: any) => m.speaker === 'claude')?.content ?? lastClaude;
+      lastGrok   = [...msgs].reverse().find((m: any) => m.speaker === 'grok')?.content   ?? lastGrok;
+      cumScores  = result.cumulativeScores ?? cumScores;
+      console.log(`  [カスタム投稿] R${round}完了 | Claude=${lastClaude.length}字`);
+    } catch (e: any) {
+      console.error(`  [カスタム投稿] R${round}エラー:`, e.message);
+      if (round <= 3) throw e;
+      break;
+    }
+  }
+
+  // 成果物抽出
+  const updatedSession = getMeetingById(sessionId)!;
+  const allMsgs = updatedSession.messages ?? [];
+  const claudeMsgs = allMsgs.filter((m: any) => m.speaker === 'claude');
+  const lastCl = claudeMsgs[claudeMsgs.length - 1]?.content ?? '';
+
+  const tweet     = lastCl.match(/【メインツイート】\s*([\s\S]*?)(?=【|$)/)?.[1]?.trim().replace(/^[「『]|[」』]$/g,'') ?? '';
+  const reply1    = lastCl.match(/【リプライ1】\s*([\s\S]*?)(?=【|$)/)?.[1]?.trim().replace(/^[「『]|[」』]$/g,'') ?? '';
+  const reply2    = lastCl.match(/【リプライ2】\s*([\s\S]*?)(?=【|$)/)?.[1]?.trim().replace(/^[「『]|[」』]$/g,'') ?? '';
+  const imgPrompt = lastCl.match(/【画像プロンプト[^】]*】\s*([\s\S]*?)(?=【|$)/)?.[1]?.trim()
+    ?? 'Beautiful Japanese woman, nostalgic summer evening, soft warm lighting, slightly sensual mood, reminiscing memories, cinematic portrait, photorealistic';
+
+  console.log(`  [カスタム投稿] 抽出完了 | tweet=${tweet.length}字 reply1=${reply1.length}字 reply2=${reply2.length}字`);
+  if (!tweet || tweet.length < 5) throw new Error('メインツイートが抽出できませんでした。Claude最終発言:\n' + lastCl.slice(0, 500));
+
+  // 画像生成
+  let imageUrl = '';
+  try {
+    imageUrl = await generateImage(imgPrompt);
+    console.log(`  [カスタム投稿] 画像生成完了: ${imageUrl.slice(0, 60)}`);
+  } catch (e: any) {
+    console.warn(`  [カスタム投稿] 画像生成失敗（テキストのみ）: ${e.message}`);
+  }
+
+  // 画像アップロード
+  let mediaIds: string[] = [];
+  if (imageUrl) {
+    try {
+      mediaIds = await uploadImages([imageUrl]);
+      console.log(`  [カスタム投稿] 画像アップロード完了 mediaId=${mediaIds[0]}`);
+    } catch (e: any) {
+      console.warn(`  [カスタム投稿] 画像アップロード失敗: ${e.message}`);
+    }
+  }
+
+  // 投稿
+  console.log(`  [カスタム投稿] メインツイート投稿中... "${tweet.slice(0, 40)}"`);
+  const mainId  = await postTweet(tweet, mediaIds);
+  console.log(`  [カスタム投稿] メイン投稿完了: ${mainId}`);
+
+  await new Promise(r => setTimeout(r, 3000));
+  const reply1Id = await replyToTweet(mainId, reply1);
+  console.log(`  [カスタム投稿] リプライ1完了: ${reply1Id}`);
+
+  await new Promise(r => setTimeout(r, 3000));
+  const reply2Id = await replyToTweet(reply1Id, reply2);
+  console.log(`  [カスタム投稿] リプライ2完了: ${reply2Id}`);
+
+  console.log(`\n  ✅ [カスタム投稿] 全投稿完了！`);
+  _customPostStatus.set(sessionId, {
+    done: true,
+    result: { mainId, reply1Id, reply2Id, tweet, reply1, reply2, imageUrl },
+  });
+}
+
+router.post('/trigger/custom-meeting-post', auth, (req, res) => {
+  const { sessionId } = req.body ?? {};
+  if (!sessionId?.trim()) { res.status(400).json({ error: 'sessionId は必須です' }); return; }
+
+  _customPostStatus.set(sessionId, { done: false });
+  res.status(202).json({ ok: true, message: '会議継続＋投稿フローを開始しました', sessionId });
+
+  runCustomMeetingPost(sessionId).catch((e: any) => {
+    console.error('[カスタム投稿] エラー:', e.message);
+    _customPostStatus.set(sessionId, { done: true, error: e.message });
+  });
+});
+
+router.get('/trigger/custom-meeting-post/status/:sessionId', auth, (req, res) => {
+  const status = _customPostStatus.get(req.params.sessionId);
+  if (!status) { res.json({ done: false, started: false }); return; }
+  res.json({ started: true, ...status });
 });
 
 export default router;
