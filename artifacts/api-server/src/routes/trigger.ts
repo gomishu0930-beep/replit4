@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getCelebPostedDate, setCelebPostedDate } from '../bot/storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, upsertRebrandlyLinks, getCelebPostedDate, setCelebPostedDate } from '../bot/storage.js';
 import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot/contact.js';
 import { getMeetingById, getMeetings, runTrialogueRound as _runTrialogueRound, TOTAL_ROUNDS as _TOTAL_ROUNDS } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
@@ -399,6 +399,60 @@ router.post('/trigger/strategy-meeting', auth, (req, res) => {
     .finally(() => {
       isStrategyMeetingRunning = false;
     });
+});
+
+// POST /api/trigger/sync-rebrandly — Rebrandlyクリック数を最新化してCTR/ΔSBI効率レポートを送信
+router.post('/trigger/sync-rebrandly', auth, async (_req, res) => {
+  try {
+    const REBRANDLY_API_KEY = process.env.REBRANDLY_API_KEY ?? '';
+    const resp = await fetch('https://api.rebrandly.com/v1/links?limit=50', {
+      headers: { apikey: REBRANDLY_API_KEY },
+    });
+    const links: any[] = await resp.json();
+
+    upsertRebrandlyLinks(links.map((l: any) => ({
+      slashtag:    l.slashtag,
+      shortUrl:    l.shortUrl ?? `rebrand.ly/${l.slashtag}`,
+      destination: l.destination,
+      clicks:      l.clicks ?? 0,
+      createdAt:   l.createdAt ?? new Date().toISOString(),
+    })));
+
+    // CTR/ΔSBI 効率係数を計算
+    const posts       = getPostsAfter(new Date(Date.now() - 30 * 86400000));
+    const rbData      = getRebrandlyData();
+    const totalImp    = posts.reduce((s: number, p: any) => s + (p.metrics?.impression_count ?? 0), 0);
+    const totalClicks = rbData.links.reduce((s: number, l: any) => s + l.clicks, 0);
+    const ctr         = totalImp > 0 ? (totalClicks / totalImp * 100).toFixed(3) : '0.000';
+
+    // SBI スナップショットから ΔSBI を計算（直近2点の差分）
+    const snapshots   = (rbData as any).snapshots ?? [];
+    const sbiValues   = snapshots.map((s: any) => s.sbi ?? 0).filter((v: number) => v !== undefined);
+    const deltaSBI    = sbiValues.length >= 2
+      ? sbiValues[sbiValues.length - 1] - sbiValues[0]
+      : null;
+    const efficiency  = deltaSBI !== null && deltaSBI !== 0
+      ? (parseFloat(ctr) / Math.abs(deltaSBI)).toFixed(4)
+      : 'N/A（SBIデータ不足）';
+
+    const report = {
+      syncedAt: new Date().toISOString(),
+      totalLinks: links.length,
+      totalClicks,
+      totalImpressions: totalImp,
+      ctr_pct: `${ctr}%`,
+      deltaSBI,
+      efficiencyCoeff: efficiency,
+      topLinks: links.sort((a: any, b: any) => b.clicks - a.clicks).slice(0, 5).map((l: any) => ({
+        slashtag: l.slashtag, clicks: l.clicks,
+      })),
+    };
+
+    console.log('  📊 [Rebrandly同期] CTR:', report.ctr_pct, '| 効率係数:', efficiency);
+    res.json({ ok: true, report });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // POST /api/trigger/send-metrics-report — 週次メトリクスレポートを今すぐ手動送信
