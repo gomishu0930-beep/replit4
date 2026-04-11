@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData } from '../bot/storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getCelebPostedDate } from '../bot/storage.js';
 import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot/contact.js';
 import { getMeetingById, getMeetings } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
@@ -62,18 +62,20 @@ async function runJob(type: string, label: string, fetchItems: () => Promise<any
     return { skipped: true, reason: '別の投稿が進行中（スケジューラー含む）' };
   }
 
-  // A/Bテスト週は手動トリガーも1件限定（1日1件制限を維持）
+  // A/Bテスト週は手動トリガーも1件限定（芸能人スロット投稿済みフラグで判定）
+  // todayCountではなくcelebPostedDateを使う：buzz等の他投稿が芸能人スロットをブロックしないよう
   const abWeek = getABTestWeek();
   const maxItems = (abWeek === 'W1' || abWeek === 'W2') ? 1 : 3;
   if (abWeek !== 'normal') {
-    const todayCount = getTodayPostCount();
-    if (todayCount >= 1) {
-      console.warn(`  ⚠ [trigger/${type}] ${abWeek}期間中に本日分(${todayCount}件)投稿済み → 手動トリガー実行（注意: 1日1件制限を超えます）`);
+    const todayKey = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    const celebPosted = getCelebPostedDate() === todayKey;
+    if (celebPosted) {
+      console.warn(`  ⚠ [trigger/${type}] ${abWeek}期間中・芸能人スロット投稿済み (${todayKey}) → スキップ`);
       return {
         ok: false,
         skipped: true,
-        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日すでに${todayCount}件投稿済みです。シャドウバン回復に影響する可能性があります。`,
-        todayCount,
+        reason: `⚠ ${abWeek}期間中は1日1件制限です。本日の芸能人スロットはすでに投稿済みです (${todayKey})。`,
+        celebPostedDate: todayKey,
       };
     }
     console.log(`  ⚠ [trigger/${type}] ${abWeek}期間中 → 手動トリガー投稿を1件限定で実行`);
