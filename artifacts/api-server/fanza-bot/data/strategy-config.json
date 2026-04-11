@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 0,
-    "avgNewPatterns": 5.13875472317855,
-    "totalCycles": 233
+    "avgNewPatterns": 3.597128306224985,
+    "totalCycles": 234
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
       "status": "confirmed",
-      "finding": "233サイクル実績 / 平均新規パターン 5.1件/サイクル",
+      "finding": "234サイクル実績 / 平均新規パターン 3.6件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-11T10:50:35.428Z"
+      "testedAt": "2026-04-11T10:59:52.855Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "pending",
       "finding": "データ不足で評価不可",
       "adjustment": null,
-      "testedAt": "2026-04-11T10:50:35.428Z"
+      "testedAt": "2026-04-11T10:59:53.133Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 21時 (avg 1.0) / 最低スロット: 21時 (avg 1.0)",
       "adjustment": null,
-      "testedAt": "2026-04-11T10:50:35.429Z"
+      "testedAt": "2026-04-11T10:59:53.133Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-11T10:59:53.133Z",
+      "cycle": 234,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-11T10:50:35.429Z",
       "cycle": 233,
@@ -429,17 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-10T03:27:07.869Z",
-      "cycle": 184,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-11T10:50:35.429Z",
-  "version": 236,
+  "lastEvaluatedAt": "2026-04-11T10:59:53.133Z",
+  "version": 237,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

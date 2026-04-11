@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getCelebPostedDate } from '../bot/storage.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getCelebPostedDate, setCelebPostedDate } from '../bot/storage.js';
 import { sendMeetingFullLog, sendMetricsReport, MetricsReportPost } from '../bot/contact.js';
 import { getMeetingById, getMeetings, runTrialogueRound as _runTrialogueRound, TOTAL_ROUNDS as _TOTAL_ROUNDS } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting, postCelebritySlotNow } from '../bot/scheduler.js';
@@ -467,6 +467,17 @@ router.post('/trigger/api-research', auth, (req, res) => {
   runApiResearchMeeting().catch((e: any) =>
     console.error(`[API調査会議] エラー: ${e.message}`),
   );
+});
+
+// ─── celebPostedDate リセット（X障害・手動投稿リカバリ用）──────────────────────
+router.post('/trigger/reset-celeb-date', auth, (req, res) => {
+  const date = (req.body?.date as string) || '2026-04-10';
+  setCelebPostedDate(date);
+  res.json({ ok: true, celebPostedDate: date, message: `celebPostedDate を ${date} にリセットしました` });
+});
+
+router.get('/trigger/celeb-date', auth, (_req, res) => {
+  res.json({ celebPostedDate: getCelebPostedDate() });
 });
 
 // ─── 緊急停止 / 再開 ──────────────────────────────────────────────────────────
