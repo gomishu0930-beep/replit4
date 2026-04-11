@@ -405,29 +405,50 @@ function Dashboard() {
     const nextRound = debateRound + 1;
     setDebateRound(nextRound);
     try {
-      const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/debate`, {
+      // 直前のGPT/Claude/Grokの発言を取得（ラウンド間の文脈渡し）
+      const msgs = meetingSession.messages;
+      const lastGptReply   = [...msgs].reverse().find(m => m.speaker === "gpt")?.content   ?? "";
+      const lastClaudeReply = [...msgs].reverse().find(m => m.speaker === "claude")?.content ?? "";
+      const lastGrokReply  = [...msgs].reverse().find(m => m.speaker === "grok")?.content  ?? "";
+
+      // /debate → /trialogue へ修正。messageはセッションタイトル（議題）を使用
+      const res = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/trialogue`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ round: nextRound }),
+        body: JSON.stringify({
+          message: meetingSession.title,
+          round: nextRound,
+          lastGptReply,
+          lastClaudeReply,
+          lastGrokReply,
+          cumulativeScores,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "ディベートエラー");
-      const newMsgs = [data.gptMsg, data.claudeMsg, data.grokMsg].filter(Boolean);
+
+      // サーバーは { messages: MeetingMessage[], roundScores, cumulativeScores, isLastRound }
+      const newMsgs: MeetingMessage[] = data.messages ?? [];
       setMeetingSession((s) => s ? { ...s, messages: [...s.messages, ...newMsgs] } : s);
-      if (data.scores) {
-        setCumulativeScores((prev) => ({
-          gpt: prev.gpt + (data.scores.gpt ?? 0),
-          claude: prev.claude + (data.scores.claude ?? 0),
-        }));
+
+      if (data.cumulativeScores) {
+        setCumulativeScores(data.cumulativeScores);
       }
-      if (nextRound >= 5) {
+
+      if (data.isLastRound) {
         setDebateCompleted(true);
-        const candidates = data.decisionCandidates ?? [];
-        setCandidates(candidates);
-        setMeetingSession((s) => s ? { ...s, decisionCandidates: candidates } : s);
+        // 決定候補を別エンドポイントで抽出
+        const extractRes = await fetch(`${API}/api/bot/meeting/sessions/${meetingSession.id}/extract-decisions`, { method: "POST" });
+        if (extractRes.ok) {
+          const extractData = await extractRes.json();
+          const candidates: DecisionCandidate[] = extractData.candidates ?? [];
+          setCandidates(candidates);
+          setMeetingSession((s) => s ? { ...s, decisionCandidates: candidates } : s);
+        }
       }
     } catch (e: any) {
       const errMsg: MeetingMessage = { role: "assistant", speaker: "system", content: `❌ エラー: ${e.message}`, at: new Date().toISOString() };
       setMeetingSession((s) => s ? { ...s, messages: [...s.messages, errMsg] } : s);
+      setDebateRound((r) => Math.max(0, r - 1));
     } finally {
       setMeetingLoading(false);
     }
