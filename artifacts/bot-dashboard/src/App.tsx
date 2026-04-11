@@ -391,7 +391,7 @@ function Dashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "会議作成エラー");
-      setMeetingSession(data.session);
+      setMeetingSession(data);
     } catch (e: any) {
       setResearchError(e.message);
     } finally {
