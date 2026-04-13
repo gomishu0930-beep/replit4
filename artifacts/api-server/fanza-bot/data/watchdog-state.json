@@ -1,232 +1,12 @@
 {
-  "lastCheckAt": "2026-04-11T15:44:00.803Z",
-  "lastIssueAt": "2026-04-09T12:17:41.808Z",
+  "lastCheckAt": "2026-04-13T01:23:24.318Z",
+  "lastIssueAt": "2026-04-13T01:23:24.318Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
-  "status": "healthy",
-  "issueCount": 8,
+  "status": "failed",
+  "issueCount": 11,
   "recoveryCount": 8,
-  "consecutiveFailures": 0,
+  "consecutiveFailures": 3,
   "recentEvents": [
-    {
-      "at": "2026-04-11T07:30:01.541Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T07:30:01.541Z",
-      "level": "info",
-      "detail": "最終投稿から 4.5h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T07:30:06.211Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T07:30:06.211Z",
-      "level": "info",
-      "detail": "最終投稿から 4.5h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T07:35:03.276Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T07:35:03.276Z",
-      "level": "info",
-      "detail": "最終投稿から 4.6h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T07:35:14.009Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T07:35:14.009Z",
-      "level": "info",
-      "detail": "最終投稿から 4.6h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T07:52:44.705Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T07:52:44.705Z",
-      "level": "info",
-      "detail": "最終投稿から 4.9h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T08:22:44.832Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T08:22:44.833Z",
-      "level": "info",
-      "detail": "最終投稿から 5.4h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T09:31:36.524Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T09:31:36.525Z",
-      "level": "info",
-      "detail": "最終投稿から 6.5h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T09:52:40.760Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T09:52:40.761Z",
-      "level": "info",
-      "detail": "最終投稿から 6.9h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T10:13:48.577Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T10:13:48.578Z",
-      "level": "info",
-      "detail": "最終投稿から 7.2h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T10:41:53.795Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T10:41:53.796Z",
-      "level": "info",
-      "detail": "最終投稿から 7.7h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T10:48:30.154Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T10:48:30.154Z",
-      "level": "info",
-      "detail": "最終投稿から 7.8h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T10:57:40.033Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T10:57:40.033Z",
-      "level": "info",
-      "detail": "最終投稿から 8h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T11:04:45.147Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T11:04:45.147Z",
-      "level": "info",
-      "detail": "最終投稿から 8.1h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T12:08:12.748Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T12:08:12.748Z",
-      "level": "info",
-      "detail": "最終投稿から 9.1h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T12:17:39.328Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T12:17:39.329Z",
-      "level": "info",
-      "detail": "最終投稿から 9.3h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T12:45:11.048Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T12:45:11.049Z",
-      "level": "info",
-      "detail": "最終投稿から 9.7h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T12:45:15.959Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T12:45:15.960Z",
-      "level": "info",
-      "detail": "最終投稿から 9.7h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T12:57:40.241Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T12:57:40.241Z",
-      "level": "info",
-      "detail": "最終投稿から 10h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T13:46:54.745Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T13:46:54.745Z",
-      "level": "info",
-      "detail": "最終投稿から 10.8h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T13:51:18.239Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T13:51:18.240Z",
-      "level": "info",
-      "detail": "最終投稿から 10.8h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T14:21:18.408Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T14:21:18.408Z",
-      "level": "info",
-      "detail": "最終投稿から 11.3h — 正常範囲"
-    },
-    {
-      "at": "2026-04-11T14:28:48.238Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T14:28:48.238Z",
-      "level": "info",
-      "detail": "最終投稿から 11.5h — 正常範囲"
-    },
     {
       "at": "2026-04-11T14:44:00.662Z",
       "level": "info",
@@ -256,6 +36,226 @@
       "at": "2026-04-11T15:44:00.803Z",
       "level": "info",
       "detail": "最終投稿から 12.7h — 正常範囲"
+    },
+    {
+      "at": "2026-04-11T16:25:40.380Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-11T16:25:40.380Z",
+      "level": "info",
+      "detail": "最終投稿から 13.4h — 正常範囲"
+    },
+    {
+      "at": "2026-04-11T17:08:35.676Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-11T17:08:35.676Z",
+      "level": "info",
+      "detail": "最終投稿から 14.1h — 正常範囲"
+    },
+    {
+      "at": "2026-04-11T22:55:55.870Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-11T22:55:55.871Z",
+      "level": "info",
+      "detail": "最終投稿から 19.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-11T23:31:56.799Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-11T23:31:56.998Z",
+      "level": "info",
+      "detail": "最終投稿から 20.5h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T00:21:20.571Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T00:21:20.571Z",
+      "level": "info",
+      "detail": "最終投稿から 21.3h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T00:21:34.623Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T00:21:34.623Z",
+      "level": "info",
+      "detail": "最終投稿から 21.4h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T03:03:29.002Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T03:03:29.002Z",
+      "level": "info",
+      "detail": "最終投稿から 24h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T03:29:32.613Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T03:29:32.613Z",
+      "level": "info",
+      "detail": "最終投稿から 24.5h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T03:54:32.860Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T03:54:32.861Z",
+      "level": "info",
+      "detail": "最終投稿から 24.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T04:50:46.233Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T04:50:46.233Z",
+      "level": "info",
+      "detail": "最終投稿から 25.8h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T06:02:25.649Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T06:02:25.649Z",
+      "level": "info",
+      "detail": "最終投稿から 27h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T06:27:24.044Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T06:27:24.045Z",
+      "level": "info",
+      "detail": "最終投稿から 27.4h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T06:44:28.057Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T06:44:28.058Z",
+      "level": "info",
+      "detail": "最終投稿から 27.7h — 正常範囲"
+    },
+    {
+      "at": "2026-04-12T07:40:09.354Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T07:40:09.355Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 28.7h 無投稿"
+    },
+    {
+      "at": "2026-04-12T07:40:09.355Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-12T07:40:14.950Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-12T07:40:14.950Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-12T07:40:14.950Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-12T08:06:32.170Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-12T08:06:32.469Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 29.1h 無投稿"
+    },
+    {
+      "at": "2026-04-12T08:06:32.469Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-12T08:06:39.171Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-12T08:06:39.171Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-12T08:06:39.171Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-13T01:23:24.318Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-13T01:23:24.318Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 46.4h 無投稿"
+    },
+    {
+      "at": "2026-04-13T01:23:24.319Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-13T01:23:25.114Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-13T01:23:25.114Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-13T01:23:25.114Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
     }
   ]
 }

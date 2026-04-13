@@ -2,7 +2,11 @@
 title: FANZA女優・単体作品おすすめ10選【2026年注目女優まとめ】
 created: 2026-04-11
 status: draft
+cover_image: images/04_actress_cover.png
+price: 無料
 ---
+
+<!-- 📸 カバー画像: images/04_actress_cover.png をnoteのカバーにアップロードしてください -->
 
 ## FANZAの人気女優による単体作品おすすめ10選
 

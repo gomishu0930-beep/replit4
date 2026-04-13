@@ -2,7 +2,11 @@
 title: FANZA初心者ガイド【失敗しない成人向け動画の選び方】
 created: 2026-04-11
 status: draft
+cover_image: images/02_beginner_cover.png
+price: 無料
 ---
+
+<!-- 📸 カバー画像: images/02_beginner_cover.png をnoteのカバーにアップロードしてください -->
 
 # FANZA（DMM）で成人向け動画を初めて購入する人向けの完全ガイド
 

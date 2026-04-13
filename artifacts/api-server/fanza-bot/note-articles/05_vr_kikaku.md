@@ -2,7 +2,11 @@
 title: FANZA VR・企画作品おすすめ10選【没入感・独自性で選ぶ】
 created: 2026-04-11
 status: draft
+cover_image: images/05_vr_cover.png
+price: 無料
 ---
+
+<!-- 📸 カバー画像: images/05_vr_cover.png をnoteのカバーにアップロードしてください -->
 
 # FANZAで楽しむ！VR作品と企画作品おすすめ10選
 

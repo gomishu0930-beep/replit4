@@ -2,7 +2,11 @@
 title: FANZA 2026年上半期 注目作品TOP10レビュー【アフィリエイター厳選】
 created: 2026-04-11
 status: draft
+cover_image: images/01_top10_cover.png
+price: 有料 ¥300
 ---
+
+<!-- 📸 カバー画像: images/01_top10_cover.png をnoteのカバーにアップロードしてください -->
 
 # 2026年上半期のFANZAで注目すべき作品TOP10
 

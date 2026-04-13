@@ -2,7 +2,11 @@
 title: FANZA コスパ最強作品ランキング【2026年版】価格÷満足度で厳選
 created: 2026-04-11
 status: draft
+cover_image: images/03_cospa_cover.png
+price: 有料 ¥300
 ---
+
+<!-- 📸 カバー画像: images/03_cospa_cover.png をnoteのカバーにアップロードしてください -->
 
 # FANZA価格対満足度（コスパ）高作品ランキング
 
