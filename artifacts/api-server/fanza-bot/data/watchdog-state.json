@@ -1,42 +1,12 @@
 {
-  "lastCheckAt": "2026-04-13T02:23:25.235Z",
-  "lastIssueAt": "2026-04-13T02:23:25.235Z",
+  "lastCheckAt": "2026-04-13T02:53:25.236Z",
+  "lastIssueAt": "2026-04-13T02:53:25.236Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
   "status": "failed",
-  "issueCount": 13,
+  "issueCount": 14,
   "recoveryCount": 8,
-  "consecutiveFailures": 5,
+  "consecutiveFailures": 6,
   "recentEvents": [
-    {
-      "at": "2026-04-11T23:31:56.799Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-11T23:31:56.998Z",
-      "level": "info",
-      "detail": "最終投稿から 20.5h — 正常範囲"
-    },
-    {
-      "at": "2026-04-12T00:21:20.571Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-12T00:21:20.571Z",
-      "level": "info",
-      "detail": "最終投稿から 21.3h — 正常範囲"
-    },
-    {
-      "at": "2026-04-12T00:21:34.623Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-12T00:21:34.623Z",
-      "level": "info",
-      "detail": "最終投稿から 21.4h — 正常範囲"
-    },
     {
       "at": "2026-04-12T03:03:29.002Z",
       "level": "info",
@@ -254,6 +224,36 @@
     },
     {
       "at": "2026-04-13T02:23:26.032Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-13T02:53:25.236Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-13T02:53:25.236Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 47.9h 無投稿"
+    },
+    {
+      "at": "2026-04-13T02:53:25.236Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-13T02:53:25.937Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-13T02:53:25.937Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-13T02:53:25.937Z",
       "level": "warn",
       "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
     }
