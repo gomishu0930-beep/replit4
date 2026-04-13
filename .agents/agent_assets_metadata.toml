@@ -149,3 +149,9 @@ id = "yqen3Z4NNSFESyuKMO91H"
 uri = "file://artifacts/api-server/data/initial-tweets.md"
 type = "text"
 title = "初回投稿プラン（女の子VS女の子 対決構図版）"
+
+[[outputs]]
+id = "nNnSDgbdVtxbe_KBrXlQD"
+uri = "file://artifacts/api-server/data/follow-strategy.md"
+type = "text"
+title = "フォロー・フォロワー獲得戦略（最終決定版）"
