@@ -155,3 +155,9 @@ id = "nNnSDgbdVtxbe_KBrXlQD"
 uri = "file://artifacts/api-server/data/follow-strategy.md"
 type = "text"
 title = "フォロー・フォロワー獲得戦略（最終決定版）"
+
+[[outputs]]
+id = "aM9EXdgqAiS8LHwfv_SQZ"
+uri = "file://artifacts/api-server/data/video-prompts.md"
+type = "text"
+title = "アカウント紹介動画プロンプト（3案）"
