@@ -1,9 +1,28 @@
-# FANZA X Bot — Workspace
+# FANZA × MyFans 二刀流Bot — Workspace
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. FANZA affiliate adult content X (Twitter) bot for @gomi_shu_god.
+pnpm workspace monorepo using TypeScript. MyFans×FANZA二刀流アフィリエイト自動化システム。
+@fanza_poll_lab アカウントで3ヶ月以内に月収¥54,000達成目標。
 Production URL: `asset-manager-3-gomishu0930.replit.app`
+
+## Strategy
+
+- **収益目標**: 1ヶ月目¥18,000 → 2ヶ月目¥35,000 → 3ヶ月目¥54,000
+- **内訳**: FANZA ¥30,000/月 + MyFans紹介 ¥3,000×8件=¥24,000/月
+- **コンテンツ比率**: 70% エンゲージメント / 20% FANZA / 10% MyFans
+- **投稿スロット**: 10:30 / 17:00 / 20:00 JST
+- **月額コスト**: ¥25,799 (Replit¥3,000 + Twitter API¥15,000 + Rebrandly¥4,350 + Canva¥1,949 + OpenAI¥1,500)
+
+## Safety Engine (凍結回避)
+
+- 最初30日: 手動のみ (MANUAL_ONLY)
+- フォロワー300+: 半自動 (SEMI_AUTO)
+- フォロワー1000+: 完全自動 (FULL_AUTO)
+- アフィリリンク比率: 30%以下
+- 連続アフィリ投稿: 1件まで
+- 1日フォロー上限: 50件
+- データ永続化: fanza-bot/data/safety-state.json (GCS)
 
 ## Stack
 
@@ -12,9 +31,10 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Build**: esbuild (single bundle, ~2.6mb)
-- **Storage**: GCS (Google Cloud Storage) — posts, templates, strategy, meeting data
-- **AI**: OpenAI GPT-4o / GPT-4o-mini, Anthropic Claude, Grok (X API)
+- **Build**: esbuild (single bundle, ~2.5mb)
+- **Storage**: GCS (Google Cloud Storage)
+- **AI**: OpenAI GPT-4o, Anthropic Claude, Grok (X API)
+- **Dashboard**: React + Vite + TanStack Query + Recharts + Tailwind
 
 ## Key Commands
 
@@ -25,70 +45,56 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 
 ```
 artifacts/api-server/src/bot/
-  scheduler.ts        — cron jobs, posting slots, catch-up logic
+  scheduler.ts        — cron jobs: 10:30/17:00/20:00 JST 3スロット + Safety Engine統合
+  safety-engine.ts    — 凍結回避: リスクスコアリング・自動化レベル管理・投稿バリデーション
   auto-meeting.ts     — 3-party AI meeting (Grok→GPT→Claude)
-  celebrity.ts        — celebrity mapping + Vision scoring
-  directive-executor.ts — decision auto-execution engine
-  codex-agent.ts      — [NEW] autonomous config changes via GPT-4o
-  sheets-writer.ts    — [NEW] Google Sheets auto-fill
   strategy.ts         — strategy config (GCS: strategy-config.json)
   storage.ts          — post records, templates, meeting data (GCS)
   meeting.ts          — meeting room, directives, research sessions
+  sheets-writer.ts    — Google Sheets auto-fill
+  analytics.ts        — external pattern monitoring, metrics refresh
+  fanza.ts            — FANZA API integration
+  twitter.ts          — X (Twitter) API integration
+  rebrandly.ts        — URL shortening + click tracking
+  watchdog.ts         — bot health monitoring
+  ai.ts               — AI text generation
+  grok.ts             — Grok API for X insights
+  contact.ts          — notification stubs
+  celebrity.ts        — celebrity stubs (legacy)
+  directive-executor.ts — directive execution stubs
+  budget-review.ts    — budget briefing stubs
+
+artifacts/api-server/src/routes/
+  index.ts            — route aggregator
+  bot.ts              — bot status, posts, rebrandly endpoints
+  safety.ts           — safety engine API (6 endpoints)
+  trigger.ts          — external trigger endpoints
+  meeting.ts          — AI meeting room endpoints
+
+artifacts/bot-dashboard/src/
+  App.tsx             — 4タブ Dashboard (ホーム/投稿/分析/設定) ダークモード・モバイルファースト
 ```
 
-## Posting Schedule (W1 Period: 4/7–4/13)
+## API Endpoints
 
-- **20:00 JST**: Celebrity affiliate post (3-party AI meeting → X post)
-- Catch-up window: 6h after slot time, 30-min periodic check
-- Double-post protection: `getCelebPostedDate()` stored in GCS
+### Safety Engine
+- `GET /api/safety/status` — 安全状態全体
+- `GET /api/safety/automation` — 自動化レベル詳細
+- `POST /api/safety/validate` — 投稿可否チェック
+- `POST /api/safety/record-post` — 投稿記録
+- `POST /api/safety/record-follow` — フォロー記録
+- `POST /api/safety/update-followers` — フォロワー数更新
 
-## Codex Agent (autonomous code changes)
+### Bot
+- `GET /api/bot/status` — ボット稼働状態
+- `GET /api/bot/posts` — 投稿履歴
+- `GET /api/bot/rebrandly` — Rebrandlyクリックデータ
+- `POST /api/bot/rebrandly/sync` — Rebrandly手動同期
+- `POST /api/bot/posts/sync-timeline` — TL同期
 
-`codex-agent.ts` uses GPT-4o to modify GCS config files when the AI meeting makes decisions:
-- `scheduler-overrides.json` — posting times, W1/W2 date ranges, catch-up window
-- `celebrity-config.json` — celebrity mappings (add/modify)
-- `meeting-prompts.json` — meeting style notes
+## Dashboard (4タブ)
 
-Triggered via `directive-executor.ts` action type `code.codex`.
-
-## Google Sheets Auto-fill (PENDING SETUP)
-
-> **Note**: Google Sheets integration requires user setup. The code is in `sheets-writer.ts`.
-> The Replit OAuth connector was not authorized. To enable:
->
-> 1. Go to [Google Cloud Console](https://console.cloud.google.com/iam-admin/serviceaccounts)
-> 2. Create a service account → Create key (JSON) → Download
-> 3. Share your target Google Spreadsheet with the service account email (Editor access)
-> 4. Add to Replit Secrets:
->    - `GOOGLE_SERVICE_ACCOUNT_JSON`: contents of the downloaded JSON file
->    - `GOOGLE_SHEET_ID`: the ID from your spreadsheet URL (`/d/XXXXX/`)
->
-> Sheets populated: `PostLog` (投稿ログ) + `DecisionLog` (決定事項)
-
-## GCS Bucket
-
-`replit-objstore-d1d25208-c118-4823-ab4e-4ec919bf4b01`
-
-## Secrets Required
-
-| Secret | Purpose |
-|---|---|
-| `OPENAI_API_KEY` | GPT-4o, GPT-4o-mini, Vision scoring |
-| `SESSION_SECRET` | Express session |
-| `TWITTER_API_KEY/SECRET` | Twitter API v2 |
-| `TWITTER_ACCESS_TOKEN/SECRET` | Bot account auth |
-| `TWITTER_USER_ID` | `1114297552268959744` |
-| `DMM_AFFILIATE_ID/API_ID` | FANZA API |
-| `REBRANDLY_API_KEY` | Link shortening + click tracking |
-| `SMTP_USER/PASS` | Email notifications |
-| `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | GCS bucket |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | *(optional)* Google Sheets |
-| `GOOGLE_SHEET_ID` | *(optional)* Google Sheets |
-
-## User Preferences
-
-- Dashboard: White/Apple-style UI, 4 tabs (ホーム/投稿/分析/管理)
-- Bot mode: W1 A/B test (20:00 JST only, 1 post/day)
-- No image generation on URL posts (`enableOnUrlPost=false`)
-- Celebrity posts via 3-party meeting (Grok→GPT→Claude)
-- Avoid restarting API server during 19:00–21:30 JST (W1 freeze window)
+1. **ホーム**: 安全レベル・リスクスコア・KPI・投稿スケジュール
+2. **投稿**: クイックアクション・投稿可否チェック・投稿履歴
+3. **分析**: 収益目標・コンテンツ比率・リスク推移・クリック計測・エンゲージメント推移
+4. **設定**: 凍結回避ルール・投稿上限段階制・自動化ロードマップ・月額コスト・ボット制御
