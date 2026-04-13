@@ -1,35 +1,43 @@
 # @fanza_poll_lab 初回投稿プラン
 ## AI会議 最終決定版（2026/04/13）
 ## 会議ID: meeting-1776055765593（5ラウンド完了）
-## 画像方針: アニメ/イラスト調の女の子入り（NSFW回避・凍結安全ライン）
+## 画像方針: 投票テーマに合わせた「〇〇な女の子 VS 〇〇な女の子」対決構図
 
 ---
 
 ## 投稿スケジュール
 
-| Day | 時間 | 投稿 | タイプ |
-|-----|------|------|--------|
-| Day1 | 設定時 | A. 固定ツイート | 自己紹介 |
-| Day1 | 10:30 | B. 巨乳vs美乳 | 2択ポール |
-| Day1 | 17:00 | C. 清楚vsギャル | 2択ポール |
-| Day2 | 10:30 | D. 先輩OLvs幼なじみ | 2択ポール |
-| Day2 | 17:00 | E. 制服vsナース | 2択ポール |
-| Day2 | 20:00 | F. ネタ募集 | エンゲージメント |
-| Day3 | 17:00 | G. FANZAアフィリ | アフィリ（SBI=0確認後） |
+| Day | 時間 | 投稿 | タイプ | 画像構図 |
+|-----|------|------|--------|----------|
+| Day1 | 設定時 | A. 固定ツイート | 自己紹介 | マスコットキャラ単体 |
+| Day1 | 10:30 | B. 巨乳vs美乳 | 2択ポール | グラマラス女子 VS スレンダー女子 |
+| Day1 | 17:00 | C. 清楚vsギャル | 2択ポール | 黒髪清楚女子 VS 金髪ギャル女子 |
+| Day2 | 10:30 | D. 先輩OLvs幼なじみ | 2択ポール | メガネOL女子 VS パーカー幼なじみ女子 |
+| Day2 | 17:00 | E. 制服vsナース | 2択ポール | セーラー服女子 VS ナース服女子 |
+| Day2 | 20:00 | F. ネタ募集 | エンゲージメント | マスコットキャラ単体 |
+| Day3 | 17:00 | G. FANZAアフィリ | アフィリ | セール紹介キャラ単体 |
 
 ---
 
-## 共通ネガティブプロンプト（全画像共通・末尾に追加）
+## 共通ネガティブプロンプト（全画像末尾に追加）
 
 ```
 Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
-## 画像スタイル共通指示
+## 共通スタイル指示
 
 ```
-anime illustration style, cute Japanese anime girl, colorful, vibrant, clean lineart, high quality digital art, neon pink (#ff2d78) and dark navy (#1a1a2e) color theme, no text
+anime illustration style, cute Japanese anime girls, colorful, vibrant, clean lineart, high quality digital art, neon pink (#ff2d78) and dark navy (#1a1a2e) color theme, no text, upper body shot
 ```
+
+## VS構図の共通ルール
+
+- 画面を左右に分割（斜めの稲妻ライン or 対角線で区切る）
+- 左側 = ネオンピンク(#ff2d78)背景 → 選択肢①の女の子
+- 右側 = ダークネイビー(#1a1a2e)背景 → 選択肢②の女の子
+- 中央にVSのエフェクト（火花・スパーク）
+- 両キャラは対面 or 背中合わせ
 
 ---
 
@@ -48,17 +56,17 @@ anime illustration style, cute Japanese anime girl, colorful, vibrant, clean lin
 
 ### 画像プロンプト
 ```
-Anime illustration, cute anime girl with long pink hair winking at the viewer, holding a ballot box with a checkmark, wearing a lab coat over a casual outfit, neon pink (#ff2d78) accents, dark navy (#1a1a2e) background with floating pie charts and bar graphs, playful pose, cheerful expression, upper body shot, clean digital art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, cute anime girl with long pink hair winking at the viewer, holding a ballot box with a checkmark, wearing a white lab coat over a black tank top, neon pink (#ff2d78) accents, dark navy (#1a1a2e) background with floating pie charts and bar graphs, playful pose, cheerful expression, upper body shot, clean digital art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Anime girl in a lab coat holding a ballot box with data charts in the background — poll lab mascot
+Anime girl in a lab coat holding a ballot box with data charts — poll lab mascot
 ```
 
 ---
 
-## 【B】投稿1 - Day1 10:30 JST - 2択ポール
+## 【B】投稿1 - Day1 10:30 JST - 巨乳 VS 美乳
 
 ### 本文
 ```
@@ -74,17 +82,17 @@ Anime girl in a lab coat holding a ballot box with data charts in the background
 
 ### 画像プロンプト
 ```
-Anime illustration, split composition with two cute anime girls back to back, left girl has confident pose with arms crossed wearing a pink sweater, right girl has shy pose holding a clipboard wearing a navy blouse, neon pink (#ff2d78) vs dark navy (#1a1a2e) diagonal split background, VS text effect between them, playful rivalry vibe, upper body shot, clean digital art, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, VS battle composition split diagonally, left side neon pink (#ff2d78) background: voluptuous anime girl with long wavy brown hair, confident smile, arms crossed, wearing a tight knit sweater, glamorous and bold aura, right side dark navy (#1a1a2e) background: slender anime girl with short bob haircut, elegant pose with hand on hip, wearing a fitted blouse, refined and graceful aura, electric spark VS effect at the center dividing line, both girls facing each other with competitive expressions, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Two anime girls back to back in a VS composition — poll battle illustration
+Glamorous anime girl vs elegant slender anime girl in a VS battle — body type poll
 ```
 
 ---
 
-## 【C】投稿2 - Day1 17:00 JST - 2択ポール
+## 【C】投稿2 - Day1 17:00 JST - 清楚 VS ギャル
 
 ### 本文
 ```
@@ -100,17 +108,17 @@ Two anime girls back to back in a VS composition — poll battle illustration
 
 ### 画像プロンプト
 ```
-Anime illustration, split composition, left side: cute anime girl with black hair in a white blouse and long skirt looking gentle and innocent on soft pink background, right side: energetic anime girl with blonde hair in trendy casual fashion with confident smile on dark navy background, diagonal split dividing the two, neon pink (#ff2d78) accent line between them, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, VS battle composition split diagonally, left side neon pink (#ff2d78) background: innocent anime girl with long straight black hair, gentle smile, hands clasped together, wearing a white blouse with a ribbon, pure and soft aura with flower petals floating, right side dark navy (#1a1a2e) background: confident anime girl with blonde hair in a ponytail, peace sign pose, tanned skin, wearing a trendy off-shoulder top and choker necklace, bold and energetic aura with star effects, lightning bolt VS effect at the center dividing line, both girls looking at the viewer, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Two anime girls side by side — innocent dark-haired girl vs confident blonde gyaru style
+Innocent black-haired anime girl vs confident blonde gyaru in a VS battle — type preference poll
 ```
 
 ---
 
-## 【D】投稿3 - Day2 10:30 JST - 2択ポール
+## 【D】投稿3 - Day2 10:30 JST - 先輩OL VS 幼なじみ
 
 ### 本文
 ```
@@ -126,17 +134,17 @@ Two anime girls side by side — innocent dark-haired girl vs confident blonde g
 
 ### 画像プロンプト
 ```
-Anime illustration, split composition, left side: cool beautiful anime woman with glasses and hair bun wearing an office blazer, arms crossed, confident smirk, on neon pink (#ff2d78) background, right side: cute anime girl with short brown hair in a casual hoodie, blushing and waving shyly, on dark navy (#1a1a2e) background, VS spark effect in the center, upper body shot, clean anime style, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, VS battle composition split diagonally, left side neon pink (#ff2d78) background: beautiful anime woman with dark hair in a bun and red-framed glasses, wearing a fitted grey office blazer over a white shirt, arms crossed with a confident smirk, cool and mature aura with geometric light effects, right side dark navy (#1a1a2e) background: cute anime girl with short light brown hair and an ahoge, wearing an oversized cream hoodie, blushing and waving shyly with both hands, warm and nostalgic aura with soft bokeh effects, fire spark VS effect at the center dividing line, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Anime office lady vs childhood friend girl in a VS battle composition
+Cool office lady anime woman vs shy childhood friend anime girl in a VS battle — relationship type poll
 ```
 
 ---
 
-## 【E】投稿4 - Day2 17:00 JST - 2択ポール
+## 【E】投稿4 - Day2 17:00 JST - 制服 VS ナース
 
 ### 本文
 ```
@@ -152,12 +160,12 @@ Anime office lady vs childhood friend girl in a VS battle composition
 
 ### 画像プロンプト
 ```
-Anime illustration, split composition, left side: cute anime girl in a sailor school uniform with pleated skirt, holding a book, cheerful smile, on neon pink (#ff2d78) background, right side: cute anime girl in a nurse cap and white nurse uniform with a stethoscope, gentle expression, on dark navy (#1a1a2e) background, sparkle effects, diagonal split, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, VS battle composition split diagonally, left side neon pink (#ff2d78) background: cute anime girl with twin tails, wearing a navy sailor school uniform with a red ribbon, holding a school bag, cheerful wink and peace sign, youthful and energetic aura with cherry blossom petals, right side dark navy (#1a1a2e) background: gentle anime girl with wavy lavender hair in a low ponytail, wearing a white nurse uniform and nurse cap, holding a clipboard to her chest, warm caring smile, soft and healing aura with cross-shaped light effects, electric VS effect at the center dividing line, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Anime schoolgirl vs nurse girl in a VS cosplay battle
+Anime schoolgirl in sailor uniform vs anime nurse in a VS battle — cosplay preference poll
 ```
 
 ---
@@ -172,12 +180,12 @@ Anime schoolgirl vs nurse girl in a VS cosplay battle
 
 ### 画像プロンプト
 ```
-Anime illustration, cute anime girl with pink hair sitting at a desk surrounded by floating speech bubbles and question marks, holding a pen and notebook, curious excited expression, wearing a casual t-shirt, neon pink (#ff2d78) speech bubbles on dark navy (#1a1a2e) background, cozy room setting, upper body shot, clean anime style, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, cute anime girl with pink hair (the poll lab mascot) sitting at a desk surrounded by floating speech bubbles and question marks, holding a pen and notebook with a curious excited expression, wearing a lab coat, neon pink (#ff2d78) speech bubbles on dark navy (#1a1a2e) background, cozy room with a glowing monitor showing charts, upper body shot, clean anime style, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Anime girl at a desk with speech bubbles — collecting poll ideas
+Anime mascot girl at a desk collecting poll topic ideas with speech bubbles
 ```
 
 ---
@@ -199,12 +207,12 @@ Anime girl at a desk with speech bubbles — collecting poll ideas
 
 ### 画像プロンプト
 ```
-Anime illustration, excited anime girl with sparkling eyes holding up a glowing sale tag, shopping bags around her, celebratory confetti and star effects, wearing a cute casual outfit, neon pink (#ff2d78) sale tag glow on dark navy (#1a1a2e) background, energetic happy pose, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+Anime illustration, excited anime girl with pink hair (the poll lab mascot) jumping with sparkling eyes, holding up a glowing pink sale tag in one hand and a gift box in the other, celebratory confetti and star burst effects, wearing a lab coat over casual clothes, neon pink (#ff2d78) glow effects on dark navy (#1a1a2e) background, energetic and happy expression, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
 ```
 
 ### Alt-text
 ```
-Excited anime girl holding a sale tag with confetti — FANZA sale announcement
+Excited anime mascot girl holding a sale tag with confetti — FANZA sale event
 ```
 
 ---
@@ -222,7 +230,9 @@ Excited anime girl holding a sale tag with confetti — FANZA sale announcement
 ## 画像ガイドライン
 
 - **スタイル**: アニメ/イラスト調（実写NG）
-- **露出ライン**: 制服・ナース服・ブラウスなど衣服着用、バストアップ〜上半身
+- **露出ライン**: 制服・ナース服・ブラウス・ニットなど衣服着用、上半身ショット
 - **NG**: ヌード、下着のみ、過度な谷間強調、性的ポーズ、実写風リアル描写
-- **配色**: ネオンピンク(#ff2d78) × ダークネイビー(#1a1a2e) 統一
-- **構図**: 2択ポールはVS分割構図で対比を強調
+- **配色**: 左=ネオンピンク(#ff2d78) / 右=ダークネイビー(#1a1a2e)
+- **構図**: ポール投稿は全て「〇〇な女の子 VS 〇〇な女の子」の対決分割構図
+- **中央**: VS火花/稲妻エフェクトで対決感を演出
+- **キャラ差別化**: 髪型・髪色・服装・表情・オーラで各テーマの特徴を明確に表現
