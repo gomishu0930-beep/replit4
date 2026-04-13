@@ -5,6 +5,7 @@ import { initStorage } from "./bot/storage";
 import { loadMeetingData } from "./bot/meeting";
 import { initTasks } from "./bot/tasks";
 import { loadPauseState } from "./bot/twitter";
+import { loadSafetyState } from "./bot/safety-engine";
 
 const rawPort = process.env["PORT"];
 
@@ -28,22 +29,20 @@ const server = app.listen(port, async (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // GCS からデータをロードしてからスケジューラーを起動
   await initStorage();
   await loadMeetingData();
   await initTasks();
-  await loadPauseState(); // 停止フラグを復元（凍結対応などで永続停止している場合）
+  await loadPauseState();
+  loadSafetyState();
   startScheduler();
 });
 
-// グレースフルシャットダウン：投稿中でも最大60秒待ってから終了
 function gracefulShutdown(signal: string) {
   logger.info(`${signal} received — graceful shutdown started`);
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);
   });
-  // 60秒以内に終わらなければ強制終了
   setTimeout(() => {
     logger.warn("Graceful shutdown timeout — forcing exit");
     process.exit(1);
@@ -53,7 +52,6 @@ function gracefulShutdown(signal: string) {
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
 
-// 未処理のPromise拒否をキャッチ → クラッシュ防止
 process.on("unhandledRejection", (reason: any) => {
   logger.error({ reason }, "unhandledRejection — 継続運転します");
 });

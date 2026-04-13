@@ -1,59 +1,50 @@
 import { Router } from 'express';
-import { getStats, getAllPosts, getExternalPatternsInfo, getDynamicTemplatesInfo, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getManualFeedbacks, recordManualFeedback, getRebrandlyData, getAlgoInsights, getLatestAlgoInsight, getAlgoDiscoveries, updateAlgoDiscoveryStatus, getAlgoDiscoveryMeta, recordPostManual, getLastPostMeetingResult } from '../bot/storage.js';
-import { getLastVisionScoringResult } from '../bot/celebrity.js';
-import { buildManualPostFeedback } from '../bot/ai.js';
+import { getStats, getAllPosts, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getRebrandlyData, recordPostManual } from '../bot/storage.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
-import { runAlgoAnalysis, computeAlgoStats, X_ALGO_KB } from '../bot/algo.js';
-import { collectAlgoNews } from '../bot/algo-news.js';
 import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateImage } from '../bot/imageGen.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
-import { runAutoDirectiveExecution, runABTestDecision, AUTONOMY_GRANTED_AT } from '../bot/auto-execute.js';
-import { runAutonomousMeeting } from '../bot/auto-meeting.js';
+import { getSafetyStatus, validatePost, recordPostEvent } from '../bot/safety-engine.js';
 
 const router = Router();
 
-function getABTestWeek(): 'W1' | 'W2' | 'normal' {
-  const nowJst = new Date(Date.now() + 9 * 3600000);
-  const dateKey = nowJst.toISOString().slice(0, 10);
-  if (dateKey >= '2026-04-07' && dateKey <= '2026-04-13') return 'W1';
-  if (dateKey >= '2026-04-14' && dateKey <= '2026-04-20') return 'W2';
-  return 'normal';
+function requireAdminToken(req: any, res: any, next: any) {
+  const token = req.headers['x-admin-token'] as string | undefined;
+  const secret = process.env.SESSION_SECRET;
+  if (secret && token && token === secret) { return next(); }
+  const origin = req.headers.origin as string | undefined;
+  const referer = req.headers.referer as string | undefined;
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DEPLOYMENT_DOMAIN;
+  if (replitDomain) {
+    const isSameOrigin = (origin?.includes(replitDomain) || referer?.includes(replitDomain));
+    if (isSameOrigin) { return next(); }
+  }
+  if (process.env.NODE_ENV === 'development') { return next(); }
+  res.status(401).json({ error: '認証が必要です' });
 }
 
 router.get('/bot/status', async (_req, res) => {
   const stats = getStats();
   const account = await getMyUsername();
-  const week = getABTestWeek();
-
-  // A/Bテスト週は1本/日のみ。通常週は動的3スロット。
-  const schedule = week === 'W1'
-    ? [
-        { time: '20:00 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W1・プライムタイム）', active: true },
-        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い', active: false, reason: 'W1停止中' },
-        { time: '05:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（W2スロット参考）', active: false, reason: 'W1停止中 — 今週は20:00のみ' },
-      ]
-    : week === 'W2'
-    ? [
-        { time: '05:00 JST', type: 'celebrity', label: '🎭 芸能人アフィリ（W2・本命スロット）', active: true },
-        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い', active: false, reason: 'W2停止中' },
-        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（通常週スロット）', active: false, reason: 'W2停止中 — 今週は05:00のみ' },
-      ]
-    : [
-        { time: '10:30 JST', type: 'impression', label: '💬 インプ狙い①', active: true },
-        { time: '17:00 JST', type: 'impression', label: '💬 インプ狙い②', active: true },
-        { time: '20:00 JST', type: 'celebrity',  label: '🎭 芸能人アフィリ（動的時間帯）', active: true },
-      ];
+  const safety = getSafetyStatus();
 
   res.json({
     status: 'running',
     uptime: Math.floor(process.uptime()),
     account,
-    mode: week === 'normal' ? 'normal' : 'recovery',
-    abTestWeek: week,
-    schedule,
+    mode: safety.automationLevel,
+    safety: {
+      level: safety.automationLevel,
+      riskScore: safety.riskScore,
+      dailyPostLimit: safety.dailyPostLimit,
+      todayPostCount: safety.todayPostCount,
+      remainingPostsToday: safety.remainingPostsToday,
+      affiliateRatio: safety.currentAffiliateRatio,
+      followerCount: safety.followerCount,
+      accountAgeDays: safety.accountAgeDays,
+    },
     stats,
   });
 });
@@ -64,7 +55,6 @@ router.get('/bot/posts', (_req, res) => {
 });
 
 router.post('/bot/posts/sync-timeline', async (_req, res) => {
-  console.log('  🔄 [タイムライン同期] 直近ツイートを取得中...');
   try {
     const tweets = await getOwnRecentTweets(50);
     let newCount = 0;
@@ -79,10 +69,8 @@ router.post('/bot/posts/sync-timeline', async (_req, res) => {
       });
       if (isNew) newCount++; else updatedCount++;
     }
-    console.log(`  ✅ [タイムライン同期] 新規: ${newCount}件 / 更新: ${updatedCount}件`);
     return res.json({ success: true, total: tweets.length, newCount, updatedCount });
   } catch (e: any) {
-    console.error(`  ❌ [タイムライン同期] 失敗: ${e.message}`);
     return res.status(500).json({ error: e.message ?? 'タイムライン取得失敗' });
   }
 });
@@ -93,10 +81,9 @@ router.post('/bot/posts/register-manual', async (req, res) => {
     return res.status(400).json({ error: 'tweetId (数字) が必要です' });
   }
   const id = tweetId.trim();
-  console.log(`  🔍 [手動登録] ツイート取得中: ${id}`);
   const tweet = await getTweetById(id);
   if (!tweet) {
-    return res.status(404).json({ error: 'ツイートが見つかりません（IDを確認してください）' });
+    return res.status(404).json({ error: 'ツイートが見つかりません' });
   }
   const { isNew, post } = recordPostManual({
     tweetId: tweet.id,
@@ -104,27 +91,18 @@ router.post('/bot/posts/register-manual', async (req, res) => {
     postedAt: tweet.createdAt,
     metrics: tweet.metrics,
   });
-  console.log(`  ✅ [手動登録] ${isNew ? '新規登録' : 'メトリクス更新'}: ${tweet.id} (インプ: ${tweet.metrics?.impression_count ?? 0})`);
   return res.json({ success: true, isNew, post });
-});
-
-router.get('/bot/external-patterns', (_req, res) => {
-  const info = getExternalPatternsInfo();
-  res.json(info);
 });
 
 router.get('/bot/strategy', (_req, res) => {
   const summary = getStrategySummary();
-  const dynInfo = getDynamicTemplatesInfo();
-  res.json({ ...summary, dynamicTemplates: dynInfo });
+  res.json(summary);
 });
 
-// ウォッチドッグ状態
 router.get('/bot/watchdog', (_req, res) => {
   res.json(getWatchdogState());
 });
 
-// DMM フロア一覧（利用可能なフロアの確認用）
 router.get('/bot/floors', async (_req, res) => {
   try {
     const params = new URLSearchParams({
@@ -134,17 +112,11 @@ router.get('/bot/floors', async (_req, res) => {
     });
     const r = await fetch(`https://api.dmm.com/affiliate/v3/FloorList?${params}`);
     const data = await r.json() as any;
-    const floors: { site: string; service: string; floorName: string; floorCode: string; floorId: string }[] = [];
+    const floors: any[] = [];
     for (const site of data?.result?.site ?? []) {
       for (const svc of site.service ?? []) {
         for (const floor of svc.floor ?? []) {
-          floors.push({
-            site: site.name,
-            service: svc.name,
-            floorName: floor.name,
-            floorCode: floor.code,
-            floorId: floor.id,
-          });
+          floors.push({ site: site.name, service: svc.name, floorName: floor.name, floorCode: floor.code, floorId: floor.id });
         }
       }
     }
@@ -154,7 +126,6 @@ router.get('/bot/floors', async (_req, res) => {
   }
 });
 
-// キャンペーンID情報
 router.get('/bot/campaign-ids', async (_req, res) => {
   try {
     const info = await getCampaignCacheInfo();
@@ -164,13 +135,8 @@ router.get('/bot/campaign-ids', async (_req, res) => {
   }
 });
 
-// ─── Twitter API 疎通診断 ────────────────────────────────────────────────────
-// どのエンドポイントが現在のプランで動くかを確認する
-
 router.get('/bot/api-check', async (_req, res) => {
   const results: Record<string, { ok: boolean; detail: string }> = {};
-
-  // ① /v2/users/me（認証ユーザー情報 — 通常 Basic+ で動作）
   try {
     const info = await getAccountInfo();
     results['GET /v2/users/me'] = info
@@ -179,47 +145,17 @@ router.get('/bot/api-check', async (_req, res) => {
   } catch (e: any) {
     results['GET /v2/users/me'] = { ok: false, detail: e.message };
   }
-
-  // ② 自ツイート取得（フリープランでは 402）
-  try {
-    const { getOwnRecentTweets } = await import('../bot/twitter.js');
-    const tweets = await getOwnRecentTweets(5);
-    results['GET /v2/users/:id/tweets'] = { ok: true, detail: `${tweets.length}件取得成功` };
-  } catch (e: any) {
-    results['GET /v2/users/:id/tweets'] = { ok: false, detail: e.message.slice(0, 80) };
-  }
-
-  // ③ ツイート検索（フリープランでは 402）
-  try {
-    const { searchTweetsByHashtag } = await import('../bot/twitter.js');
-    const tweets = await searchTweetsByHashtag('FANZA', 10);
-    results['GET /v2/tweets/search/recent'] = { ok: true, detail: `${tweets.length}件取得成功` };
-  } catch (e: any) {
-    results['GET /v2/tweets/search/recent'] = { ok: false, detail: e.message.slice(0, 80) };
-  }
-
-  const allOk = Object.values(results).every((r) => r.ok);
-  res.json({
-    summary: allOk ? '✅ 全エンドポイント動作中' : '⚠️ 一部エンドポイントが利用不可',
-    results,
-  });
+  res.json({ results });
 });
 
-// ─── 回復研究: アカウントスナップショット ─────────────────────────────────────
-
-// フォロワー推移一覧
 router.get('/bot/snapshots', (_req, res) => {
   res.json({ snapshots: getAccountSnapshots() });
 });
 
-// 手動でスナップショットを今すぐ取得
 router.post('/bot/snapshots/capture', async (_req, res) => {
   try {
     const info = await getAccountInfo();
-    if (!info) {
-      res.status(503).json({ ok: false, error: 'Twitter API からアカウント情報を取得できませんでした' });
-      return;
-    }
+    if (!info) { res.status(503).json({ ok: false, error: 'Twitter API取得失敗' }); return; }
     const note = (_req.body?.note as string) ?? '手動記録';
     recordAccountSnapshot({ ...info, note });
     res.json({ ok: true, snapshot: { ...info, note } });
@@ -228,129 +164,26 @@ router.post('/bot/snapshots/capture', async (_req, res) => {
   }
 });
 
-// ─── 回復研究: 手動観察ログ ────────────────────────────────────────────────────
-
-// 観察ログ一覧（?category=engagement|product|safe-post|other）
 router.get('/bot/observations', (req, res) => {
   const cat = req.query.category as ManualObservation['category'] | undefined;
   res.json({ observations: getObservations(cat) });
 });
 
-// 観察を追加
 router.post('/bot/observations', (req, res) => {
   const { category, observation, source, hypothesis, priority } = req.body ?? {};
   if (!category || !observation) {
     res.status(400).json({ ok: false, error: 'category と observation は必須です' });
     return;
   }
-  const validCategories = ['engagement', 'product', 'safe-post', 'other'];
-  if (!validCategories.includes(category)) {
-    res.status(400).json({ ok: false, error: `category は ${validCategories.join('|')} のいずれかです` });
-    return;
-  }
-  const obs = addObservation({
-    category,
-    observation,
-    source: source ?? undefined,
-    hypothesis: hypothesis ?? undefined,
-    priority: priority ?? 'medium',
-  });
+  const obs = addObservation({ category, observation, source, hypothesis, priority: priority ?? 'medium' });
   res.json({ ok: true, observation: obs });
 });
 
-// 観察を削除
 router.delete('/bot/observations/:id', (req, res) => {
   const deleted = deleteObservation(req.params.id);
-  if (!deleted) {
-    res.status(404).json({ ok: false, error: '該当する観察ログが見つかりません' });
-    return;
-  }
+  if (!deleted) { res.status(404).json({ ok: false, error: '該当なし' }); return; }
   res.json({ ok: true });
 });
-
-// 手動投稿フィードバック履歴取得
-router.get('/bot/manual-feedback', (_req, res) => {
-  res.json({ feedbacks: getManualFeedbacks(10) });
-});
-
-// 手動投稿フィードバック即時生成（手動トリガー）
-router.post('/bot/manual-feedback/run', async (_req, res) => {
-  try {
-    const fb = await buildManualPostFeedback(7);
-    if (!fb) {
-      res.json({ ok: false, reason: '直近7日間の手動投稿が見つかりませんでした' });
-      return;
-    }
-    const saved = recordManualFeedback(fb);
-    res.json({ ok: true, feedback: saved });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// キャンペーンID手動再探索（POST）
-router.post('/bot/campaign-ids/discover', async (_req, res) => {
-  try {
-    // バックグラウンドで実行（レスポンスはすぐ返す）
-    discoverCampaignIds({ force: true, maxProbe: 500 }).catch((e: any) =>
-      console.warn('  ⚠ 手動探索失敗:', e.message),
-    );
-    res.json({ status: 'started', message: 'キャンペーンID探索を開始しました（バックグラウンド実行中）' });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── アルゴリズム解析 ──────────────────────────────────────────────────────────
-
-router.get('/bot/algo-kb', (_req, res) => {
-  res.json(X_ALGO_KB);
-});
-
-// アルゴ発見情報 CRUD
-router.get('/bot/algo-discoveries', (_req, res) => {
-  res.json({
-    meta: getAlgoDiscoveryMeta(),
-    discoveries: getAlgoDiscoveries(),
-  });
-});
-
-router.post('/bot/algo-discoveries/search', async (_req, res) => {
-  try {
-    const found = await collectAlgoNews();
-    res.json({ ok: true, found: found.length, discoveries: found });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-router.patch('/bot/algo-discoveries/:id', (req, res) => {
-  const { status, note } = req.body as { status: string; note?: string };
-  const validStatuses = ['pending', 'adopted', 'rejected'];
-  if (!validStatuses.includes(status)) {
-    res.status(400).json({ error: 'invalid status' }); return;
-  }
-  const ok = updateAlgoDiscoveryStatus(req.params.id, status as any, note);
-  if (!ok) { res.status(404).json({ error: 'not found' }); return; }
-  res.json({ ok: true });
-});
-
-router.get('/bot/algo-insights', (_req, res) => {
-  const latest = getLatestAlgoInsight();
-  const stats  = computeAlgoStats();
-  res.json({ latest, stats: { byType: stats.byType, byHour: stats.byHour, byDayOfWeek: stats.byDayOfWeek, correlations: stats.correlations, topPosts: stats.topPosts, sampleSize: stats.sampleSize } });
-});
-
-router.post('/bot/algo-insights/run', async (_req, res) => {
-  try {
-    const insight = await runAlgoAnalysis();
-    res.json({ ok: true, briefing: insight.briefing, generatedAt: insight.generatedAt });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── Rebrandly ────────────────────────────────────────────────────────────────
 
 router.get('/bot/rebrandly', (_req, res) => {
   res.json(getRebrandlyData());
@@ -369,94 +202,6 @@ router.post('/bot/rebrandly/sync', async (_req, res) => {
   }
 });
 
-// ─── 自律実行エンドポイント ──────────────────────────────────────────────────
-
-router.get('/bot/autonomy/status', (_req, res) => {
-  res.json({
-    autonomyGrantedAt: AUTONOMY_GRANTED_AT,
-    isAutonomous: true,
-    features: [
-      { key: 'auto_meeting',       label: '週次AI自律会議',             schedule: '月曜 04:00 JST', enabled: true },
-      { key: 'directive_auto_exec', label: 'AI担当指令の自動実行',      schedule: '毎朝 07:30 JST', enabled: true },
-      { key: 'algo_auto_apply',    label: 'アルゴ推奨の自動戦略適用',   schedule: '日曜 23:30 JST', enabled: true },
-      { key: 'ab_test_decide',     label: 'A/Bテスト自動判定',          schedule: 'W2後 月曜 09:00 JST', enabled: true },
-    ],
-  });
-});
-
-// ─── 自律API用: 認証ミドルウェア ─────────────────────────────────────────────
-// 同一ドメイン（ダッシュボード）からのリクエスト、またはx-admin-tokenヘッダーを許可
-function requireAdminToken(req: any, res: any, next: any) {
-  // 1. トークン認証（外部ツール等）
-  const token = req.headers['x-admin-token'] as string | undefined;
-  const secret = process.env.SESSION_SECRET;
-  if (secret && token && token === secret) { return next(); }
-
-  // 2. 同一オリジン確認（ダッシュボードからのブラウザリクエスト）
-  const origin = req.headers.origin as string | undefined;
-  const referer = req.headers.referer as string | undefined;
-  const replitDomain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DEPLOYMENT_DOMAIN;
-  if (replitDomain) {
-    const isSameOrigin = (origin?.includes(replitDomain) || referer?.includes(replitDomain));
-    if (isSameOrigin) { return next(); }
-  }
-
-  // 3. 開発環境は許可
-  if (process.env.NODE_ENV === 'development') { return next(); }
-
-  res.status(401).json({ error: '認証が必要です' });
-}
-
-router.post('/bot/autonomy/run-directives', requireAdminToken, async (_req, res) => {
-  try {
-    console.log('  🤖 [API] 手動トリガー: 会議室決定事項の自動実行開始');
-    const result = await runAutoDirectiveExecution();
-    res.json({ ok: true, result });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-router.post('/bot/autonomy/run-meeting', requireAdminToken, async (req, res) => {
-  try {
-    console.log('  🤝 [API] 手動トリガー: 自律AI会議開始');
-    const customTopic = req.body?.topic as string | undefined;
-    const result = await runAutonomousMeeting(customTopic);
-    res.json({ ok: true, result });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-router.post('/bot/autonomy/run-ab-test', requireAdminToken, async (_req, res) => {
-  try {
-    console.log('  🧪 [API] 手動トリガー: A/Bテスト自動判定開始');
-    const decision = await runABTestDecision();
-    if (!decision) {
-      res.json({ ok: false, message: 'W2期間中のため判定スキップ（4/20以降に実行可能）' });
-    } else {
-      res.json({ ok: true, decision });
-    }
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── 3者投稿会議 最新結果 ─────────────────────────────────────────────────────
-router.get('/bot/post-meeting/latest', requireAdminToken, (_req, res) => {
-  const result = getLastPostMeetingResult();
-  if (!result) { res.json({ ok: false, result: null }); return; }
-  res.json({ ok: true, result });
-});
-
-// ── Vision スコアリング最新結果 ──────────────────────────────────────────────
-router.get('/bot/vision-scoring/latest', requireAdminToken, (_req, res) => {
-  const result = getLastVisionScoringResult();
-  if (!result) { res.json({ ok: false, result: null }); return; }
-  res.json({ ok: true, result });
-});
-
-// ── Nanobanana2 画像生成 ──────────────────────────────────────────────────────
 router.post('/bot/nanobanana/generate', async (req, res) => {
   const { prompt } = req.body ?? {};
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
@@ -464,12 +209,10 @@ router.post('/bot/nanobanana/generate', async (req, res) => {
     const imageUrl = await generateImage(prompt.trim());
     res.json({ ok: true, imageUrl });
   } catch (e: any) {
-    console.error('[Nanobanana] 生成エラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Nanobanana2 画像アップロード（X mediaId取得）──────────────────────────────
 router.post('/bot/nanobanana/upload', async (req, res) => {
   const { imageUrl } = req.body ?? {};
   if (!imageUrl?.trim()) { res.status(400).json({ error: 'imageUrl は必須です' }); return; }
@@ -477,33 +220,36 @@ router.post('/bot/nanobanana/upload', async (req, res) => {
     const mediaIds = await uploadImages([imageUrl.trim()]);
     res.json({ ok: true, mediaId: mediaIds[0] ?? null, mediaIds });
   } catch (e: any) {
-    console.error('[Nanobanana] アップロードエラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── カスタムツイート投稿（任意テキスト + 任意mediaIds）────────────────────────
-router.post('/bot/tweet', async (req, res) => {
-  const { text, mediaIds = [] } = req.body ?? {};
+router.post('/bot/tweet', requireAdminToken, async (req, res) => {
+  const { text, mediaIds = [], isAffiliate = false } = req.body ?? {};
   if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
+
+  const validation = validatePost(isAffiliate);
+  if (!validation.allowed) {
+    res.status(429).json({ error: '安全制限', validation });
+    return;
+  }
+
   try {
     const tweetId = await postTweet(text.trim(), mediaIds);
-    res.json({ ok: true, tweetId });
+    recordPostEvent(isAffiliate);
+    res.json({ ok: true, tweetId, validation });
   } catch (e: any) {
-    console.error('[Tweet] 投稿エラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── リプライ投稿 ───────────────────────────────────────────────────────────────
-router.post('/bot/reply', async (req, res) => {
+router.post('/bot/reply', requireAdminToken, async (req, res) => {
   const { tweetId, text } = req.body ?? {};
   if (!tweetId?.trim() || !text?.trim()) { res.status(400).json({ error: 'tweetId と text は必須です' }); return; }
   try {
     const replyId = await replyToTweet(tweetId.trim(), text.trim());
     res.json({ ok: true, tweetId: replyId });
   } catch (e: any) {
-    console.error('[Reply] 投稿エラー:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
