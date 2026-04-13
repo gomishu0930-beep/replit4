@@ -36,6 +36,24 @@ uri = "file://artifacts/api-server/fanza-bot/note-articles/images/05_vr_cover.pn
 type = "image"
 title = "VR cyber neon wireframe"
 
+[[generated]]
+id = "867bnQsJ74PZtfuzw7NVM"
+uri = "file://attached_assets/generated_images/header_banner.png"
+type = "image"
+title = "Twitter header poll theme"
+
+[[generated]]
+id = "7ga0xeMTl2KqxkRCEAFAU"
+uri = "file://attached_assets/generated_images/icon_profile.png"
+type = "image"
+title = "Profile icon ballot box"
+
+[[generated]]
+id = "LOIwzF_z2731mD-un5uvi"
+uri = "file://attached_assets/generated_images/header_v2.png"
+type = "image"
+title = "header neon ballot clean"
+
 [[outputs]]
 id = "wfdAwBpJndMb9jPTDjCBd"
 uri = "file://fanza-bot.tar.gz"
@@ -113,3 +131,15 @@ id = "dCUtav-eGnOin-Tap8bpz"
 uri = "file://artifacts/api-server/data/account-design.md"
 type = "text"
 title = "@fanza_poll_lab アカウント設計書（OODA分析）"
+
+[[outputs]]
+id = "X00Rii-nzk_tRfATotIfU"
+uri = "file://attached_assets/generated_images/header_v2.png"
+type = "image"
+title = "ヘッダー画像（1500x500推奨 — Canvaでテキスト追加）"
+
+[[outputs]]
+id = "2ATKzcbO_ZYk7jGIahWkZ"
+uri = "file://attached_assets/generated_images/icon_profile.png"
+type = "image"
+title = "プロフィールアイコン（400x400）"
