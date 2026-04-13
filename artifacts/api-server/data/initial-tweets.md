@@ -1,6 +1,7 @@
 # @fanza_poll_lab 初回投稿プラン
 ## AI会議 最終決定版（2026/04/13）
 ## 会議ID: meeting-1776055765593（5ラウンド完了）
+## 画像方針: アニメ/イラスト調の女の子入り（NSFW回避・凍結安全ライン）
 
 ---
 
@@ -18,10 +19,16 @@
 
 ---
 
-## 共通ネガティブプロンプト（全画像共通）
+## 共通ネガティブプロンプト（全画像共通・末尾に追加）
 
 ```
-Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+## 画像スタイル共通指示
+
+```
+anime illustration style, cute Japanese anime girl, colorful, vibrant, clean lineart, high quality digital art, neon pink (#ff2d78) and dark navy (#1a1a2e) color theme, no text
 ```
 
 ---
@@ -41,7 +48,12 @@ Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, u
 
 ### 画像プロンプト
 ```
-Minimalist infographic showing two pink checkboxes and a navy bar chart, neon pink (#ff2d78) accents on dark navy (#1a1a2e) background, no text, clean flat design, isometric light, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, cute anime girl with long pink hair winking at the viewer, holding a ballot box with a checkmark, wearing a lab coat over a casual outfit, neon pink (#ff2d78) accents, dark navy (#1a1a2e) background with floating pie charts and bar graphs, playful pose, cheerful expression, upper body shot, clean digital art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Anime girl in a lab coat holding a ballot box with data charts in the background — poll lab mascot
 ```
 
 ---
@@ -62,7 +74,12 @@ Minimalist infographic showing two pink checkboxes and a navy bar chart, neon pi
 
 ### 画像プロンプト
 ```
-Clean geometric pie chart split 50-50, left half bright pink (#ff2d78), right half dark navy (#1a1a2e), hard edges, no labels, minimalist data visualization, flat vector design, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, split composition with two cute anime girls back to back, left girl has confident pose with arms crossed wearing a pink sweater, right girl has shy pose holding a clipboard wearing a navy blouse, neon pink (#ff2d78) vs dark navy (#1a1a2e) diagonal split background, VS text effect between them, playful rivalry vibe, upper body shot, clean digital art, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Two anime girls back to back in a VS composition — poll battle illustration
 ```
 
 ---
@@ -83,7 +100,12 @@ Clean geometric pie chart split 50-50, left half bright pink (#ff2d78), right ha
 
 ### 画像プロンプト
 ```
-Two abstract vertical bars facing each other, left bar neon pink (#ff2d78), right bar dark navy (#1a1a2e), diagonal split background, no silhouettes, minimalist data chart style, flat design, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, split composition, left side: cute anime girl with black hair in a white blouse and long skirt looking gentle and innocent on soft pink background, right side: energetic anime girl with blonde hair in trendy casual fashion with confident smile on dark navy background, diagonal split dividing the two, neon pink (#ff2d78) accent line between them, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Two anime girls side by side — innocent dark-haired girl vs confident blonde gyaru style
 ```
 
 ---
@@ -104,7 +126,12 @@ Two abstract vertical bars facing each other, left bar neon pink (#ff2d78), righ
 
 ### 画像プロンプト
 ```
-Horizontal bar chart with two bars, top bar neon pink (#ff2d78), bottom bar dark navy (#1a1a2e), hard edges, no labels, minimalist infographic style, flat design, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, split composition, left side: cool beautiful anime woman with glasses and hair bun wearing an office blazer, arms crossed, confident smirk, on neon pink (#ff2d78) background, right side: cute anime girl with short brown hair in a casual hoodie, blushing and waving shyly, on dark navy (#1a1a2e) background, VS spark effect in the center, upper body shot, clean anime style, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Anime office lady vs childhood friend girl in a VS battle composition
 ```
 
 ---
@@ -125,7 +152,12 @@ Horizontal bar chart with two bars, top bar neon pink (#ff2d78), bottom bar dark
 
 ### 画像プロンプト
 ```
-Diagonal split chart with pink (#ff2d78) and navy (#1a1a2e) color blocks, abstract bars, no icons, flat design, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, split composition, left side: cute anime girl in a sailor school uniform with pleated skirt, holding a book, cheerful smile, on neon pink (#ff2d78) background, right side: cute anime girl in a nurse cap and white nurse uniform with a stethoscope, gentle expression, on dark navy (#1a1a2e) background, sparkle effects, diagonal split, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Anime schoolgirl vs nurse girl in a VS cosplay battle
 ```
 
 ---
@@ -140,7 +172,12 @@ Diagonal split chart with pink (#ff2d78) and navy (#1a1a2e) color blocks, abstra
 
 ### 画像プロンプト
 ```
-Neon pink speech bubbles floating over dark navy (#1a1a2e) background, light data-point dots, modern flat illustration, no text, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, cute anime girl with pink hair sitting at a desk surrounded by floating speech bubbles and question marks, holding a pen and notebook, curious excited expression, wearing a casual t-shirt, neon pink (#ff2d78) speech bubbles on dark navy (#1a1a2e) background, cozy room setting, upper body shot, clean anime style, vibrant, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Anime girl at a desk with speech bubbles — collecting poll ideas
 ```
 
 ---
@@ -162,7 +199,12 @@ Neon pink speech bubbles floating over dark navy (#1a1a2e) background, light dat
 
 ### 画像プロンプト
 ```
-Stylized abstract shopping tag icon in neon pink (#ff2d78), surrounded by abstract data bars on dark navy (#1a1a2e) canvas, futuristic flat design, no text, white background. Negative prompt: human, silhouette, skin tone, body, face, clothing, lingerie, underwear, curves, gradient, glow effect, pornographic, adult content, nudity
+Anime illustration, excited anime girl with sparkling eyes holding up a glowing sale tag, shopping bags around her, celebratory confetti and star effects, wearing a cute casual outfit, neon pink (#ff2d78) sale tag glow on dark navy (#1a1a2e) background, energetic happy pose, upper body shot, clean anime art style, vibrant colors, no text. Exclude: nude, naked, topless, exposed chest, exposed breasts, nipple, crotch, spread legs, explicit, pornographic, realistic photo, real person, 3D render, watermark, text, letters, words
+```
+
+### Alt-text
+```
+Excited anime girl holding a sale tag with confetti — FANZA sale announcement
 ```
 
 ---
@@ -176,3 +218,11 @@ Stylized abstract shopping tag icon in neon pink (#ff2d78), surrounded by abstra
 5. **SBI監視**: 各投稿後にshadowban.eu確認、SBI>0なら投稿頻度を削減
 6. **Alt-text必須**: 全画像にAlt-textを設定
 7. **分散いいね**: 投稿後30-60分以内に#FANZA検索上位SFW投稿へいいね3件
+
+## 画像ガイドライン
+
+- **スタイル**: アニメ/イラスト調（実写NG）
+- **露出ライン**: 制服・ナース服・ブラウスなど衣服着用、バストアップ〜上半身
+- **NG**: ヌード、下着のみ、過度な谷間強調、性的ポーズ、実写風リアル描写
+- **配色**: ネオンピンク(#ff2d78) × ダークネイビー(#1a1a2e) 統一
+- **構図**: 2択ポールはVS分割構図で対比を強調
