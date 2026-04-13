@@ -10,31 +10,31 @@ title = "nostalgic cute girl portrait"
 id = "bxwWEQzf_PXuZxobpNrq1"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/01_top10_cover.png"
 type = "image"
-title = "top10 ranking cover"
+title = "TOP10 review premium poster"
 
 [[generated]]
 id = "MC0soSZ90V7V52L2zlLMV"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/02_beginner_cover.png"
 type = "image"
-title = "beginner guide cover"
+title = "beginner guide flat design"
 
 [[generated]]
 id = "eLGa3j779wX835jfGfy3E"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/03_cospa_cover.png"
 type = "image"
-title = "cospa ranking cover"
+title = "cospa ranking orange navy"
 
 [[generated]]
 id = "E9zMenFrI-nQ5Br0RO3lS"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/04_actress_cover.png"
 type = "image"
-title = "actress spotlight cover"
+title = "actress floral luxury aesthetic"
 
 [[generated]]
 id = "zfoBIKMFYHU-NGEHnkV1e"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/05_vr_cover.png"
 type = "image"
-title = "VR kikaku cover"
+title = "VR cyber neon wireframe"
 
 [[outputs]]
 id = "wfdAwBpJndMb9jPTDjCBd"
@@ -52,58 +52,58 @@ title = "投稿用画像（現実路線・思い出感）"
 id = "i3321qA0-4rzUxDQ3TZGA"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/01_top10_review_2026h1.md"
 type = "text"
-title = "【有料¥300】TOP10レビュー 画像付き"
+title = "【有料¥300】TOP10 画像+文章更新済"
 
 [[outputs]]
 id = "t0yj5N8nWe9EdnS_YIq6h"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/02_beginners_guide.md"
 type = "text"
-title = "【無料】初心者ガイド 画像付き"
+title = "【無料】初心者ガイド 画像+文章更新済"
 
 [[outputs]]
 id = "UCaNo4m0GnaZCMSdubE_R"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/03_cospa_ranking.md"
 type = "text"
-title = "【有料¥300】コスパランキング 画像付き"
+title = "【有料¥300】コスパランキング 画像+文章更新済"
 
 [[outputs]]
 id = "G3erWDeG75JUfDN8rCl-9"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/04_actress_solo.md"
 type = "text"
-title = "【無料】女優・単体おすすめ10選 画像付き"
+title = "【無料】女優・単体 画像+文章更新済"
 
 [[outputs]]
 id = "ZPsU-lVgnqOIvaccs81jE"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/05_vr_kikaku.md"
 type = "text"
-title = "【無料】VR・企画おすすめ10選 画像付き"
+title = "【無料】VR・企画 画像+文章更新済"
 
 [[outputs]]
 id = "Cg-TZ4jOH_Yz74Do1j1NH"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/01_top10_cover.png"
 type = "image"
-title = "表紙画像①TOP10ランキング"
+title = "①TOP10 バーガンディ×ゴールド（Claude改良）"
 
 [[outputs]]
 id = "SZDOue3iJ6obwSO6ArdIb"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/02_beginner_cover.png"
 type = "image"
-title = "表紙画像②初心者ガイド"
+title = "②初心者 アクア×ホワイト（Claude改良）"
 
 [[outputs]]
 id = "-eSSvtecqsfYIfqq0mDQn"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/03_cospa_cover.png"
 type = "image"
-title = "表紙画像③コスパランキング"
+title = "③コスパ オレンジ×ネイビー（Claude改良）"
 
 [[outputs]]
 id = "Uelkq5LUhc7KTWm05w4_6"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/04_actress_cover.png"
 type = "image"
-title = "表紙画像④女優・単体"
+title = "④女優 ピンク×花柄（Claudeリスク排除済）"
 
 [[outputs]]
 id = "zV9VJ4-BEB0_iGV_XQ6sd"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/05_vr_cover.png"
 type = "image"
-title = "表紙画像⑤VR・企画"
+title = "⑤VR サイバーブルー×パープル（Claude改良）"
