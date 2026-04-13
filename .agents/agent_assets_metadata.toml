@@ -143,3 +143,9 @@ id = "2ATKzcbO_ZYk7jGIahWkZ"
 uri = "file://attached_assets/generated_images/icon_profile.png"
 type = "image"
 title = "プロフィールアイコン（400x400）"
+
+[[outputs]]
+id = "yqen3Z4NNSFESyuKMO91H"
+uri = "file://artifacts/api-server/data/initial-tweets.md"
+type = "text"
+title = "初回投稿プラン（固定ツイート+投稿6本+画像プロンプト）"
