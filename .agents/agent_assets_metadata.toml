@@ -107,3 +107,9 @@ id = "zV9VJ4-BEB0_iGV_XQ6sd"
 uri = "file://artifacts/api-server/fanza-bot/note-articles/images/05_vr_cover.png"
 type = "image"
 title = "⑤VR サイバーブルー×パープル（Claude改良）"
+
+[[outputs]]
+id = "dCUtav-eGnOin-Tap8bpz"
+uri = "file://artifacts/api-server/data/account-design.md"
+type = "text"
+title = "@fanza_poll_lab アカウント設計書（OODA分析）"
