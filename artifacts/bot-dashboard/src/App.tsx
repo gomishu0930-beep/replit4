@@ -217,6 +217,35 @@ function Dashboard() {
           <div className="space-y-4">
             <SectionHeader icon="🗳️" title="@fanza_poll_lab" sub="メイン — 手動投稿（Xアプリから）" color="text-blue-400" />
 
+            <div className="rounded-2xl bg-blue-500/5 border border-blue-500/15 p-4">
+              <p className="text-[11px] text-blue-400 font-bold mb-2">Pollとは？</p>
+              <p className="text-[11px] text-zinc-300 leading-relaxed mb-2">
+                Xの「投票機能」です。ツイート作成画面の下部にある📊マークから2〜4択の投票を作れます。
+                フォロワーがタップするだけで参加でき、エンゲージメントが爆発的に伸びます。
+              </p>
+              <div className="space-y-1.5 mb-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">1.</span>
+                  <p className="text-[10px] text-zinc-400">Xアプリで新規ツイート → 下の📊アイコンをタップ</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">2.</span>
+                  <p className="text-[10px] text-zinc-400">選択肢を2つ以上入力（例:「巨乳派」「美乳派」「貧乳派」）</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">3.</span>
+                  <p className="text-[10px] text-zinc-400">投票期間を設定（推奨: 24時間）→ ツイート本文に下のテンプレをコピペ</p>
+                </div>
+              </div>
+              <div className="bg-black/20 rounded-lg p-2.5">
+                <p className="text-[10px] text-amber-400 font-medium mb-1">なぜPollが最強？</p>
+                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                  投票=エンゲージメント扱い → アルゴ評価UP → インプレッション爆増。
+                  リンクなし・画像なしで凍結リスクもゼロ。1日2本で十分な効果。
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-medium">次回投稿</p>
