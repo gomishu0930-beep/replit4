@@ -161,3 +161,9 @@ id = "aM9EXdgqAiS8LHwfv_SQZ"
 uri = "file://artifacts/api-server/data/video-prompts.md"
 type = "text"
 title = "動画プロンプト（アイドル系可愛い美女版）"
+
+[[outputs]]
+id = "F_nqKrsiJKdBXYJZmf42n"
+uri = "file://artifacts/api-server/data/all-prompts-copypaste.md"
+type = "text"
+title = "全プロンプト コピペ用まとめ"
