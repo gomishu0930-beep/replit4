@@ -90,11 +90,30 @@ async function pollTask(taskId: string, apiKey: string): Promise<string> {
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
   const faceBase = 'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps';
 
-  const base = productTitle
-    ? `${faceBase}, cinematic portrait, shot on Sony A7IV 85mm f/1.4, volumetric haze, delicate collarbone highlight, inspired by: "${productTitle.slice(0, 60)}"`
-    : `${faceBase}, cinematic portrait, shot on Sony A7IV 85mm f/1.4, volumetric haze, delicate collarbone highlight`;
+  const sceneMap: [RegExp, string][] = [
+    [/温泉|風呂|入浴/, 'wearing yukata, hot spring inn, steamy atmosphere'],
+    [/OL|オフィス|上司|部下|会社/, 'wearing office blouse and pencil skirt, modern office background'],
+    [/教師|先生|学校|授業/, 'wearing teacher outfit with glasses, classroom background'],
+    [/ナース|看護|病院/, 'wearing nurse uniform, hospital corridor background'],
+    [/メイド|喫茶/, 'wearing maid outfit with headband, cozy cafe interior'],
+    [/制服|JK|女子校/, 'wearing school uniform sailor outfit, school hallway'],
+    [/水着|プール|海|ビーチ/, 'wearing one-piece swimsuit, poolside, summer sunlight'],
+    [/人妻|奥さん|妻/, 'elegant mature woman, wearing casual home outfit, kitchen background'],
+    [/電車|痴漢|通勤/, 'standing in crowded train, nervous expression, wearing office attire'],
+    [/マッサージ|エステ/, 'lying on massage table, spa room, wearing towel wrap'],
+    [/コスプレ/, 'wearing cosplay outfit, colorful background'],
+    [/不倫|浮気|密会/, 'hotel room, dim warm lighting, wearing elegant dress, guilty expression'],
+  ];
 
-  return `${base}. Film grain, 8K, photorealistic, shallow depth of field, tasteful and artistic. No explicit content, no anime, no cartoon, no CGI, no plastic skin, no airbrushed skin.`;
+  let sceneHint = 'cinematic portrait, delicate collarbone highlight';
+  const src = productTitle || tweetText;
+  for (const [re, desc] of sceneMap) {
+    if (re.test(src)) { sceneHint = desc; break; }
+  }
+
+  const base = `${faceBase}, ${sceneHint}, shot on Sony A7IV 85mm f/1.4, volumetric haze, film grain, 8K, photorealistic, shallow depth of field`;
+
+  return `${base}. Negative: nude, naked, explicit, NSFW, nipple, underwear, lingerie, cartoon, anime, CGI, plastic skin, airbrushed skin.`;
 }
 
 function sleep(ms: number) {

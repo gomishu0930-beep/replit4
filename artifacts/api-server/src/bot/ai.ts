@@ -299,12 +299,13 @@ async function generateWithClaude(
   const client = new Anthropic({ baseURL: baseUrl, apiKey });
 
   const actressRaw = item.actress?.map((a: any) => a.name).join('・') || '';
-  const actress = actressRaw; // 空の場合はClaudeプロンプト内で適切に処理
+  const actress = actressRaw;
   const reviewCount = item.review?.count ?? 0;
   const reviewAvg = item.review?.average ?? '4.5';
   const title = shortTitle(item.title, 30);
-  const fullTitle = item.title ?? title; // シナリオ型用にフルタイトルを渡す
+  const fullTitle = item.title ?? title;
   const typeLabel = buildTypeLabel(type);
+  const genreList: string[] = item.genre ?? [];
 
   const ownExamples = topPatterns.slice(0, 2);
   const extExamples = externalPatterns.slice(0, 2);
@@ -384,12 +385,17 @@ async function generateWithClaude(
   const actressLine = actress
     ? `- 出演者: ${actress}`
     : '- 出演者: （情報なし。作品タイトルのシナリオから魅力を伝えること）';
+  const genreLine = genreList.length > 0
+    ? `- ジャンル: ${genreList.join('・')}`
+    : '';
 
   const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。動画配信サービスの紹介ツイートを1件作成してください。
 
 作品情報:
 - タイトル: ${title}
+- フルタイトル: ${fullTitle}
 ${actressLine}
+${genreLine}
 - カテゴリ: ${typeLabel}
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点${saleHint}
@@ -419,11 +425,25 @@ ${ownSection}${extSection}
 }
 
 imagePromptのルール:
-- 共通顔ベース必須: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
+- 共通顔ベース必須（これを必ず先頭に含める）: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
 - カメラ: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze
-- 作品の雰囲気に合わせた衣装・シチュエーション・背景を追加（例: 水着→beach, ナース→hospital）
-- ネガティブ末尾必須: Negative: nude, naked, explicit, cartoon, anime, CGI, plastic skin, airbrushed skin
-- 全て英語で記述`;
+- 【重要】作品タイトルとジャンルから特徴を読み取り、衣装・シチュエーション・背景・表情を具体的に指定すること:
+  - タイトルの場面設定（例: 「温泉」→hot spring inn, yukata / 「オフィス」→office, business attire / 「学校」→classroom, school uniform）
+  - ジャンルキーワード変換例:
+    - 巨乳・爆乳 → large bust, fitted top
+    - OL・女教師・ナース → office lady blouse, teacher outfit, nurse uniform
+    - 人妻・熟女 → elegant mature woman, wedding ring, kitchen apron
+    - JK・女子校生 → school uniform, sailor uniform, plaid skirt
+    - コスプレ → cosplay outfit
+    - 水着 → swimsuit, poolside
+    - メイド → maid outfit, cafe interior
+    - 痴漢・電車 → crowded train interior, standing, nervous expression
+    - 不倫・浮気 → hotel room, dim lighting, guilty expression
+    - マッサージ → massage table, spa room, towel
+  - 表情も場面に合わせる（恥じらい→shy blushing / 誘惑→seductive gaze / 無邪気→innocent smile）
+- ネガティブ末尾必須: Negative: nude, naked, explicit, NSFW, nipple, underwear, lingerie, cartoon, anime, CGI, plastic skin, airbrushed skin
+- 全て英語で記述
+- 安全性重要：露出のない衣装にすること。水着はワンピース型のみ。下着・ランジェリーは禁止。`;
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',

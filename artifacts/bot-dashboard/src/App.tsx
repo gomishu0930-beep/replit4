@@ -524,6 +524,7 @@ function StudioTab() {
             title: item.title,
             affiliateURL: item.affiliateURL,
             actress: item.actress,
+            genre: item.genre,
             reviewCount: item.reviewCount,
             reviewAvg: item.reviewAvg,
           },

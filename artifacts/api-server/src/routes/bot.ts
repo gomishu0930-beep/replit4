@@ -353,6 +353,7 @@ router.post('/bot/generate-tweet', requireAdminToken, async (req, res) => {
         : rawItem.actress ? [{ name: rawItem.actress }] : [],
       review: { count: rawItem.reviewCount ?? 0, average: rawItem.reviewAvg ?? '4.5' },
       affiliateURL: rawItem.affiliateURL || '',
+      genre: Array.isArray(rawItem.genre) ? rawItem.genre : [],
     };
     const tweetType = type === 'keyword' ? 'random' : type;
     const result = await generateTweetText(item, tweetType);
