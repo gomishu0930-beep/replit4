@@ -5,7 +5,7 @@
 
 const API = 'http://localhost:8080';
 const SESSION_ID = 'meeting-1775894258369';
-const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【最終ラウンド（R5）で必ず以下の形式で成果物を明示すること】\n【メインツイート】ここに本文（140字以内・具体的エピソード・えっちな表現OK）\n【リプライ1】ここに本文（140字以内・続き）\n【リプライ2】ここに本文（140字以内・FANZA作品URL誘導で締め）\n【画像プロンプト（英語）】ここにプロンプト（日本人女性・情緒的・ちょっとアダルト）\n\nトーン: 大人の男性が昔の甘酸っぱい体験を懐かしく振り返るスタイル。ハッシュタグなし。';
+const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【最終ラウンド（R5）で必ず以下の形式で成果物を明示すること】\n【メインツイート】ここに本文（140字以内・具体的エピソード・えっちな表現OK）\n【リプライ1】ここに本文（140字以内・続き）\n【リプライ2】ここに本文（140字以内・FANZA作品URL誘導で締め）\n【画像プロンプト（英語）】ここにプロンプト（フォトリアリスティック・アイドル的可愛さ: baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, see-through bangs, dark brown hair・情緒的・アニメNG）\n\nトーン: 大人の男性が昔の甘酸っぱい体験を懐かしく振り返るスタイル。ハッシュタグなし。';
 
 async function apiPost(path, body) {
   const r = await fetch(`${API}${path}`, {
@@ -131,7 +131,7 @@ if (!content.tweet || content.tweet.length < 5) {
 // 3. 画像生成（nanobanana2）
 let imageUrl = null;
 const imgPromptToUse = content.imgPrompt ||
-  'Beautiful Japanese woman, nostalgic summer evening, soft warm lighting, slightly sensual and melancholic mood, reminiscing memories, cinematic portrait, photorealistic, 4K';
+  'cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, gentle smile, see-through bangs, dark brown hair, nostalgic summer evening, soft warm lighting, melancholic mood, reminiscing memories, cinematic portrait, photorealistic, 8K, no anime, no cartoon';
 
 console.log('\n🍌 Nanobanana2で画像生成中...');
 console.log('プロンプト:', imgPromptToUse.slice(0, 120));

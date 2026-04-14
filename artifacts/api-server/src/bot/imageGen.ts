@@ -88,11 +88,13 @@ async function pollTask(taskId: string, apiKey: string): Promise<string> {
  * ツイート内容と商品情報からNanobanana2用の画像プロンプトを生成する
  */
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
-  const base = productTitle
-    ? `Beautiful Japanese woman, cinematic portrait, soft studio lighting, elegant and sensual pose, professional photography style, inspired by: "${productTitle.slice(0, 60)}"`
-    : 'Beautiful Japanese woman, cinematic portrait, soft studio lighting, elegant and sensual pose, professional photography style';
+  const faceBase = 'cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush';
 
-  return `${base}. High quality, 4K, photorealistic, tasteful and artistic. No explicit content.`;
+  const base = productTitle
+    ? `${faceBase}, cinematic portrait, soft studio lighting, delicate collarbone highlight, inspired by: "${productTitle.slice(0, 60)}"`
+    : `${faceBase}, cinematic portrait, soft studio lighting, delicate collarbone highlight`;
+
+  return `${base}. High quality, 8K, photorealistic, tasteful and artistic. No explicit content, no anime, no cartoon.`;
 }
 
 function sleep(ms: number) {
