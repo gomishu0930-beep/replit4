@@ -127,7 +127,7 @@ function levelColor(level: string): string {
   return "#f59e0b";
 }
 
-type Tab = "home" | "posts" | "analytics" | "settings";
+type Tab = "home" | "posts" | "analytics" | "scorer" | "settings";
 
 function Dashboard() {
   const [tab, setTab] = useState<Tab>("home");
@@ -501,6 +501,9 @@ function Dashboard() {
           </div>
         )}
 
+        {/* ── 画像採点 ── */}
+        {tab === "scorer" && <ImageScorerTab />}
+
         {/* ── 設定 ── */}
         {tab === "settings" && (
           <div className="space-y-4">
@@ -615,6 +618,7 @@ function Dashboard() {
             { key: "home", label: "ホーム", icon: "🏠" },
             { key: "posts", label: "投稿", icon: "📝" },
             { key: "analytics", label: "分析", icon: "📊" },
+            { key: "scorer", label: "採点", icon: "🏆" },
             { key: "settings", label: "設定", icon: "⚙️" },
           ] as const).map(({ key, label, icon }) => (
             <button
@@ -688,6 +692,175 @@ function ProgressStep({ label, sub, active, done }: { label: string; sub: string
         <p className={`text-[12px] font-medium ${active ? "text-blue-400" : done ? "text-emerald-400" : "text-zinc-500"}`}>{label}</p>
         <p className="text-[10px] text-zinc-500">{sub}</p>
       </div>
+    </div>
+  );
+}
+
+function ImageScorerTab() {
+  const [mode, setMode] = useState<"url" | "prompt">("url");
+  const [imageUrl, setImageUrl] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState("");
+
+  const handleScore = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      let res;
+      if (mode === "url") {
+        res = await fetch(`${API}/api/bot/image/score`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: imageUrl.trim() }),
+        });
+      } else {
+        res = await fetch(`${API}/api/bot/image/generate-and-score`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: prompt.trim() }),
+        });
+      }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResult(data);
+      if (mode === "prompt" && data.imageUrl) setImageUrl(data.imageUrl);
+    } catch (e: any) {
+      setError(e.message || "エラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const gradeColor: Record<string, string> = {
+    S: "text-amber-400",
+    A: "text-emerald-400",
+    B: "text-yellow-400",
+    C: "text-red-400",
+  };
+
+  const scoreBarColor = (score: number) => {
+    if (score >= 9) return "bg-amber-400";
+    if (score >= 7) return "bg-emerald-400";
+    if (score >= 5) return "bg-yellow-400";
+    return "bg-red-400";
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-zinc-900 border border-white/5 p-5">
+        <p className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider mb-3">画像スコアリング（橋本環奈 = 100点基準）</p>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setMode("url")}
+            className={`px-3 py-1.5 text-[11px] rounded-lg font-medium transition-colors ${mode === "url" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}
+          >URL採点</button>
+          <button
+            onClick={() => setMode("prompt")}
+            className={`px-3 py-1.5 text-[11px] rounded-lg font-medium transition-colors ${mode === "prompt" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}
+          >生成＋採点</button>
+        </div>
+
+        {mode === "url" ? (
+          <input
+            type="text"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="画像URLを貼り付け..."
+            className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-blue-500/50 focus:outline-none"
+          />
+        ) : (
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="画像生成プロンプトを入力..."
+            rows={4}
+            className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none"
+          />
+        )}
+
+        <button
+          onClick={handleScore}
+          disabled={loading || (mode === "url" ? !imageUrl.trim() : !prompt.trim())}
+          className="mt-3 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-blue-500 text-white hover:brightness-110"
+        >
+          {loading ? (mode === "prompt" ? "生成＋採点中..." : "採点中...") : "🏆 採点する"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-[12px] text-red-400">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <>
+          {(result.imageUrl || imageUrl) && (
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 flex justify-center">
+              <img src={result.imageUrl || imageUrl} alt="scored" className="max-h-[300px] rounded-xl object-contain" />
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-zinc-900 border border-white/5 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className={`text-[40px] font-black ${gradeColor[result.grade] || "text-white"}`}>{result.totalScore ?? result.score?.totalScore}</span>
+                <span className="text-zinc-500 text-[14px] font-medium">/100</span>
+              </div>
+              <div className="text-right">
+                <span className={`text-[24px] font-black ${gradeColor[result.grade ?? result.score?.grade] || "text-white"}`}>{result.grade ?? result.score?.grade}</span>
+                <p className="text-[11px] mt-0.5">{(result.passed ?? result.score?.passed) ? <span className="text-emerald-400">✅ 合格</span> : <span className="text-red-400">❌ 不合格</span>}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {(result.items ?? result.score?.items ?? []).map((item: any, i: number) => (
+                <div key={i} className="bg-black/20 rounded-lg p-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-zinc-300 font-medium">{item.category}</span>
+                    <span className="text-[12px] font-bold text-white">{item.score}/10</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-1.5 mb-1">
+                    <div className={`h-1.5 rounded-full ${scoreBarColor(item.score)}`} style={{ width: `${item.score * 10}%` }} />
+                  </div>
+                  <p className="text-[10px] text-zinc-500">{item.comment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {(result.summary ?? result.score?.summary) && (
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
+              <p className="text-[11px] font-semibold text-zinc-400 uppercase mb-2">総評</p>
+              <p className="text-[12px] text-zinc-300 leading-relaxed">{result.summary ?? result.score?.summary}</p>
+            </div>
+          )}
+
+          {((result.improvements ?? result.score?.improvements)?.length > 0 || (result.promptFixes ?? result.score?.promptFixes)?.length > 0) && (
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+              {(result.improvements ?? result.score?.improvements)?.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-yellow-400 uppercase mb-1.5">改善ポイント</p>
+                  {(result.improvements ?? result.score?.improvements).map((imp: string, i: number) => (
+                    <p key={i} className="text-[11px] text-zinc-400 pl-3 border-l-2 border-yellow-500/30 mb-1">• {imp}</p>
+                  ))}
+                </div>
+              )}
+              {(result.promptFixes ?? result.score?.promptFixes)?.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-pink-400 uppercase mb-1.5">プロンプト修正案</p>
+                  {(result.promptFixes ?? result.score?.promptFixes).map((fix: string, i: number) => (
+                    <p key={i} className="text-[11px] text-zinc-400 pl-3 border-l-2 border-pink-500/30 mb-1">• {fix}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

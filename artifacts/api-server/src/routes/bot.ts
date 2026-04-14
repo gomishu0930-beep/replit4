@@ -3,6 +3,7 @@ import { getStats, getAllPosts, getAccountSnapshots, recordAccountSnapshot, getO
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
 import { generateImage } from '../bot/imageGen.js';
+import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageScorer.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
@@ -238,6 +239,39 @@ router.post('/bot/tweet', requireAdminToken, async (req, res) => {
     const tweetId = await postTweet(text.trim(), mediaIds);
     recordPostEvent(isAffiliate);
     res.json({ ok: true, tweetId, validation });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/image/score', async (req, res) => {
+  const { imageUrl } = req.body ?? {};
+  if (!imageUrl?.trim()) { res.status(400).json({ error: 'imageUrl は必須です' }); return; }
+  try {
+    const result = await scoreImage(imageUrl.trim());
+    res.json({ ok: true, ...result });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/image/generate-and-score', async (req, res) => {
+  const { prompt } = req.body ?? {};
+  if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
+  try {
+    const result = await generateAndScore(prompt.trim());
+    res.json({ ok: true, ...result });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/image/generate-until-pass', async (req, res) => {
+  const { prompt, maxAttempts = 3, minScore = 85 } = req.body ?? {};
+  if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
+  try {
+    const result = await generateUntilPass(prompt.trim(), maxAttempts, minScore);
+    res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

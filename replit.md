@@ -59,6 +59,7 @@ artifacts/api-server/src/bot/
   watchdog.ts         — bot health monitoring
   ai.ts               — AI text generation
   grok.ts             — Grok API for X insights
+  imageScorer.ts      — 橋本環奈スコア自動採点 (GPT-4o Vision)
   contact.ts          — notification stubs
   celebrity.ts        — celebrity stubs (legacy)
   directive-executor.ts — directive execution stubs
@@ -91,10 +92,14 @@ artifacts/bot-dashboard/src/
 - `GET /api/bot/rebrandly` — Rebrandlyクリックデータ
 - `POST /api/bot/rebrandly/sync` — Rebrandly手動同期
 - `POST /api/bot/posts/sync-timeline` — TL同期
+- `POST /api/bot/image/score` — 画像URL採点（橋本環奈基準100点満点）
+- `POST /api/bot/image/generate-and-score` — 画像生成＋自動採点
+- `POST /api/bot/image/generate-until-pass` — 合格するまで再生成（最大N回）
 
-## Dashboard (4タブ)
+## Dashboard (5タブ)
 
 1. **ホーム**: 安全レベル・リスクスコア・KPI・投稿スケジュール
 2. **投稿**: クイックアクション・投稿可否チェック・投稿履歴
 3. **分析**: 収益目標・コンテンツ比率・リスク推移・クリック計測・エンゲージメント推移
-4. **設定**: 凍結回避ルール・投稿上限段階制・自動化ロードマップ・月額コスト・ボット制御
+4. **採点**: 画像URL採点 / プロンプト→生成＋採点（橋本環奈100点基準・10項目×10点）
+5. **設定**: 凍結回避ルール・投稿上限段階制・自動化ロードマップ・月額コスト・ボット制御
