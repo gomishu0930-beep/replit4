@@ -19,10 +19,23 @@ function requireAdminToken(req: any, res: any, next: any) {
   if (secret && token && token === secret) { return next(); }
   const origin = req.headers.origin as string | undefined;
   const referer = req.headers.referer as string | undefined;
-  const replitDomain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DEPLOYMENT_DOMAIN;
-  if (replitDomain) {
-    const isSameOrigin = (origin?.includes(replitDomain) || referer?.includes(replitDomain));
-    if (isSameOrigin) { return next(); }
+  const allowedDomains = [
+    process.env.REPLIT_DEV_DOMAIN,
+    process.env.REPLIT_DEPLOYMENT_DOMAIN,
+    process.env.REPLIT_DOMAINS,
+  ].filter(Boolean);
+  if (allowedDomains.length > 0) {
+    const checkUrl = origin || referer || '';
+    try {
+      const host = new URL(checkUrl).hostname;
+      if (allowedDomains.some(d => host === d || host.endsWith('.' + d) || host.endsWith('.replit.app'))) {
+        return next();
+      }
+    } catch {
+      if (allowedDomains.some(d => checkUrl.includes(d!)) || checkUrl.includes('.replit.app')) {
+        return next();
+      }
+    }
   }
   if (process.env.NODE_ENV === 'development') { return next(); }
   res.status(401).json({ error: '認証が必要です' });
