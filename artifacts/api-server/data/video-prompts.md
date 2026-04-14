@@ -2,6 +2,7 @@
 ## OODA会議 最終決定版（2026/04/14）
 ## 会議ID: meeting-1776132427236（3ラウンド完了）
 ## スタイル: 乃木坂46/フルーツジッパー系アイドル的可愛さ（たぬき顔・baby face・リアル寄り）
+## リアリティ強化: RAW photo style / 肌質感 / 自然な不完全さ / アナモルフィックレンズ
 
 ---
 
@@ -18,13 +19,13 @@
 ## 顔の基本プロンプト（全動画で共通使用・写真と統一）
 
 ```
-cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush
+RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps
 ```
 
 ## 共通ネガティブプロンプト
 
 ```
-nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, CGI, digital art, illustration, watermark, subtitle, text, clutter, flicker, motion blur, dark lighting, plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows, overexposed, underexposed
 ```
 
 ## Canva後付けテキスト（共通）
@@ -44,12 +45,12 @@ nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon,
 
 ### プロンプト
 ```
-looping 6-second cinematic video, photorealistic style, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, long flowing dark brown hair with soft waves, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, wearing an open white lab coat over a black fitted camisole, stands at centre holding a stylish ballot box, two rectangular paper slips (one neon pink #ff2d78, one dark navy #1a1a2e) fall gently from above and drop into the box, girl gives a cute wink and smile, neon pink rim lighting from left side, dark navy background with soft bokeh, cinematic shallow depth of field, scene resets seamlessly for an infinite loop, fully clothed, no text, SFW
+looping 6-second cinematic video, RAW photo style, photorealistic, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, long flowing dark brown hair with soft waves, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, natural stray hair wisps, wearing an open white lab coat over a black fitted camisole, stands at centre holding a stylish ballot box, two rectangular paper slips (one neon pink #ff2d78, one dark navy #1a1a2e) fall gently from above and drop into the box, girl gives a cute wink and smile, neon pink rim lighting from left side, dark navy background with soft bokeh, anamorphic lens flare, cinematic shallow depth of field, volumetric haze, scene resets seamlessly for an infinite loop, fully clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, graph, chart, pop-up, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, CGI, digital art, illustration, watermark, subtitle, text, clutter, graph, chart, pop-up, flicker, motion blur, dark lighting, plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows, overexposed, underexposed
 ```
 
 ### テスト条件
@@ -68,12 +69,12 @@ nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon,
 
 ### プロンプト
 ```
-looping 7-second cinematic video, photorealistic style, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, flowing dark brown hair with highlights, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, wearing a white lab coat draped over her shoulders with a cute dark top underneath, presents a ballot box at centre, two coloured slips (neon pink #ff2d78 and dark navy #1a1a2e) swirl once in mid-air and drop into the box, a small two-bar chart (pink vs navy) materializes above the box with a soft glow, girl tilts her head and gives a playful cute wink, chart fades as scene returns to first frame for a smooth infinite loop, neon pink accent lighting, dark navy background with bokeh, cinematic shallow depth of field, fully clothed, no text, SFW
+looping 7-second cinematic video, RAW photo style, photorealistic, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, flowing dark brown hair with highlights, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, natural stray hair wisps, wearing a white lab coat draped over her shoulders with a cute dark top underneath, presents a ballot box at centre, two coloured slips (neon pink #ff2d78 and dark navy #1a1a2e) swirl once in mid-air and drop into the box, a small two-bar chart (pink vs navy) materializes above the box with a soft glow, girl tilts her head and gives a playful cute wink, chart fades as scene returns to first frame for a smooth infinite loop, neon pink accent lighting, dark navy background with bokeh, anamorphic lens flare, cinematic shallow depth of field, volumetric haze, fully clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, complex background, shaky camera, low fps, strobe, dark frame, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, CGI, digital art, illustration, watermark, subtitle, text, complex background, shaky camera, low fps, strobe, dark frame, plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows, overexposed, underexposed
 ```
 
 ### テスト条件
@@ -92,12 +93,12 @@ nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon,
 
 ### プロンプト
 ```
-smooth 7-second looping cinematic video, photorealistic style, dark navy background (#1a1a2e), gentle rain of neon pink (#ff2d78) and dark navy paper slips falling like confetti, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, long dark brown hair flowing in motion, warm youthful glow, subtle glossy lips, light blush, wearing a white lab coat that billows softly, holds a ballot box close to her body and twirls gracefully, slips funnel into the box, a simple two-slice pie chart (pink and navy) appears above with a neon glow, rotates once then dissolves into particles, rain continues seamlessly, cinematic rim lighting, shallow depth of field, fully clothed, no text, SFW
+smooth 7-second looping cinematic video, RAW photo style, photorealistic, dark navy background (#1a1a2e), gentle rain of neon pink (#ff2d78) and dark navy paper slips falling like confetti, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, long dark brown hair flowing in motion, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, natural stray hair wisps, wearing a white lab coat that billows softly, holds a ballot box close to her body and twirls gracefully, slips funnel into the box, a simple two-slice pie chart (pink and navy) appears above with a neon glow, rotates once then dissolves into particles, rain continues seamlessly, anamorphic lens flare, cinematic rim lighting, volumetric haze, shallow depth of field, fully clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, jitter, flashing lights, cluttered scenery, motion blur, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, CGI, digital art, illustration, watermark, subtitle, text, jitter, flashing lights, cluttered scenery, motion blur, plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows, overexposed, underexposed
 ```
 
 ### 備考

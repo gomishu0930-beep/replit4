@@ -88,13 +88,13 @@ async function pollTask(taskId: string, apiKey: string): Promise<string> {
  * ツイート内容と商品情報からNanobanana2用の画像プロンプトを生成する
  */
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
-  const faceBase = 'cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush';
+  const faceBase = 'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps';
 
   const base = productTitle
-    ? `${faceBase}, cinematic portrait, soft studio lighting, delicate collarbone highlight, inspired by: "${productTitle.slice(0, 60)}"`
-    : `${faceBase}, cinematic portrait, soft studio lighting, delicate collarbone highlight`;
+    ? `${faceBase}, cinematic portrait, shot on Sony A7IV 85mm f/1.4, volumetric haze, delicate collarbone highlight, inspired by: "${productTitle.slice(0, 60)}"`
+    : `${faceBase}, cinematic portrait, shot on Sony A7IV 85mm f/1.4, volumetric haze, delicate collarbone highlight`;
 
-  return `${base}. High quality, 8K, photorealistic, tasteful and artistic. No explicit content, no anime, no cartoon.`;
+  return `${base}. Film grain, 8K, photorealistic, shallow depth of field, tasteful and artistic. No explicit content, no anime, no cartoon, no CGI, no plastic skin, no airbrushed skin.`;
 }
 
 function sleep(ms: number) {

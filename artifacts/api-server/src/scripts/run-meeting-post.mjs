@@ -3,7 +3,7 @@
  */
 
 const API = 'http://localhost:8080';
-const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【必須成果物（最終ラウンドで必ず明示すること）】\n①【メインツイート】〜140字以内\n②【リプライ1】〜140字以内（続き）\n③【リプライ2】〜140字以内（FANZA作品への誘導で締め）\n④【画像プロンプト（英語）】nanobanana2用・フォトリアリスティック・アイドル的可愛さ(baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, see-through bangs, dark brown hair)・情緒的・アニメNG\n\n投稿トーン: 大人の男性が昔の甘酸っぱいえっちな体験を懐かしく語るスタイル。具体的エピソード風。ハッシュタグなし。';
+const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【必須成果物（最終ラウンドで必ず明示すること）】\n①【メインツイート】〜140字以内\n②【リプライ1】〜140字以内（続き）\n③【リプライ2】〜140字以内（FANZA作品への誘導で締め）\n④【画像プロンプト（英語）】nanobanana2用・冒頭に"RAW photo"必須・フォトリアリスティック・アイドル的可愛さ(baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps)・末尾に"shot on Sony A7IV 85mm f/1.4, volumetric haze, film grain, 8K"必須・情緒的・アニメNG・CGI NG・plastic skin NG\n\n投稿トーン: 大人の男性が昔の甘酸っぱいえっちな体験を懐かしく語るスタイル。具体的エピソード風。ハッシュタグなし。';
 
 async function post(path, body) {
   const r = await fetch(`${API}${path}`, {

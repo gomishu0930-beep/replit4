@@ -131,7 +131,7 @@ if (!content.tweet || content.tweet.length < 5) {
 // 3. 画像生成（nanobanana2）
 let imageUrl = null;
 const imgPromptToUse = content.imgPrompt ||
-  'cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, gentle smile, see-through bangs, dark brown hair, nostalgic summer evening, soft warm lighting, melancholic mood, reminiscing memories, cinematic portrait, photorealistic, 8K, no anime, no cartoon';
+  'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps, nostalgic summer evening, soft warm lighting, melancholic mood, reminiscing memories, shot on Sony A7IV 85mm f/1.4, cinematic portrait, volumetric haze, film grain, photorealistic, 8K, no anime, no cartoon, no CGI, no plastic skin';
 
 console.log('\n🍌 Nanobanana2で画像生成中...');
 console.log('プロンプト:', imgPromptToUse.slice(0, 120));
