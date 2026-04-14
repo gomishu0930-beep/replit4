@@ -1,42 +1,12 @@
 {
-  "lastCheckAt": "2026-04-14T03:29:34.676Z",
-  "lastIssueAt": "2026-04-14T03:29:34.676Z",
+  "lastCheckAt": "2026-04-14T03:35:26.046Z",
+  "lastIssueAt": "2026-04-14T03:35:26.046Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
   "status": "failed",
-  "issueCount": 45,
+  "issueCount": 46,
   "recoveryCount": 8,
-  "consecutiveFailures": 37,
+  "consecutiveFailures": 38,
   "recentEvents": [
-    {
-      "at": "2026-04-14T02:01:44.777Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T02:01:44.777Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T02:29:45.281Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T02:29:45.281Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 71.5h 無投稿"
-    },
-    {
-      "at": "2026-04-14T02:29:45.281Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T02:29:50.881Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
     {
       "at": "2026-04-14T02:29:50.882Z",
       "level": "error",
@@ -254,6 +224,36 @@
     },
     {
       "at": "2026-04-14T03:29:35.413Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-14T03:35:26.046Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T03:35:26.046Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 72.6h 無投稿"
+    },
+    {
+      "at": "2026-04-14T03:35:26.046Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T03:35:26.760Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T03:35:26.760Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-14T03:35:26.760Z",
       "level": "warn",
       "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
     }
