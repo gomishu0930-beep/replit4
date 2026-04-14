@@ -3,7 +3,8 @@
 ## Overview
 
 pnpm workspace monorepo using TypeScript. MyFans×FANZA二刀流アフィリエイト自動化システム。
-@fanza_poll_lab アカウントで3ヶ月以内に月収¥54,000達成目標。
+メインアカウント @ero_senpai1（青バッジ・フォロワー110人）で3ヶ月以内に月収¥54,000達成目標。
+サブアカウント @fanza_poll_lab は実験場（画像テスト・ハッシュタグA/B用）。
 Production URL: `asset-manager-3-gomishu0930.replit.app`
 
 ## Strategy

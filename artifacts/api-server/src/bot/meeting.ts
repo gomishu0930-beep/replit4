@@ -298,7 +298,7 @@ export function buildBotContext(): string {
   return `## ボット現状（${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}）
 
 ### アカウント
-- @fanza_poll_lab
+- @ero_senpai1
 - 投稿モード: 1日1件・${weekStr}（A/Bテスト）
 - 統計: 総投稿${stats.totalPosts}件 / 直近7日${stats.postsLast7Days}件 / いいね${stats.totalLikes}
 

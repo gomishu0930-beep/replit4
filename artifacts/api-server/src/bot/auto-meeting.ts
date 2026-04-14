@@ -279,7 +279,7 @@ async function buildWeeklyAgenda(): Promise<string> {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### アカウント概況（内部GCSデータ）
-- @fanza_poll_lab / フォロワー${snapshot?.followersCount ?? '不明'}人
+- @ero_senpai1 / フォロワー${snapshot?.followersCount ?? '不明'}人
 - A/Bテスト: ${abWeek}（W1=20:00枠 / W2=05:00枠 / W3以降=投稿会議3スロット）
 - 先週の投稿数: ${lastWeekPosts.length}件 / 7日間平均インプ: ${avgImp}（${trend}）
 - 累計投稿数: ${stats.totalPosts}件 / 累計いいね: ${stats.totalLikes}件
@@ -370,7 +370,7 @@ export async function runAutonomousMeeting(customTopic?: string): Promise<AutoMe
   try {
     const weekDef = getABTestWeek();
     const weekStr = weekDef === 'W2' ? 'W2(05:00枠)' : weekDef === 'W1' ? 'W1(20:00プライムタイム枠)' : '通常週（動的18-22時枠）';
-    const researchTopic = `2026年最新のX(Twitter) FANZA/成人向けアフィリエイトアカウントのプライムタイム投稿戦略。${weekStr}A/Bテスト中（日本語アカウント@fanza_poll_lab・新規アカウント・シャドウバンなし）。凍結リスク最小化・最適投稿本数・プライムタイム時間帯選定・インプレッション最大化の具体的手法を調査してください。`;
+    const researchTopic = `2026年最新のX(Twitter) FANZA/成人向けアフィリエイトアカウントのプライムタイム投稿戦略。${weekStr}A/Bテスト中（日本語アカウント@ero_senpai1・新規アカウント・シャドウバンなし）。凍結リスク最小化・最適投稿本数・プライムタイム時間帯選定・インプレッション最大化の具体的手法を調査してください。`;
     const research = await runDeepResearch(researchTopic);
     researchId = research.id;
     console.log(`  ✅ [週次会議] Webリサーチ完了 (${research.result.length}文字取得)`);
@@ -663,7 +663,7 @@ async function buildPostMeetingTopic(): Promise<string> {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### アカウント概況
-- @fanza_poll_lab / フォロワー${snapshot?.followersCount ?? '不明'}人
+- @ero_senpai1 / フォロワー${snapshot?.followersCount ?? '不明'}人
 - 今日の投稿数: ${todayCount}件 / A/Bテスト: ${abWeek}
 
 ### 直近10件の投稿実績
@@ -894,7 +894,7 @@ export async function runEmergencyMeeting(): Promise<EmergencyMeetingResult> {
   console.log('  🔎 [緊急会議] 事前Webリサーチ: 凍結回避・新アカウント成長戦略...');
   let researchId: string | undefined;
   try {
-    const researchTopic = `2026年X(Twitter)アカウント凍結回避戦略。成人向けFANZAアフィリエイトアカウントが凍結された後、新アカウント(@fanza_poll_lab)でゼロから再スタートする際のベストプラクティス。凍結を避けながらフォロワーを増やし、インプレッションを伸ばす具体的な方法を調査してください。`;
+    const researchTopic = `2026年X(Twitter)アカウント凍結回避戦略。成人向けFANZAアフィリエイトアカウントが凍結された後、新アカウント(@ero_senpai1)でゼロから再スタートする際のベストプラクティス。凍結を避けながらフォロワーを増やし、インプレッションを伸ばす具体的な方法を調査してください。`;
     const research = await runDeepResearch(researchTopic);
     researchId = research.id;
     console.log(`  ✅ [緊急会議] Webリサーチ完了 (${research.result.length}文字取得)`);
@@ -907,7 +907,7 @@ export async function runEmergencyMeeting(): Promise<EmergencyMeetingResult> {
 
   // ── 緊急会議アジェンダ ────────────────────────────────────────────────────
   const stats = getStats();
-  const topic = `# 緊急戦略会議: アカウント凍結インシデント検証・@fanza_poll_lab 新規スタート戦略
+  const topic = `# 緊急戦略会議: アカウント凍結インシデント検証・@ero_senpai1 新規スタート戦略
 
 あなたたちはFANZAアフィリエイトXボットの戦略チームです（o3=ストラテジスト, Claude=コピーライター, Grok=X専門家）。
 今回は緊急事態が発生したため、通常の週次会議ではなく緊急インシデント対応会議を行います。
@@ -922,7 +922,7 @@ export async function runEmergencyMeeting(): Promise<EmergencyMeetingResult> {
   - シャドウバン中のアカウントで短時間に複数投稿が発生
   - bypass=trueフラグで日次制限を無視して2回目の投稿が実行された
   - 🔞アダルトコンテンツ × シャドウバン中 × 短時間重複投稿が重なった
-- **新アカウント**: @fanza_poll_lab（フォロワー数不明・新規）
+- **新アカウント**: @ero_senpai1（フォロワー数不明・新規）
 - **ボット状態**: 緊急停止済み → 本会議で方針決定後に新規スタート
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -948,7 +948,7 @@ Grokへの指示:
 ## Phase 3: 新規スタート戦略の策定（重要・具体的に議論）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-@fanza_poll_lab の新規スタート戦略を以下の観点で議論してください:
+@ero_senpai1 の新規スタート戦略を以下の観点で議論してください:
 
 **【安全性】凍結リスク最小化**
 - 1日の投稿上限・頻度・時間帯の最適解
@@ -977,7 +977,7 @@ Grokへの指示:
 **【ユーザー確認】手動対応が必要な事項**
 → 📌 決定候補: [具体的なアクション]（assignee: user）
 
-**【新規KPI設定】@fanza_poll_lab の最初の目標**
+**【新規KPI設定】@ero_senpai1 の最初の目標**
 → 1ヶ月目標: フォロワーXX人 / 平均インプXX / 凍結ゼロ`;
 
   // ── o3 × Claude × Grok トリアローグ（5ラウンド）────────────────────────
@@ -1053,7 +1053,7 @@ Grokへの指示:
     `👤 要手動確認:\n${manualLines}\n\n` +
     `🗑 リセット完了:\n${resetData.cleared.join('\n')}\n\n` +
     `⏱ 所要時間: ${Math.round(duration_ms / 1000)}秒\n\n` +
-    `✨ @fanza_poll_lab として新規スタート準備完了`,
+    `✨ @ero_senpai1 として新規スタート準備完了`,
   );
 
   // 会議フルログをメールで送信
@@ -1062,7 +1062,7 @@ Grokへの指示:
     if (fullSession) {
       const decisionTexts = candidates.map(c => `[${c.assignee}/${c.priority}/${c.category}] ${c.text}`);
       const summaryLines = [
-        `【緊急会議完了】凍結インシデント分析・@fanza_poll_lab 新規スタート戦略決定`,
+        `【緊急会議完了】凍結インシデント分析・@ero_senpai1 新規スタート戦略決定`,
         ``,
         `📋 施策決定: ${candidates.length}件`,
         `🤖 AI自動実行: ${autoExecuted.filter(r => r.success).length}/${autoExecuted.length}件成功`,
