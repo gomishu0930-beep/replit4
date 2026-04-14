@@ -1,7 +1,7 @@
 # @fanza_poll_lab 初回投稿プラン
-## AI会議 最終決定版（2026/04/14）
-## 会議ID: meeting-1776128953632（3ラウンド完了）
-## 画像方針: フォトリアリスティックAI美女（目ぱっちり・鼻筋通り・口小さめ・黒髪・色気重視）
+## OODA会議 最終決定版（2026/04/14）
+## 会議ID: meeting-1776132427236（3ラウンド完了）
+## 画像方針: 乃木坂46/フルーツジッパー系アイドル的可愛さ（たぬき顔・baby face・リアル寄り）
 
 ---
 
@@ -22,13 +22,19 @@
 ## 顔の基本プロンプト（全画像・全動画で共通使用）
 
 ```
-photorealistic AI-generated portrait, beautiful young Japanese woman, 22 years old, natural black hair, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, cinematic lighting, shallow depth of field, 8K quality
+cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, cinematic lighting, shallow depth of field, 8K quality
 ```
 
 ## 共通ネガティブプロンプト（全画像末尾に追加）
 
 ```
-nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
+```
+
+## 色気オプション（必要に応じて末尾に追加）
+
+```
+delicate collarbone highlight, faint shoulder highlight, subtle glossy lips
 ```
 
 ## VS構図の共通ルール
@@ -38,7 +44,8 @@ nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, p
 - 右側 = ダークネイビー(#1a1a2e)のライティング → 選択肢②の美女
 - 中央にVSの光エフェクト
 - 両者は対面 or 背中合わせ、目線はカメラに
-- 顔の基本プロンプトをベースに、髪型・髪色・服装・メイクで差別化
+- 顔の基本プロンプトを両者に適用、髪型・髪色・服装・メイクで差別化
+- Girl A: dark brown hair（暗め）/ Girl B: light brown hair（明るめ）で髪色に明暗差をつける
 
 ---
 
@@ -57,12 +64,12 @@ nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, p
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, beautiful young Japanese woman, 22 years old, long flowing black hair with soft waves, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes looking at the camera, high straight nose bridge, small slightly parted glossy lips with a soft smirk, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, wearing an open white lab coat over a black fitted camisole, holding a stylish ballot box, neon pink (#ff2d78) rim lighting from the left, dark navy (#1a1a2e) background with subtle bokeh of floating data charts, cinematic lighting, shallow depth of field, upper body shot, sensual but fully clothed, high fashion editorial style, 8K quality. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, long flowing dark brown hair with soft waves, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, wearing an open white lab coat over a black fitted camisole, holding a stylish ballot box, warm innocent gaze looking at the camera, neon pink (#ff2d78) rim lighting from the left, dark navy (#1a1a2e) background with subtle bokeh of floating data charts, cinematic lighting, shallow depth of field, upper body shot, fully clothed, 8K quality. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Beautiful Japanese woman in a lab coat holding a ballot box with soft neon lighting — poll lab visual
+Cute Japanese woman in a lab coat holding a ballot box with soft neon lighting — poll lab visual
 ```
 
 ---
@@ -83,12 +90,12 @@ Beautiful Japanese woman in a lab coat holding a ballot box with soft neon light
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, VS split composition with diagonal light divider, left side with warm neon pink (#ff2d78) lighting: gorgeous Japanese woman, 22 years old, long wavy chestnut brown hair, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips with a confident seductive smile, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, arms crossed emphasizing curves, wearing a deep V-neck knit sweater, bold glamorous aura, right side with cool dark navy (#1a1a2e) lighting: elegant Japanese woman, 22 years old, sleek short black bob haircut, large sparkling doe eyes with double eyelids and long curved eyelashes, refined expression with a slight lip bite, high straight nose bridge, small glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin, hand on hip, wearing a silk fitted blouse with top button undone, sophisticated aura, VS light burst effect at the center divide, both women looking at the camera, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but fully clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, VS split composition with diagonal light divider, left side with warm neon pink (#ff2d78) lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, confident cute smile, see-through bangs, long wavy dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, arms crossed, wearing a deep V-neck knit sweater, bold glamorous aura, right side with cool dark navy (#1a1a2e) lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, refined gentle smile, side-swept see-through bangs, sleek short light brown bob haircut, delicate collarbone highlight, warm youthful glow, subtle glossy lips, hand on hip, wearing a silk fitted blouse with top button undone, elegant aura, VS light burst effect at the center divide, both girls looking at the camera, upper body shot, cinematic lighting, shallow depth of field, 8K quality, fully clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Glamorous woman vs elegant slender woman in VS split — body type preference poll
+Glamorous cute girl vs elegant slender cute girl in VS split — body type preference poll
 ```
 
 ---
@@ -109,12 +116,12 @@ Glamorous woman vs elegant slender woman in VS split — body type preference po
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, VS split composition with diagonal light divider, left side with soft neon pink (#ff2d78) glow: innocent beautiful Japanese woman, 22 years old, long straight black hair, large sparkling doe eyes with double eyelids and long curved eyelashes, gentle shy expression, high straight nose bridge, small soft glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush and faint blush, hands softly clasped near her chin, wearing a white lace blouse with a ribbon, pure and delicate aura with soft light particles, right side with dark navy (#1a1a2e) moody lighting: confident stunning Japanese woman, 22 years old, bleached blonde hair in a high ponytail, large sparkling doe eyes with double eyelids and bold eyeliner, bedroom eyes, tanned glowing skin, high straight nose bridge, small glossy pink lips with a playful smirk, oval face with soft jawline, wearing a trendy off-shoulder crop top and layered necklaces, bold and magnetic aura with lens flare accents, electric VS glow at the center divide, both women gazing at the camera, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, VS split composition with diagonal light divider, left side with soft neon pink (#ff2d78) glow: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, shy gentle smile, see-through bangs, long straight dark brown hair, warm youthful glow, subtle glossy lips, light natural blush, hands softly clasped near her chin, wearing a white lace blouse with a ribbon, pure and delicate aura with soft light particles, right side with dark navy (#1a1a2e) moody lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal and bold eyeliner, playful confident smirk, thick see-through bangs, bleached light brown hair in a high ponytail, tanned glowing skin, subtle glossy pink lips, wearing a trendy off-shoulder crop top and layered necklaces, bold and energetic aura with lens flare accents, electric VS glow at the center divide, both girls gazing at the camera, upper body shot, cinematic lighting, shallow depth of field, 8K quality, clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Innocent dark-haired beauty vs confident blonde gyaru in VS split — type preference poll
+Innocent dark-haired cute girl vs confident gyaru cute girl in VS split — type preference poll
 ```
 
 ---
@@ -135,7 +142,7 @@ Innocent dark-haired beauty vs confident blonde gyaru in VS split — type prefe
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, VS split composition with diagonal light divider, left side with neon pink (#ff2d78) accent lighting: beautiful mature Japanese woman, 22 years old, dark black hair in a sleek bun, large sparkling doe eyes with double eyelids behind stylish thin-framed glasses, bedroom eyes with a dominant confident expression, high straight nose bridge, small glossy lips with red lipstick, oval face with soft jawline, smooth luminous dewy porcelain skin, wearing a fitted charcoal blazer over a white silk shirt with one button undone, arms crossed, polished corporate aura, right side with dark navy (#1a1a2e) warm lighting: cute youthful Japanese woman, 22 years old, soft shoulder-length light brown hair, large sparkling doe eyes with double eyelids, shy sweet smile, high straight nose bridge, small soft glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush and blushing cheeks, wearing an oversized cream knit cardigan falling off one shoulder revealing a tank top strap, cozy nostalgic aura with warm bokeh, flame VS effect at the center divide, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, VS split composition with diagonal light divider, left side with neon pink (#ff2d78) accent lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal behind stylish thin-framed glasses, confident cute expression, center-parted see-through bangs, dark brown hair in a sleek low bun, delicate collarbone highlight, warm youthful glow, subtle glossy lips with light lipstick, wearing a fitted charcoal blazer over a white blouse with one button undone, arms crossed, polished office aura, right side with dark navy (#1a1a2e) warm lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, shy sweet blushing smile, thick see-through bangs, soft shoulder-length light brown hair, warm youthful glow, subtle glossy lips, rosy blush on cheeks, wearing an oversized cream knit cardigan falling off one shoulder revealing a tank top strap, cozy nostalgic aura with warm bokeh, flame VS effect at the center divide, upper body shot, cinematic lighting, shallow depth of field, 8K quality, clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
@@ -161,12 +168,12 @@ Confident office lady vs sweet girl-next-door in VS split — relationship type 
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, VS split composition with diagonal light divider, left side with neon pink (#ff2d78) lighting: adorable Japanese woman, 22 years old, black hair in twin braids tied with ribbons, large sparkling doe eyes with double eyelids and long curved eyelashes, playful wink with finger on her lips, high straight nose bridge, small glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush, wearing a navy sailor school uniform with a pleated skirt, cherry blossom petals floating, sweet and mischievous aura, right side with dark navy (#1a1a2e) lighting: alluring Japanese woman, 22 years old, wavy black hair loosely pinned up, large sparkling doe eyes with double eyelids, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin, wearing a fitted white nurse uniform with a small nurse cap, holding a stethoscope around her neck, gentle caring smile, healing and seductive aura with soft cross-shaped light, electric VS glow at the center divide, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, VS split composition with diagonal light divider, left side with neon pink (#ff2d78) lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, playful wink with finger on her lips, see-through bangs, dark brown hair in twin braids tied with pastel-pink ribbons, warm youthful glow, subtle glossy lips, light blush, wearing a navy sailor school uniform with a pleated skirt, cherry blossom petals floating, sweet and mischievous aura, right side with dark navy (#1a1a2e) lighting: cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, gentle caring smile, see-through bangs, wavy light brown hair loosely pinned up, warm youthful glow, subtle glossy lips, wearing a fitted white nurse uniform with a small nurse cap, holding a stethoscope around her neck, healing and warm aura with soft cross-shaped light, electric VS glow at the center divide, upper body shot, cinematic lighting, shallow depth of field, 8K quality, clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Schoolgirl uniform beauty vs nurse beauty in VS split — cosplay preference poll
+Schoolgirl uniform cute girl vs nurse cute girl in VS split — cosplay preference poll
 ```
 
 ---
@@ -181,12 +188,12 @@ Schoolgirl uniform beauty vs nurse beauty in VS split — cosplay preference pol
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, beautiful young Japanese woman, 22 years old, long black hair with soft waves, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes with a curious playful expression, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, wearing an open white lab coat over a casual black top, sitting at a modern desk with a laptop, chin resting on her hand, neon pink (#ff2d78) light from the side, dark navy (#1a1a2e) background with floating translucent speech bubble shapes, warm intimate atmosphere, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, curious excited expression, see-through bangs, long dark brown hair with soft waves, warm youthful glow, subtle glossy lips, light blush, wearing an open white lab coat over a casual black top, sitting at a modern desk with a laptop and scattered papers, chin resting on her hand, warm innocent gaze, neon pink (#ff2d78) light from the side, dark navy (#1a1a2e) background with floating translucent speech bubble shapes, warm intimate atmosphere, upper body shot, cinematic lighting, shallow depth of field, 8K quality, clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Beautiful Japanese woman at a desk with speech bubbles — collecting poll topic ideas
+Cute Japanese woman at a desk with speech bubbles — collecting poll topic ideas
 ```
 
 ---
@@ -208,12 +215,12 @@ Beautiful Japanese woman at a desk with speech bubbles — collecting poll topic
 
 ### 画像プロンプト
 ```
-photorealistic AI-generated portrait, gorgeous young Japanese woman, 22 years old, long black hair, large sparkling doe eyes with double eyelids and long curved eyelashes, excited expression with sparkling eyes and a bright smile, high straight nose bridge, small glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, holding up a glowing pink gift bag in one hand, wearing a white lab coat loosely draped over bare shoulders with a strapless top underneath, celebratory confetti and warm golden light particles in the air, neon pink (#ff2d78) accent lighting, dark navy (#1a1a2e) background with bokeh, joyful energetic mood, upper body shot, cinematic lighting, shallow depth of field, 8K quality, sensual but clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
+photorealistic portrait, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, excited happy expression with bright smile, see-through bangs, long dark brown hair, warm youthful glow, subtle glossy lips, light blush, holding up a glowing pink gift bag in one hand, wearing a white lab coat loosely draped over shoulders with a cute top underneath, celebratory confetti and warm golden light particles in the air, neon pink (#ff2d78) accent lighting, dark navy (#1a1a2e) background with bokeh, joyful energetic mood, upper body shot, cinematic lighting, shallow depth of field, 8K quality, clothed. Exclude: nude, naked, topless, exposed nipple, exposed genitalia, spread legs, sex act, pornographic, cartoon, anime, 3D render, watermark, text, letters, words, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline, mature face, sharp jawline, gaunt cheeks, harsh shadows
 ```
 
 ### Alt-text
 ```
-Excited beautiful Japanese woman holding a gift bag with confetti — FANZA sale event
+Excited cute Japanese woman holding a gift bag with confetti — FANZA sale event
 ```
 
 ---
@@ -230,12 +237,13 @@ Excited beautiful Japanese woman holding a gift bag with confetti — FANZA sale
 
 ## 画像ガイドライン
 
-- **スタイル**: フォトリアリスティックAI生成（実写に近いが実在人物ではない）
-- **顔の特徴**: 目ぱっちり二重・鼻筋通り・口小さめ・色白肌艶・黒髪ベース
-- **質感**: 肌の艶・透明感・グロッシーリップ・シネマティックライティング重視
-- **色気表現**: bedroom eyes（seductive gazeとの重複は避ける）
+- **スタイル**: フォトリアリスティック・アイドル的可愛さ（乃木坂46/フルーツジッパー参考）
+- **顔の特徴**: baby face、丸い頬、小さい鼻（button nose）、大きく丸い目＋涙袋（aegyo sal）、see-through bangs
+- **表情**: gentle smile、mouth corners slightly upturned（上品な笑顔）
+- **髪色**: dark brown（ベース）、Girl Bはlight brownで差別化
+- **質感**: warm youthful glow、subtle glossy lips、light blush
+- **色気**: delicate collarbone highlight（控えめ）、faint shoulder highlight（オプション）
 - **露出ライン**: 鎖骨・肩・二の腕まではOK。胸元は服で覆う（Vネック・ボタン開きは可）
-- **NG**: ヌード、下着丸出し、性的ポーズ、実在人物の顔、アニメ調
+- **NG**: ヌード、下着丸出し、性的ポーズ、実在人物の顔、アニメ調、mature face、sharp jawline
 - **配色**: 左=ネオンピンク(#ff2d78)ライティング / 右=ダークネイビー(#1a1a2e)ライティング
 - **構図**: ポール投稿は全て「〇〇な美女 VS 〇〇な美女」の対決分割構図
-- **中央**: VSの光エフェクトで対決感を演出
