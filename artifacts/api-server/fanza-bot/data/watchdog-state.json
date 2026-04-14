@@ -1,102 +1,12 @@
 {
-  "lastCheckAt": "2026-04-14T12:06:50.360Z",
-  "lastIssueAt": "2026-04-14T12:06:50.360Z",
+  "lastCheckAt": "2026-04-14T13:44:47.585Z",
+  "lastIssueAt": "2026-04-14T13:44:47.585Z",
   "lastRecoveryAt": "2026-04-09T12:18:29.913Z",
   "status": "failed",
-  "issueCount": 55,
+  "issueCount": 58,
   "recoveryCount": 8,
-  "consecutiveFailures": 47,
+  "consecutiveFailures": 50,
   "recentEvents": [
-    {
-      "at": "2026-04-14T03:42:42.719Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T03:42:42.719Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T04:12:45.439Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T04:12:45.439Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 73.2h 無投稿"
-    },
-    {
-      "at": "2026-04-14T04:12:45.439Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T04:12:46.774Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-14T04:12:46.774Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T04:12:46.774Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T05:12:40.361Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T05:12:40.362Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 74.2h 無投稿"
-    },
-    {
-      "at": "2026-04-14T05:12:40.362Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T05:12:44.663Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-14T05:12:44.663Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T05:12:44.663Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T05:40:11.216Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T05:40:11.217Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 74.7h 無投稿"
-    },
-    {
-      "at": "2026-04-14T05:40:11.217Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T05:40:15.518Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
     {
       "at": "2026-04-14T05:40:15.518Z",
       "level": "error",
@@ -254,6 +164,96 @@
     },
     {
       "at": "2026-04-14T12:06:51.100Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-14T12:50:03.647Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T12:50:03.648Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 81.8h 無投稿"
+    },
+    {
+      "at": "2026-04-14T12:50:03.648Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T12:50:08.946Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T12:50:08.946Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-14T12:50:08.946Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-14T13:38:29.130Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T13:38:29.130Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 82.6h 無投稿"
+    },
+    {
+      "at": "2026-04-14T13:38:29.131Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T13:38:35.930Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T13:38:36.129Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-14T13:38:36.129Z",
+      "level": "warn",
+      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
+    },
+    {
+      "at": "2026-04-14T13:44:47.585Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T13:44:47.585Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 82.7h 無投稿"
+    },
+    {
+      "at": "2026-04-14T13:44:47.585Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T13:44:48.318Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T13:44:48.318Z",
+      "level": "error",
+      "detail": "Twitter API エラー: Request failed with code 401"
+    },
+    {
+      "at": "2026-04-14T13:44:48.318Z",
       "level": "warn",
       "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
     }
