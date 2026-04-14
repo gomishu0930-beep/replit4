@@ -5,10 +5,11 @@ import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, upload
 import { generateImage } from '../bot/imageGen.js';
 import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageScorer.js';
 import { getStrategySummary } from '../bot/strategy.js';
-import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
+import { getCampaignCacheInfo, discoverCampaignIds, fetchItems, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
 import { getSafetyStatus, validatePost, recordPostEvent } from '../bot/safety-engine.js';
 import { generateTweetText } from '../bot/ai.js';
+import { resolveShortUrl } from '../bot/rebrandly.js';
 
 const router = Router();
 
@@ -289,17 +290,79 @@ router.post('/bot/reply', requireAdminToken, async (req, res) => {
   }
 });
 
+router.get('/bot/fanza-search', requireAdminToken, async (req, res) => {
+  const type = String(req.query.type || 'rank');
+  const keyword = String(req.query.keyword || '').trim();
+  const count = Math.min(Number(req.query.count) || 10, 30);
+  try {
+    let items: any[] = [];
+    switch (type) {
+      case 'amateur': items = await getAmateurItems(count); break;
+      case 'buzz': items = await getBuzzItems(count); break;
+      case 'rank': items = await getRankingItems(count); break;
+      case 'sale': items = await getSaleItems(count); break;
+      case 'random': items = await getRandomItems(count); break;
+      case 'keyword':
+        if (!keyword) { res.status(400).json({ error: 'キーワードを指定してください' }); return; }
+        items = await getKeywordItems(keyword, count);
+        break;
+      default:
+        items = await getRankingItems(count);
+    }
+    const mapped = items.map((item: any) => ({
+      content_id: item.content_id,
+      title: item.title,
+      affiliateURL: item.affiliateURL,
+      actress: item.iteminfo?.actress?.map((a: any) => a.name) ?? [],
+      genre: item.iteminfo?.genre?.map((g: any) => g.name)?.slice(0, 5) ?? [],
+      reviewCount: item.review?.count ?? 0,
+      reviewAvg: item.review?.average ?? null,
+      thumbnail: item.imageURL?.large ?? item.imageURL?.small ?? null,
+      sampleImages: getSampleImages(item),
+      price: item.prices?.price ?? null,
+      date: item.date ?? null,
+    }));
+    res.json({ ok: true, items: mapped });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/bot/generate-tweet', requireAdminToken, async (req, res) => {
-  const { title, actress, type = 'amateur', reviewCount = 0, reviewAvg = '4.5' } = req.body ?? {};
-  if (!title?.trim()) { res.status(400).json({ error: 'title は必須です' }); return; }
+  const { item: rawItem, type = 'amateur', shortenLink = true } = req.body ?? {};
+  if (!rawItem?.title?.trim()) { res.status(400).json({ error: '作品情報（title）は必須です' }); return; }
   try {
     const item = {
-      title: title.trim(),
-      actress: actress ? [{ name: actress }] : [],
-      review: { count: reviewCount, average: reviewAvg },
+      title: rawItem.title.trim(),
+      content_id: rawItem.content_id || '',
+      actress: Array.isArray(rawItem.actress)
+        ? rawItem.actress.map((a: string) => ({ name: a }))
+        : rawItem.actress ? [{ name: rawItem.actress }] : [],
+      review: { count: rawItem.reviewCount ?? 0, average: rawItem.reviewAvg ?? '4.5' },
+      affiliateURL: rawItem.affiliateURL || '',
     };
-    const result = await generateTweetText(item, type);
-    res.json({ ok: true, tweet: result.text, imagePrompt: result.imagePrompt });
+    const tweetType = type === 'keyword' ? 'random' : type;
+    const result = await generateTweetText(item, tweetType);
+
+    let shortUrl = '';
+    if (item.affiliateURL && shortenLink) {
+      try {
+        shortUrl = await resolveShortUrl(item.affiliateURL, item.content_id, item.title);
+      } catch (e: any) {
+        console.warn('短縮URL生成失敗:', e.message);
+        shortUrl = item.affiliateURL;
+      }
+    } else {
+      shortUrl = item.affiliateURL || '';
+    }
+
+    res.json({
+      ok: true,
+      tweet: result.text,
+      imagePrompt: result.imagePrompt,
+      affiliateURL: item.affiliateURL,
+      shortUrl,
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

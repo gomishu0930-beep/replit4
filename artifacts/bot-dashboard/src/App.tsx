@@ -475,6 +475,13 @@ function Dashboard() {
   );
 }
 
+interface FanzaItem {
+  content_id: string; title: string; affiliateURL: string;
+  actress: string[]; genre: string[]; reviewCount: number;
+  reviewAvg: number | null; thumbnail: string | null;
+  sampleImages: string[]; price: string | null; date: string | null;
+}
+
 function StudioTab() {
   const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score">("tweet");
   const [prompt, setPrompt] = useState("");
@@ -484,29 +491,62 @@ function StudioTab() {
   const [genImages, setGenImages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [scoreMode, setScoreMode] = useState<"url" | "prompt">("url");
-  const [tweetTitle, setTweetTitle] = useState("");
-  const [tweetActress, setTweetActress] = useState("");
-  const [tweetType, setTweetType] = useState("amateur");
-  const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null } | null>(null);
-  const [tweetCopied, setTweetCopied] = useState<string | null>(null);
 
-  const handleGenerateTweet = async () => {
-    if (!tweetTitle.trim()) return;
-    setLoading(true); setError(""); setTweetResult(null);
+  const [searchType, setSearchType] = useState("rank");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [fanzaItems, setFanzaItems] = useState<FanzaItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<FanzaItem | null>(null);
+  const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null; shortUrl: string } | null>(null);
+  const [tweetCopied, setTweetCopied] = useState<string | null>(null);
+  const [genStep, setGenStep] = useState<"search" | "result">("search");
+
+  const handleSearch = async () => {
+    setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search");
+    try {
+      const params = new URLSearchParams({ type: searchType, count: "10" });
+      if (searchType === "keyword" && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
+      const res = await fetch(`${API}/api/bot/fanza-search?${params}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setFanzaItems(data.items || []);
+    } catch (e: any) { setError(e.message); } finally { setSearchLoading(false); }
+  };
+
+  const handleSelectAndGenerate = async (item: FanzaItem) => {
+    setSelectedItem(item); setLoading(true); setError(""); setTweetResult(null);
     try {
       const res = await fetch(`${API}/api/bot/generate-tweet`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: tweetTitle.trim(), actress: tweetActress.trim() || undefined, type: tweetType }),
+        body: JSON.stringify({
+          item: {
+            content_id: item.content_id,
+            title: item.title,
+            affiliateURL: item.affiliateURL,
+            actress: item.actress,
+            reviewCount: item.reviewCount,
+            reviewAvg: item.reviewAvg,
+          },
+          type: searchType,
+        }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setTweetResult({ tweet: data.tweet, imagePrompt: data.imagePrompt });
+      setTweetResult({ tweet: data.tweet, imagePrompt: data.imagePrompt, shortUrl: data.shortUrl || '' });
       if (data.imagePrompt) setPrompt(data.imagePrompt);
+      setGenStep("result");
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   };
 
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => { setTweetCopied(key); setTimeout(() => setTweetCopied(null), 2000); });
+  };
+
+  const copyAll = () => {
+    if (!tweetResult) return;
+    const parts = [tweetResult.tweet];
+    if (tweetResult.shortUrl) parts.push('', tweetResult.shortUrl);
+    copyText(parts.join('\n'), 'all');
   };
 
   const handleGenerate = async () => {
@@ -574,53 +614,123 @@ function StudioTab() {
       {studioMode === "tweet" && (
         <>
           <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">作品情報を入力 → 投稿文 + 画像プロンプトを同時生成</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → タップで投稿文+リンク自動生成</p>
 
-            <div className="space-y-2">
-              <input type="text" value={tweetTitle} onChange={e => setTweetTitle(e.target.value)}
-                placeholder="作品タイトル（例: 妻が不在中に義妹と…）"
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none" />
-
-              <input type="text" value={tweetActress} onChange={e => setTweetActress(e.target.value)}
-                placeholder="出演女優名（任意）"
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none" />
-
-              <div className="flex gap-1 flex-wrap">
-                {[
-                  { value: "amateur", label: "素人" },
-                  { value: "rank", label: "ランキング" },
-                  { value: "sale", label: "セール" },
-                  { value: "buzz", label: "バズ" },
-                  { value: "random", label: "ランダム" },
-                ].map(t => (
-                  <button key={t.value} onClick={() => setTweetType(t.value)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${tweetType === t.value ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-1 flex-wrap mb-2">
+              {[
+                { value: "rank", label: "ランキング" },
+                { value: "amateur", label: "素人" },
+                { value: "sale", label: "セール" },
+                { value: "buzz", label: "バズ" },
+                { value: "random", label: "ランダム" },
+                { value: "keyword", label: "キーワード" },
+              ].map(t => (
+                <button key={t.value} onClick={() => setSearchType(t.value)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${searchType === t.value ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+                  {t.label}
+                </button>
+              ))}
             </div>
 
-            <button onClick={handleGenerateTweet} disabled={loading || !tweetTitle.trim()}
-              className="mt-3 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-blue-500 text-white hover:brightness-110">
-              {loading ? "AI生成中..." : "✍️ 投稿文 + 画像プロンプトを生成"}
+            {searchType === "keyword" && (
+              <input type="text" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)}
+                placeholder="検索キーワード（例: 巨乳 OL）"
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none mb-2" />
+            )}
+
+            <button onClick={handleSearch} disabled={searchLoading || (searchType === "keyword" && !searchKeyword.trim())}
+              className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110">
+              {searchLoading ? "検索中..." : "FANZA作品を検索"}
             </button>
           </div>
 
           {error && <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{error}</div>}
 
-          {tweetResult && (
+          {fanzaItems.length > 0 && genStep === "search" && (
+            <div className="space-y-2">
+              <p className="text-[10px] text-zinc-500 font-medium">{fanzaItems.length}件の作品 — タップで投稿文を自動生成</p>
+              {fanzaItems.map((item) => (
+                <button key={item.content_id} onClick={() => handleSelectAndGenerate(item)} disabled={loading && selectedItem?.content_id === item.content_id}
+                  className={`w-full text-left rounded-2xl border p-3 transition-all ${
+                    loading && selectedItem?.content_id === item.content_id
+                      ? "bg-emerald-500/10 border-emerald-500/30 animate-pulse"
+                      : "bg-zinc-900 border-white/5 hover:border-emerald-500/30 hover:bg-zinc-800"
+                  }`}>
+                  <div className="flex gap-3">
+                    {item.thumbnail && (
+                      <img src={item.thumbnail} alt="" className="w-16 h-20 object-cover rounded-lg flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] text-white font-medium leading-tight line-clamp-2">{item.title}</p>
+                      {item.actress.length > 0 && (
+                        <p className="text-[10px] text-pink-400 mt-0.5">{item.actress.join(", ")}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {item.reviewAvg && (
+                          <span className="text-[10px] text-amber-400">★{item.reviewAvg}</span>
+                        )}
+                        {item.reviewCount > 0 && (
+                          <span className="text-[10px] text-zinc-500">({item.reviewCount}件)</span>
+                        )}
+                        {item.price && (
+                          <span className="text-[10px] text-zinc-400">{item.price}</span>
+                        )}
+                      </div>
+                      {item.genre.length > 0 && (
+                        <p className="text-[9px] text-zinc-600 mt-1 line-clamp-1">{item.genre.join(" / ")}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 self-center">
+                      {loading && selectedItem?.content_id === item.content_id
+                        ? <span className="text-[10px] text-emerald-400">生成中...</span>
+                        : <span className="text-[16px]">→</span>
+                      }
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {tweetResult && genStep === "result" && (
             <>
+              <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-emerald-400 uppercase tracking-wider font-bold">完成 — コピペするだけ！</p>
+                  <button onClick={copyAll}
+                    className="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-500 text-white hover:bg-emerald-400 transition-colors">
+                    {tweetCopied === "all" ? "✅ コピー済み" : "投稿文+リンクをコピー"}
+                  </button>
+                </div>
+                {selectedItem && (
+                  <p className="text-[10px] text-zinc-500 mb-2">{selectedItem.title}</p>
+                )}
+              </div>
+
               <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">投稿文</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">本文ツイート</p>
                   <button onClick={() => copyText(tweetResult.tweet, "tweet")}
                     className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {tweetCopied === "tweet" ? "✅ コピー済み" : "コピー"}
+                    {tweetCopied === "tweet" ? "✅" : "コピー"}
                   </button>
                 </div>
                 <pre className="text-[12px] text-zinc-200 whitespace-pre-wrap font-sans leading-relaxed bg-black/20 rounded-lg p-3">{tweetResult.tweet}</pre>
               </div>
+
+              {tweetResult.shortUrl && (
+                <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">リプ欄用リンク</p>
+                    <button onClick={() => copyText(tweetResult.shortUrl, "link")}
+                      className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      {tweetCopied === "link" ? "✅" : "コピー"}
+                    </button>
+                  </div>
+                  <p className="text-[12px] text-blue-400 bg-black/20 rounded-lg p-3 break-all">{tweetResult.shortUrl}</p>
+                </div>
+              )}
 
               {tweetResult.imagePrompt && (
                 <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
@@ -629,7 +739,7 @@ function StudioTab() {
                     <div className="flex gap-1">
                       <button onClick={() => copyText(tweetResult.imagePrompt!, "imgPrompt")}
                         className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-pink-500/20 text-pink-400 border border-pink-500/30">
-                        {tweetCopied === "imgPrompt" ? "✅ コピー済み" : "コピー"}
+                        {tweetCopied === "imgPrompt" ? "✅" : "コピー"}
                       </button>
                       <button onClick={() => { setPrompt(tweetResult.imagePrompt!); setStudioMode("generate"); }}
                         className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
@@ -640,6 +750,11 @@ function StudioTab() {
                   <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed bg-black/20 rounded-lg p-3">{tweetResult.imagePrompt}</pre>
                 </div>
               )}
+
+              <button onClick={() => { setGenStep("search"); setTweetResult(null); setSelectedItem(null); }}
+                className="w-full py-2 rounded-lg text-[11px] font-medium bg-zinc-800 text-zinc-400 border border-white/5 hover:bg-zinc-700 transition-colors">
+                ← 別の作品を選ぶ
+              </button>
             </>
           )}
         </>
