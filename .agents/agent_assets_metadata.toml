@@ -167,3 +167,9 @@ id = "F_nqKrsiJKdBXYJZmf42n"
 uri = "file://artifacts/api-server/data/all-prompts-copypaste.md"
 type = "text"
 title = "全プロンプト コピペ用（リアリティ強化版）"
+
+[[outputs]]
+id = "r69MpYZVhwEAdOMSAn07q"
+uri = "file://artifacts/api-server/data/image-generation-rulebook.md"
+type = "text"
+title = "画像・動画生成ルールブック（橋本環奈スコア基準）"

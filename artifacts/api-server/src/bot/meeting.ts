@@ -16,6 +16,9 @@ import { queryGrok } from './grok.js';
 import { readJson, writeJson } from './cloudStore.js';
 import { getAllPosts, getStats, getExternalPatternsInfo, getDailyImpressionSnapshots, getObservations, getRebrandlyData } from './storage.js';
 import { getStrategySummary } from './strategy.js';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // ─── クライアント初期化 ──────────────────────────────────────────────────────
 
@@ -120,6 +123,27 @@ export async function loadMeetingData(): Promise<void> {
 
 async function saveData(): Promise<void> {
   await writeJson('meeting-data.json', cache);
+}
+
+// ─── 画像生成ルールブック読み込み ────────────────────────────────────────────
+
+let _rulebookCache: string | null = null;
+
+function getImageRulebookSummary(): string {
+  if (_rulebookCache) return _rulebookCache;
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const rulebookPath = resolve(__dirname, '../../data/image-generation-rulebook.md');
+    const full = readFileSync(rulebookPath, 'utf-8');
+    const sections = full.split(/^## /m).slice(1, 6);
+    _rulebookCache = sections.map(s => '- ' + s.split('\n')[0].trim()).join('\n');
+    _rulebookCache += '\n  ※詳細はimage-generation-rulebook.md参照。橋本環奈=100点基準。合格ライン85点以上。';
+    _rulebookCache += '\n  ※共通顔プロンプト: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, aegyo sal, see-through bangs, natural skin texture, fine peach fuzz, Sony A7IV 85mm f/1.4';
+  } catch {
+    _rulebookCache = '  ルールブック読み込み失敗（data/image-generation-rulebook.md）';
+  }
+  return _rulebookCache;
 }
 
 // ─── ボット現状コンテキスト ───────────────────────────────────────────────────
@@ -261,7 +285,10 @@ ${obsSummary}
 
 ### アクティブ決定事項（AI担当/user担当を区別）
 ${dirSummary}
-${prevMeetingCtx}`.trim();
+${prevMeetingCtx}
+
+### 画像・動画生成ルール（橋本環奈スコア基準）
+${getImageRulebookSummary()}`.trim();
 }
 
 // ─── Deep Research (GPT-4o + web search) ────────────────────────────────────
