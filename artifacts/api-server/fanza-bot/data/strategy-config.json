@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 15,
+  "monitorIntervalHours": 14,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -8,18 +8,18 @@
     "random": 1
   },
   "cycleStats": {
-    "lastNewPatterns": 36,
-    "avgNewPatterns": 35.47458652895161,
-    "totalCycles": 304
+    "lastNewPatterns": 37,
+    "avgNewPatterns": 35.93221057026613,
+    "totalCycles": 305
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 16h）は最適か？",
+      "question": "外部情報の収集間隔（現在 15h）は最適か？",
       "status": "adjusted",
-      "finding": "304サイクル実績 / 平均新規パターン 35.5件/サイクル",
-      "adjustment": "監視間隔を 16h → 15h に短縮（平均新規パターン 35.5件/サイクル）",
-      "testedAt": "2026-04-14T17:53:04.151Z"
+      "finding": "305サイクル実績 / 平均新規パターン 35.9件/サイクル",
+      "adjustment": "監視間隔を 15h → 14h に短縮（平均新規パターン 35.9件/サイクル）",
+      "testedAt": "2026-04-14T18:00:06.438Z"
     },
     {
       "id": "type-weights",
@@ -35,7 +35,7 @@
       "status": "confirmed",
       "finding": "直近 14件の平均スコア 0.9 vs 以前 0.5 (+85.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-14T17:53:04.152Z"
+      "testedAt": "2026-04-14T18:00:06.439Z"
     },
     {
       "id": "posting-hours",
@@ -43,7 +43,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 21時 (avg 1.0) / 最低スロット: 12時 (avg 0.6)",
       "adjustment": null,
-      "testedAt": "2026-04-14T17:53:04.152Z"
+      "testedAt": "2026-04-14T18:00:06.439Z"
     },
     {
       "id": "content-5types",
@@ -51,15 +51,15 @@
       "status": "pending",
       "finding": "データ不足 (0件)。各型に1件以上、合計5件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-09T18:00:00.010Z"
+      "testedAt": "2026-04-14T18:00:00.008Z"
     },
     {
       "id": "impression-effect",
       "question": "インプ狙い投稿（10:30）の追加はアフィリ投稿のエンゲージメントを向上させているか？",
-      "status": "pending",
-      "finding": "データ不足 (0件)。10件以上で評価開始。",
+      "status": "confirmed",
+      "finding": "インプ投稿データなし / 宣伝投稿avg 0.7 / 宣伝投稿スコア推移: 前半avg 0.5 → 後半avg 0.9 (📈改善)",
       "adjustment": null,
-      "testedAt": "2026-04-09T18:00:00.010Z"
+      "testedAt": "2026-04-14T18:00:00.009Z"
     },
     {
       "id": "research-engagement",
@@ -67,26 +67,40 @@
       "status": "pending",
       "finding": "インプ投稿データなし。10:30スロットで蓄積開始。",
       "adjustment": "回復後に採用予定: 最もエンゲージメントを得たスタイルを主力にする",
-      "testedAt": "2026-04-09T18:00:00.010Z"
+      "testedAt": "2026-04-14T18:00:00.009Z"
     },
     {
       "id": "research-product",
       "question": "【回復期研究②】高評価×レビュー数×セール中のどの条件が「伸びる作品」を最もよく予測するか？",
       "status": "pending",
-      "finding": "芸能人スロット投稿 4件 蓄積中。代表タイトル: DAHLIA専属 穂高結花 あのお嬢様大 / Nana なないろファンタジア・八木奈々 / 河北彩花 Re:start！ 。観察ログに個別メモを記録してください。",
+      "finding": "芸能人スロット投稿 5件 蓄積中。代表タイトル: Nana なないろファンタジア・八木奈々 / DAHLIA専属 穂高結花 あのお嬢様大 / 【VR】8KVR！2SEX！長尺130分 。観察ログに個別メモを記録してください。",
       "adjustment": "回復後に採用予定: 品質スコア算式（レビュー数×評価×セール係数）を調整する",
-      "testedAt": "2026-04-09T18:00:00.010Z"
+      "testedAt": "2026-04-14T18:00:00.009Z"
     },
     {
       "id": "research-safe-post",
       "question": "【回復期研究③】どのコンテンツパターン（文体・絵文字・画像有無・リンクの有無）がシャドウバンを回避できるか？",
       "status": "pending",
-      "finding": "直近14件のうち🔞マーク含む投稿: 4件。現状: 投稿1本/日(インプ) + 芸能人1本/日 = 2件体制継続中。観察ログにBAN回避ノウハウを記録してください。",
+      "finding": "直近14件のうち🔞マーク含む投稿: 6件。現状: 投稿1本/日(インプ) + 芸能人1本/日 = 2件体制継続中。観察ログにBAN回避ノウハウを記録してください。",
       "adjustment": "回復後に採用予定: BANリスクが低いと判明したパターンを標準テンプレートに採用",
-      "testedAt": "2026-04-09T18:00:00.010Z"
+      "testedAt": "2026-04-14T18:00:00.009Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-14T18:00:06.439Z",
+      "cycle": 305,
+      "decisions": [
+        "監視間隔を 15h → 14h に短縮（平均新規パターン 35.9件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-14T18:00:00.009Z",
+      "cycle": 304,
+      "decisions": [
+        "日次評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-14T17:53:04.153Z",
       "cycle": 304,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-12T06:46:46.358Z",
-      "cycle": 256,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-12T06:29:42.545Z",
-      "cycle": 255,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-14T17:53:04.152Z",
-  "version": 307,
+  "lastEvaluatedAt": "2026-04-14T18:00:06.439Z",
+  "version": 309,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
