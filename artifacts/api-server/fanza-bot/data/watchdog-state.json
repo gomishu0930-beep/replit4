@@ -1,47 +1,12 @@
 {
-  "lastCheckAt": "2026-04-14T13:55:43.940Z",
-  "lastIssueAt": "2026-04-14T13:55:43.940Z",
-  "lastRecoveryAt": "2026-04-14T13:55:47.569Z",
+  "lastCheckAt": "2026-04-14T14:25:47.711Z",
+  "lastIssueAt": "2026-04-14T14:25:47.711Z",
+  "lastRecoveryAt": "2026-04-14T14:25:50.945Z",
   "status": "healthy",
-  "issueCount": 59,
-  "recoveryCount": 9,
+  "issueCount": 60,
+  "recoveryCount": 10,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-14T07:35:27.333Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T07:52:09.539Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T07:52:09.539Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 76.9h 無投稿"
-    },
-    {
-      "at": "2026-04-14T07:52:09.539Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T07:52:15.539Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-14T07:52:15.539Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T07:52:15.539Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
     {
       "at": "2026-04-14T11:50:17.862Z",
       "level": "info",
@@ -256,6 +221,41 @@
       "at": "2026-04-14T13:55:47.569Z",
       "level": "recovery",
       "detail": "✅ 自動回復成功 (通算 9回目)"
+    },
+    {
+      "at": "2026-04-14T14:25:47.711Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T14:25:47.711Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 254.4h 無投稿"
+    },
+    {
+      "at": "2026-04-14T14:25:47.711Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T14:25:48.407Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T14:25:48.407Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-14T14:25:48.407Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-14T14:25:50.945Z",
+      "level": "recovery",
+      "detail": "✅ 自動回復成功 (通算 10回目)"
     }
   ]
 }
