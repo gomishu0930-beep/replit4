@@ -1,82 +1,12 @@
 {
-  "lastCheckAt": "2026-04-14T14:25:47.711Z",
-  "lastIssueAt": "2026-04-14T14:25:47.711Z",
-  "lastRecoveryAt": "2026-04-14T14:25:50.945Z",
+  "lastCheckAt": "2026-04-14T15:09:32.462Z",
+  "lastIssueAt": "2026-04-14T15:09:32.462Z",
+  "lastRecoveryAt": "2026-04-14T15:09:35.772Z",
   "status": "healthy",
-  "issueCount": 60,
-  "recoveryCount": 10,
+  "issueCount": 62,
+  "recoveryCount": 12,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-14T11:50:17.862Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T11:50:17.862Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 80.8h 無投稿"
-    },
-    {
-      "at": "2026-04-14T11:50:17.863Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T11:50:23.763Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-14T11:50:24.064Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T11:50:24.064Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T11:50:27.949Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T11:50:28.147Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 80.8h 無投稿"
-    },
-    {
-      "at": "2026-04-14T11:50:28.147Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-14T11:50:33.148Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-14T11:50:33.148Z",
-      "level": "error",
-      "detail": "Twitter API エラー: Request failed with code 401"
-    },
-    {
-      "at": "2026-04-14T11:50:33.148Z",
-      "level": "warn",
-      "detail": "API障害検知 → 回復を待機（次回チェックで再試行）"
-    },
-    {
-      "at": "2026-04-14T12:06:50.360Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-14T12:06:50.360Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 81.1h 無投稿"
-    },
     {
       "at": "2026-04-14T12:06:50.360Z",
       "level": "info",
@@ -256,6 +186,76 @@
       "at": "2026-04-14T14:25:50.945Z",
       "level": "recovery",
       "detail": "✅ 自動回復成功 (通算 10回目)"
+    },
+    {
+      "at": "2026-04-14T14:55:47.715Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T14:55:47.715Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 254.9h 無投稿"
+    },
+    {
+      "at": "2026-04-14T14:55:47.715Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T14:55:48.477Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T14:55:48.477Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-14T14:55:48.477Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-14T14:55:51.120Z",
+      "level": "recovery",
+      "detail": "✅ 自動回復成功 (通算 11回目)"
+    },
+    {
+      "at": "2026-04-14T15:09:32.462Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-14T15:09:32.462Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 255.1h 無投稿"
+    },
+    {
+      "at": "2026-04-14T15:09:32.462Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-14T15:09:33.176Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-14T15:09:33.176Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-14T15:09:33.176Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-14T15:09:35.772Z",
+      "level": "recovery",
+      "detail": "✅ 自動回復成功 (通算 12回目)"
     }
   ]
 }

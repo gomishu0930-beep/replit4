@@ -1,0 +1,77 @@
+{
+  "accountCreatedAt": "2026-04-14T13:52:39.813Z",
+  "followerCount": 0,
+  "automationLevel": "MANUAL_ONLY",
+  "dailyPostLimit": 3,
+  "todayPostCount": 0,
+  "todayAffiliateCount": 0,
+  "todayNonAffiliateCount": 0,
+  "todayFollowCount": 0,
+  "consecutiveAffiliateCount": 0,
+  "lastPostAt": null,
+  "lastAffiliatePostAt": null,
+  "lastResetDate": "2026-04-15",
+  "maxAffiliateRatio": 30,
+  "totalPosts": 0,
+  "totalAffiliatePosts": 0,
+  "riskScore": 30,
+  "riskHistory": [],
+  "config": {
+    "manualOnlyDays": 30,
+    "semiAutoMinFollowers": 300,
+    "fullAutoMinFollowers": 1000,
+    "maxDailyFollows": 50,
+    "maxAffiliateRatioPct": 30,
+    "maxConsecutiveAffiliate": 1,
+    "postLimitsByWeek": [
+      {
+        "week": 1,
+        "limit": 3
+      },
+      {
+        "week": 2,
+        "limit": 3
+      },
+      {
+        "week": 3,
+        "limit": 5
+      },
+      {
+        "week": 4,
+        "limit": 5
+      },
+      {
+        "week": 5,
+        "limit": 8
+      },
+      {
+        "week": 6,
+        "limit": 8
+      },
+      {
+        "week": 7,
+        "limit": 10
+      },
+      {
+        "week": 8,
+        "limit": 10
+      },
+      {
+        "week": 9,
+        "limit": 12
+      },
+      {
+        "week": 10,
+        "limit": 12
+      },
+      {
+        "week": 11,
+        "limit": 12
+      },
+      {
+        "week": 12,
+        "limit": 12
+      }
+    ]
+  }
+}

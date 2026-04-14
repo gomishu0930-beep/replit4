@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
-import { uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
+import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
 import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, upsertRebrandlyLinks } from '../bot/storage.js';
 import { getMeetingById, getMeetings } from '../bot/meeting.js';
@@ -62,8 +62,16 @@ async function runJob(type: string, label: string, fetchItems: () => Promise<any
 
 function auth(req: any, res: any, next: any) {
   const secret = req.headers['x-trigger-secret'] ?? req.query.secret;
-  if (secret !== TRIGGER_SECRET) { res.status(401).json({ error: 'Unauthorized' }); return; }
-  next();
+  if (secret === TRIGGER_SECRET) { return next(); }
+  const origin = req.headers.origin as string | undefined;
+  const referer = req.headers.referer as string | undefined;
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DEPLOYMENT_DOMAIN;
+  if (replitDomain) {
+    const isSameOrigin = (origin?.includes(replitDomain) || referer?.includes(replitDomain));
+    if (isSameOrigin) { return next(); }
+  }
+  if (process.env.NODE_ENV === 'development') { return next(); }
+  res.status(401).json({ error: 'Unauthorized' });
 }
 
 router.post('/trigger/rank', auth, async (_req, res) => {
@@ -201,6 +209,21 @@ router.post('/trigger/sheets-backfill', auth, async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+router.post('/trigger/pause', auth, async (req, res) => {
+  const reason = req.body?.reason ?? 'ダッシュボードから緊急停止';
+  await pauseBot(reason);
+  res.json({ ok: true, paused: true, reason });
+});
+
+router.post('/trigger/resume', auth, async (_req, res) => {
+  await resumeBot();
+  res.json({ ok: true, paused: false });
+});
+
+router.get('/trigger/pause-status', auth, (_req, res) => {
+  res.json({ paused: isBotPaused(), reason: getPausedReason() });
 });
 
 export default router;
