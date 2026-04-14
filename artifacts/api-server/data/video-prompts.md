@@ -1,6 +1,7 @@
 # @fanza_poll_lab アカウント紹介動画プロンプト
-## AI会議 最終決定版（2026/04/13）
-## スタイル: リアル寄りAI美女（肌質感・色気・艶重視）
+## AI会議 最終決定版（2026/04/14）
+## 会議ID: meeting-1776128953632（3ラウンド完了）
+## スタイル: フォトリアリスティックAI美女（目ぱっちり・鼻筋通り・口小さめ・黒髪・色気重視）
 
 ---
 
@@ -14,10 +15,16 @@
 
 ---
 
+## 顔の基本プロンプト（全動画で共通使用・写真と統一）
+
+```
+beautiful young Japanese woman, 22 years old, natural black hair, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks
+```
+
 ## 共通ネガティブプロンプト
 
 ```
-nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
 ```
 
 ## Canva後付けテキスト（共通）
@@ -30,19 +37,19 @@ nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon
 ## 【案①】Minimal Vote Drop（先行テスト用・最優先）
 
 ### コンセプト
-白衣を羽織ったピンク髪の美女が投票箱を持って微笑む。ネオンピンクとダークネイビーの投票用紙がひらひら落ちて箱に入り、彼女が色っぽくウインク。シーンがリセットして無限ループ。
+黒髪の美女が白衣を羽織って投票箱を持ち、ネオンピンクとダークネイビーの投票用紙がひらひら落ちて箱に入る。彼女が色っぽくウインク、シーンがリセットして無限ループ。
 
 ### 推奨尺
 6秒
 
 ### プロンプト
 ```
-looping 6-second cinematic video, photorealistic style, beautiful young Japanese woman with long pink-tinted wavy hair, wearing an open white lab coat over a black fitted camisole, natural dewy skin with soft glow, glossy lips, stands at centre holding a stylish ballot box, two rectangular paper slips (one neon pink #ff2d78, one dark navy #1a1a2e) fall gently from above and drop into the box, woman gives a subtle seductive wink and smile, neon pink rim lighting from left side, dark navy background with soft bokeh, cinematic shallow depth of field, scene resets seamlessly for an infinite loop, sensual but fully clothed, no text, SFW
+looping 6-second cinematic video, photorealistic style, beautiful young Japanese woman, 22 years old, long flowing natural black hair with soft waves, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, wearing an open white lab coat over a black fitted camisole, stands at centre holding a stylish ballot box, two rectangular paper slips (one neon pink #ff2d78, one dark navy #1a1a2e) fall gently from above and drop into the box, woman gives a subtle seductive wink and smile, neon pink rim lighting from left side, dark navy background with soft bokeh, cinematic shallow depth of field, scene resets seamlessly for an infinite loop, sensual but fully clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, graph, chart, pop-up, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, clutter, graph, chart, pop-up, flicker, motion blur, dark lighting, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
 ```
 
 ### テスト条件
@@ -54,19 +61,19 @@ nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon
 ## 【案②】Vote Slip → Bar Graph Pop（Phase-1 A/Bテスト用）
 
 ### コンセプト
-案①の発展版。投票用紙が箱に入った後、箱の上にネオンピンクとネイビーの棒グラフがポンと浮かび上がる。美女が目を見開いて嬉しそうに微笑み、グラフがフェードアウトしてループ。「投票→結果が見える」を動画で体現。
+案①の発展版。投票用紙が箱に入った後、箱の上にネオンピンクとネイビーの棒グラフがポンと浮かび上がる。美女が嬉しそうに微笑みグラフがフェードアウトしてループ。
 
 ### 推奨尺
 7秒
 
 ### プロンプト
 ```
-looping 7-second cinematic video, photorealistic style, stunning young Japanese woman with flowing pink-highlighted hair, wearing a white lab coat draped over her shoulders with a form-fitting dark top underneath, luminous dewy skin, glossy parted lips, presents a ballot box at centre, two coloured slips (neon pink #ff2d78 and dark navy #1a1a2e) swirl once in mid-air and drop into the box, a small two-bar chart (pink vs navy) materializes above the box with a soft glow, woman tilts her head and gives a playful wink, chart fades as scene returns to first frame for a smooth infinite loop, neon pink accent lighting, dark navy background with bokeh, cinematic shallow depth of field, sensual but clothed, no text, SFW
+looping 7-second cinematic video, photorealistic style, stunning young Japanese woman, 22 years old, flowing natural black hair with highlights, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, wearing a white lab coat draped over her shoulders with a form-fitting dark top underneath, presents a ballot box at centre, two coloured slips (neon pink #ff2d78 and dark navy #1a1a2e) swirl once in mid-air and drop into the box, a small two-bar chart (pink vs navy) materializes above the box with a soft glow, woman tilts her head and gives a playful wink, chart fades as scene returns to first frame for a smooth infinite loop, neon pink accent lighting, dark navy background with bokeh, cinematic shallow depth of field, sensual but clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, complex background, shaky camera, low fps, strobe, dark frame, deformed hands, extra fingers, blurry face
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, complex background, shaky camera, low fps, strobe, dark frame, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
 ```
 
 ### テスト条件
@@ -78,19 +85,19 @@ nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon
 ## 【案③】Paper Rain & Pie Chart Loop（拡張用）
 
 ### コンセプト
-ダークネイビーの背景にネオンピンクとネイビーの投票用紙が雨のように降り注ぐ。白衣の美女が投票箱を胸元に抱えて優雅に回転、用紙が箱に吸い込まれる。2色の円グラフが現れて1回転→溶けるように消える。紙の雨が続きシームレスループ。
+ダークネイビーの背景にネオンピンクとネイビーの投票用紙が雨のように降り注ぐ。白衣の黒髪美女が投票箱を胸元に抱えて優雅に回転、用紙が箱に吸い込まれる。2色の円グラフが現れて1回転→溶けるように消えてシームレスループ。
 
 ### 推奨尺
 7秒
 
 ### プロンプト
 ```
-smooth 7-second looping cinematic video, photorealistic style, dark navy background (#1a1a2e), gentle rain of neon pink (#ff2d78) and dark navy paper slips falling like confetti, beautiful young Japanese woman with long pink-tinted hair flowing in motion, wearing a white lab coat that billows softly, luminous glowing skin, holds a ballot box close to her body and twirls gracefully, slips funnel into the box, a simple two-slice pie chart (pink and navy) appears above with a neon glow, rotates once then dissolves into particles, rain continues seamlessly, cinematic rim lighting, shallow depth of field, sensual but clothed, no text, SFW
+smooth 7-second looping cinematic video, photorealistic style, dark navy background (#1a1a2e), gentle rain of neon pink (#ff2d78) and dark navy paper slips falling like confetti, beautiful young Japanese woman, 22 years old, long natural black hair flowing in motion, large sparkling doe eyes with double eyelids and long curved eyelashes, bedroom eyes, high straight nose bridge, small slightly parted glossy lips, oval face with soft jawline, smooth luminous dewy porcelain skin with a soft natural flush on cheeks, wearing a white lab coat that billows softly, holds a ballot box close to her body and twirls gracefully, slips funnel into the box, a simple two-slice pie chart (pink and navy) appears above with a neon glow, rotates once then dissolves into particles, rain continues seamlessly, cinematic rim lighting, shallow depth of field, sensual but clothed, no text, SFW
 ```
 
 ### ネガティブプロンプト
 ```
-nsfw, nudity, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, jitter, flashing lights, cluttered scenery, motion blur, deformed hands, extra fingers, blurry face
+nude, naked, topless, exposed nipple, genitalia, sex act, pornographic, cartoon, anime, 3D render, watermark, subtitle, text, jitter, flashing lights, cluttered scenery, motion blur, deformed hands, extra fingers, blurry face, asymmetric eyes, crooked nose, oversized mouth, blurry skin, deformed jawline
 ```
 
 ### 備考
