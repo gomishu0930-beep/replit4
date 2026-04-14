@@ -19,14 +19,16 @@ let isPosting = false;
 async function postItem(item: any, type: string) {
   const topPatterns = getTopPatterns(5);
   const externalPatterns = getExternalTopPatterns(5);
-  const text = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const result = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const text = result.text;
+  const imagePrompt = result.imagePrompt;
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${item.affiliateURL ?? ''}`);
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
-  recordPost({ tweetId, replyId, item, text, type });
+  recordPost({ tweetId, replyId, item, text, type, imagePrompt });
   recordPostEvent(true);
   return tweetId;
 }

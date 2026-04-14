@@ -55,7 +55,10 @@ async function postFanzaItem(item: any, type: string, label: string) {
 
   const topPatterns = getTopPatterns(10);
   const externalPatterns = getExternalTopPatterns(10);
-  const text = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const genResult = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const text = genResult.text;
+  const imagePrompt = genResult.imagePrompt;
+  if (imagePrompt) console.log(`  🖼️ 画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -76,7 +79,7 @@ async function postFanzaItem(item: any, type: string, label: string) {
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
 
-  recordPost({ tweetId, replyId, item, text, type });
+  recordPost({ tweetId, replyId, item, text, type, imagePrompt });
   recordPostEvent(true);
 
   if (isSheetsConfigured()) {

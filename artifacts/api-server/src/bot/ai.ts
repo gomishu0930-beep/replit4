@@ -284,9 +284,14 @@ export function buildCelebrityPostContext(): string {
 
 // ─── Claude 生成────────────────────────────────────────────────────────────
 
+export interface TweetWithImagePrompt {
+  text: string;
+  imagePrompt: string | null;
+}
+
 async function generateWithClaude(
   item: any, type: string, topPatterns: any[], externalPatterns: any[] = [],
-): Promise<string | null> {
+): Promise<TweetWithImagePrompt | null> {
   const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   if (!baseUrl || !apiKey) return null;
@@ -407,23 +412,45 @@ ${ownSection}${extSection}
 - 「リプ欄へ👇」を含める
 - 「人気女優」「トップ女優」「著名女優」などの曖昧な表現は使わない ← 厳禁
 
-ツイート本文だけを出力してください:`;
+以下のJSON形式で出力してください（説明文不要、JSONのみ）:
+{
+  "tweet": "ツイート本文（🔞から始める）",
+  "imagePrompt": "投稿に添える画像のプロンプト（英語）"
+}
+
+imagePromptのルール:
+- 共通顔ベース必須: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
+- カメラ: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze
+- 作品の雰囲気に合わせた衣装・シチュエーション・背景を追加（例: 水着→beach, ナース→hospital）
+- ネガティブ末尾必須: Negative: nude, naked, explicit, cartoon, anime, CGI, plastic skin, airbrushed skin
+- 全て英語で記述`;
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 350,
+    max_tokens: 600,
     messages: [
       { role: 'user', content: prompt },
-      { role: 'assistant', content: '🔞' },
     ],
   });
 
   const block = message.content[0];
   if (block.type !== 'text') return null;
-  const raw = ('🔞' + block.text).trim();
+  const rawResponse = block.text.trim();
 
-  // ハッシュタグが混入していたら除去
-  const text = raw.replace(/#[\w\u3000-\u9fff\uff01-\uff60]+/g, '').replace(/\s+\n/g, '\n').trim();
+  let text: string;
+  let imagePrompt: string | null = null;
+
+  try {
+    const cleaned = rawResponse.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    text = (parsed.tweet ?? '').trim();
+    imagePrompt = (parsed.imagePrompt ?? '').trim() || null;
+  } catch {
+    const raw = rawResponse.startsWith('🔞') ? rawResponse : '🔞' + rawResponse;
+    text = raw.trim();
+  }
+
+  text = text.replace(/#[\w\u3000-\u9fff\uff01-\uff60]+/g, '').replace(/\s+\n/g, '\n').trim();
 
   if (text.length < 10 || text.length > 450) return null;
   if (isRefusal(text)) {
@@ -434,7 +461,8 @@ ${ownSection}${extSection}
     console.warn('  ⚠ Claude 応答が必須要素を欠くためテンプレートで代替');
     return null;
   }
-  return text;
+  console.log(`  🖼️ 画像プロンプト${imagePrompt ? '生成済み' : 'なし'}`);
+  return { text, imagePrompt };
 }
 
 // ─── 芸能人スロット専用：AI生成 ─────────────────────────────────────────────
@@ -588,19 +616,22 @@ export async function generateTweetText(
   type: string,
   topPatterns: any[] = [],
   externalPatterns: any[] = [],
-): Promise<string> {
+): Promise<TweetWithImagePrompt> {
   try {
-    const aiText = await generateWithClaude(item, type, topPatterns, externalPatterns);
-    if (aiText) {
+    const result = await generateWithClaude(item, type, topPatterns, externalPatterns);
+    if (result) {
       console.log('  ✨ Claude で文章生成成功');
-      return aiText;
+      return result;
     }
   } catch (e: any) {
     console.warn(`  ⚠ Claude 生成失敗、テンプレートで代替: ${e.message}`);
   }
 
   console.log('  📝 テンプレートで文章生成');
-  return buildTemplateText(item, type);
+  const text = buildTemplateText(item, type);
+  const { buildImagePrompt } = await import('./imageGen.js');
+  const imagePrompt = buildImagePrompt(text, item.title);
+  return { text, imagePrompt };
 }
 
 // ─── 手動投稿フィードバック生成 ──────────────────────────────────────────────

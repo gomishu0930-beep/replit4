@@ -37,6 +37,7 @@ interface PostRecord {
   contentType?: string;  // 5型分類: レビュー型/比較型/ランキング型/失敗回避型/共感型
   text: string;
   item: { id: string; title: string; affiliateURL: string };
+  imagePrompt?: string | null;
   postedAt: string;
   metrics: PostMetrics | null;
 }
@@ -158,11 +159,12 @@ function savePostsAsync() {
   );
 }
 
-export function recordPost({ tweetId, replyId, item, text, type, contentType }: {
-  tweetId: string; replyId: string; item?: any; text: string; type: string; contentType?: string;
+export function recordPost({ tweetId, replyId, item, text, type, contentType, imagePrompt }: {
+  tweetId: string; replyId: string; item?: any; text: string; type: string; contentType?: string; imagePrompt?: string | null;
 }) {
   postsCache.posts.push({
     tweetId, replyId, type, contentType, text,
+    imagePrompt: imagePrompt ?? null,
     item: item
       ? { id: item.content_id, title: item.title, affiliateURL: item.affiliateURL }
       : { id: '', title: '', affiliateURL: '' },

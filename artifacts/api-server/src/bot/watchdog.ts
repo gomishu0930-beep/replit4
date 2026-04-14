@@ -159,7 +159,10 @@ async function emergencyPost(): Promise<void> {
   const item = items[0];
   const topPatterns = getTopPatterns(5);
   const externalPatterns = getExternalTopPatterns(5);
-  const text = await generateTweetText(item, 'random', topPatterns, externalPatterns);
+  const genResult = await generateTweetText(item, 'random', topPatterns, externalPatterns);
+  const text = genResult.text;
+  const imagePrompt = genResult.imagePrompt;
+  if (imagePrompt) console.log(`  🖼️ [WATCHDOG] 画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -172,7 +175,7 @@ async function emergencyPost(): Promise<void> {
   const engText = generateEngagementReply('random');
   await replyToTweet(replyId, engText);
 
-  recordPost({ tweetId, replyId, item, text, type: 'emergency' });
+  recordPost({ tweetId, replyId, item, text, type: 'emergency', imagePrompt });
   console.log(`  [WATCHDOG] ✅ 緊急投稿完了: ${tweetId}`);
 }
 

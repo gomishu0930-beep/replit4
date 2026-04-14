@@ -476,7 +476,7 @@ function Dashboard() {
 }
 
 function StudioTab() {
-  const [studioMode, setStudioMode] = useState<"generate" | "score">("generate");
+  const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score">("tweet");
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -484,6 +484,30 @@ function StudioTab() {
   const [genImages, setGenImages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [scoreMode, setScoreMode] = useState<"url" | "prompt">("url");
+  const [tweetTitle, setTweetTitle] = useState("");
+  const [tweetActress, setTweetActress] = useState("");
+  const [tweetType, setTweetType] = useState("amateur");
+  const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null } | null>(null);
+  const [tweetCopied, setTweetCopied] = useState<string | null>(null);
+
+  const handleGenerateTweet = async () => {
+    if (!tweetTitle.trim()) return;
+    setLoading(true); setError(""); setTweetResult(null);
+    try {
+      const res = await fetch(`${API}/api/bot/generate-tweet`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: tweetTitle.trim(), actress: tweetActress.trim() || undefined, type: tweetType }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setTweetResult({ tweet: data.tweet, imagePrompt: data.imagePrompt });
+      if (data.imagePrompt) setPrompt(data.imagePrompt);
+    } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+  };
+
+  const copyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => { setTweetCopied(key); setTimeout(() => setTweetCopied(null), 2000); });
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -530,18 +554,96 @@ function StudioTab() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader icon="🎨" title="スタジオ" sub="画像生成 + 採点（橋本環奈 = 100点基準）" color="text-pink-400" />
+      <SectionHeader icon="🎨" title="スタジオ" sub="投稿文+画像プロンプト生成・画像生成・採点" color="text-pink-400" />
 
-      <div className="flex gap-2">
+      <div className="flex gap-1">
+        <button onClick={() => setStudioMode("tweet")}
+          className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "tweet" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+          ✍️ 投稿文
+        </button>
         <button onClick={() => setStudioMode("generate")}
-          className={`flex-1 py-2 rounded-xl text-[12px] font-semibold transition-all ${studioMode === "generate" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+          className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "generate" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
           🖼️ 画像生成
         </button>
         <button onClick={() => setStudioMode("score")}
-          className={`flex-1 py-2 rounded-xl text-[12px] font-semibold transition-all ${studioMode === "score" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+          className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "score" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
           🏆 採点
         </button>
       </div>
+
+      {studioMode === "tweet" && (
+        <>
+          <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">作品情報を入力 → 投稿文 + 画像プロンプトを同時生成</p>
+
+            <div className="space-y-2">
+              <input type="text" value={tweetTitle} onChange={e => setTweetTitle(e.target.value)}
+                placeholder="作品タイトル（例: 妻が不在中に義妹と…）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none" />
+
+              <input type="text" value={tweetActress} onChange={e => setTweetActress(e.target.value)}
+                placeholder="出演女優名（任意）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none" />
+
+              <div className="flex gap-1 flex-wrap">
+                {[
+                  { value: "amateur", label: "素人" },
+                  { value: "rank", label: "ランキング" },
+                  { value: "sale", label: "セール" },
+                  { value: "buzz", label: "バズ" },
+                  { value: "random", label: "ランダム" },
+                ].map(t => (
+                  <button key={t.value} onClick={() => setTweetType(t.value)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${tweetType === t.value ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleGenerateTweet} disabled={loading || !tweetTitle.trim()}
+              className="mt-3 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-blue-500 text-white hover:brightness-110">
+              {loading ? "AI生成中..." : "✍️ 投稿文 + 画像プロンプトを生成"}
+            </button>
+          </div>
+
+          {error && <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{error}</div>}
+
+          {tweetResult && (
+            <>
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">投稿文</p>
+                  <button onClick={() => copyText(tweetResult.tweet, "tweet")}
+                    className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    {tweetCopied === "tweet" ? "✅ コピー済み" : "コピー"}
+                  </button>
+                </div>
+                <pre className="text-[12px] text-zinc-200 whitespace-pre-wrap font-sans leading-relaxed bg-black/20 rounded-lg p-3">{tweetResult.tweet}</pre>
+              </div>
+
+              {tweetResult.imagePrompt && (
+                <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">画像プロンプト</p>
+                    <div className="flex gap-1">
+                      <button onClick={() => copyText(tweetResult.imagePrompt!, "imgPrompt")}
+                        className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                        {tweetCopied === "imgPrompt" ? "✅ コピー済み" : "コピー"}
+                      </button>
+                      <button onClick={() => { setPrompt(tweetResult.imagePrompt!); setStudioMode("generate"); }}
+                        className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                        画像生成へ →
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed bg-black/20 rounded-lg p-3">{tweetResult.imagePrompt}</pre>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
 
       {studioMode === "generate" && (
         <>

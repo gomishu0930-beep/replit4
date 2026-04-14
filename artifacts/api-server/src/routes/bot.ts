@@ -8,6 +8,7 @@ import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
 import { getSafetyStatus, validatePost, recordPostEvent } from '../bot/safety-engine.js';
+import { generateTweetText } from '../bot/ai.js';
 
 const router = Router();
 
@@ -283,6 +284,22 @@ router.post('/bot/reply', requireAdminToken, async (req, res) => {
   try {
     const replyId = await replyToTweet(tweetId.trim(), text.trim());
     res.json({ ok: true, tweetId: replyId });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/generate-tweet', requireAdminToken, async (req, res) => {
+  const { title, actress, type = 'amateur', reviewCount = 0, reviewAvg = '4.5' } = req.body ?? {};
+  if (!title?.trim()) { res.status(400).json({ error: 'title は必須です' }); return; }
+  try {
+    const item = {
+      title: title.trim(),
+      actress: actress ? [{ name: actress }] : [],
+      review: { count: reviewCount, average: reviewAvg },
+    };
+    const result = await generateTweetText(item, type);
+    res.json({ ok: true, tweet: result.text, imagePrompt: result.imagePrompt });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
