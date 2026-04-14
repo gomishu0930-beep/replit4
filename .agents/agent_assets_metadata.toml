@@ -173,3 +173,9 @@ id = "r69MpYZVhwEAdOMSAn07q"
 uri = "file://artifacts/api-server/data/image-generation-rulebook.md"
 type = "text"
 title = "画像・動画生成ルールブック（橋本環奈スコア基準）"
+
+[[outputs]]
+id = "bJ1D1u8dcAimuKoSMmBtt"
+uri = "file://artifacts/api-server/data/operation-manual.md"
+type = "text"
+title = "二刀流運用マニュアル v1.0"
