@@ -128,23 +128,63 @@ async function saveData(): Promise<void> {
 // ─── 画像生成ルールブック読み込み ────────────────────────────────────────────
 
 let _rulebookCache: string | null = null;
+let _rulebookFull: string | null = null;
 
-function getImageRulebookSummary(): string {
-  if (_rulebookCache) return _rulebookCache;
+function loadRulebook(): { summary: string; full: string } {
+  if (_rulebookCache && _rulebookFull) return { summary: _rulebookCache, full: _rulebookFull };
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const rulebookPath = resolve(__dirname, '../../data/image-generation-rulebook.md');
     const full = readFileSync(rulebookPath, 'utf-8');
+    _rulebookFull = full;
     const sections = full.split(/^## /m).slice(1, 6);
     _rulebookCache = sections.map(s => '- ' + s.split('\n')[0].trim()).join('\n');
-    _rulebookCache += '\n  ※詳細はimage-generation-rulebook.md参照。橋本環奈=100点基準。合格ライン85点以上。';
-    _rulebookCache += '\n  ※共通顔プロンプト: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, aegyo sal, see-through bangs, natural skin texture, fine peach fuzz, Sony A7IV 85mm f/1.4';
+    _rulebookCache += '\n  ※橋本環奈=100点基準。合格ライン85点以上。';
   } catch {
     _rulebookCache = '  ルールブック読み込み失敗（data/image-generation-rulebook.md）';
+    _rulebookFull = _rulebookCache;
   }
-  return _rulebookCache;
+  return { summary: _rulebookCache, full: _rulebookFull };
 }
+
+function getImageRulebookSummary(): string {
+  return loadRulebook().summary;
+}
+
+function getImageRulebookFull(): string {
+  return loadRulebook().full;
+}
+
+const PROMPT_CREATION_INSTRUCTION = `
+【画像プロンプト作成ルール — 必ず遵守】
+会議で画像・動画プロンプトを作成・改善する場合、以下を必ず守ること:
+
+1. **採点基準10項目すべてで高得点（各8点以上）を狙う**プロンプトを構築する
+   - 顔の丸み / 目の大きさ・輝き / 鼻の形 / 口元の可愛さ / 肌の透明感
+   - 髪の質感・ツヤ / 表情の自然さ / 全体バランス / 写真のリアル感 / オーラ・雰囲気
+2. **共通顔プロンプトを必ずベースに使用**（省略・改変禁止）:
+   RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps
+3. **リアリティ強化キーワード必須**: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze（動画はanamorphic lens flare追加）
+4. **ネガティブプロンプト必須**: plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, overexposed, underexposed
+5. **投稿タイプ別の構図・衣装・表情を正確に適用**（ルールブックのセクション5〜8参照）
+6. **VS構図ではGirl A = dark brown hair / Girl B = light brown hairで差別化**
+7. プロンプト提案時は以下のフォーマットで出力:
+
+\`\`\`
+【プロンプト提案】投稿タイプ: [A〜G / 動画①〜③]
+━━━ ポジティブプロンプト ━━━
+[完全なプロンプト全文]
+━━━ ネガティブプロンプト ━━━
+[完全なネガティブプロンプト全文]
+━━━ 採点10項目の狙い ━━━
+1. 顔の丸み: [狙い / 対応キーワード] → 目標 X/10
+2. 目の大きさ・輝き: [狙い] → 目標 X/10
+...（10項目すべて）
+━━━ 期待スコア: XX/100 (X級) ━━━
+\`\`\`
+`;
+
 
 // ─── ボット現状コンテキスト ───────────────────────────────────────────────────
 
@@ -288,7 +328,11 @@ ${dirSummary}
 ${prevMeetingCtx}
 
 ### 画像・動画生成ルール（橋本環奈スコア基準）
-${getImageRulebookSummary()}`.trim();
+${getImageRulebookSummary()}
+
+### 画像プロンプト作成時の詳細ルールブック
+${getImageRulebookFull()}
+${PROMPT_CREATION_INSTRUCTION}`.trim();
 }
 
 // ─── Deep Research (GPT-4o + web search) ────────────────────────────────────
@@ -373,6 +417,11 @@ async function speakAsGPT(session: MeetingSession, prompt: string, extraInstruct
 - 合意する場合も「なぜそれが正しいか」を数字で補強する
 - 決して「様子を見ましょう」では終わらせない。必ず具体的な仮説と検証方法を示す
 
+【画像プロンプト作成時の追加役割】
+- 画像・動画プロンプトの議題が出た場合、橋本環奈スコア採点基準（10項目×10点=100点）を分析し、各項目で8点以上を取れるプロンプト構成を論理的に設計する
+- 過去のスコア結果データがあれば、どの項目が弱いかを数値で特定し、対応するキーワード追加・削除を具体的に提案する
+- プロンプト提案時は必ず「ボットコンテキストの画像プロンプト作成ルール」のフォーマットに従う
+
 【禁止事項】
 - 「どちらも大切」「バランスが重要」などの曖昧な結論
 - データなしの感覚的主張
@@ -415,6 +464,12 @@ async function speakAsClaude(session: MeetingSession, prompt: string, extraInstr
 - 前回会議の決定事項が守られているか・効果が出ているかを検証する
 - 最終ラウンドでは必ず「今週のNo.1優先事項」を1つ断言して終わる
 
+【画像プロンプト作成時の追加役割】
+- プロンプト提案に対して「このプロンプトでX上のリスク（NSFW判定・通報リスク・シャドウバン誘発）は無いか」を必ず検証する
+- 衣装・表情・構図がXのセンシティブコンテンツポリシーに抵触しないかチェックする
+- 採点基準10項目のうち「写真のリアル感」と「オーラ・雰囲気」の観点から、AI生成画像だとバレにくいプロンプト技法を提案する
+- プロンプト提案時は必ず「ボットコンテキストの画像プロンプト作成ルール」のフォーマットに従う
+
 【禁止事項】
 - GPTへの過度な賛同（「おっしゃる通り」で始まる発言を3回以上繰り返さない）
 - 「さらなる情報収集が必要」などの先送り結論
@@ -455,6 +510,11 @@ async function speakAsGrok(session: MeetingSession, prompt: string, extraInstruc
 - GPTの理論的分析が現場と乖離していれば指摘、Claudeのリスク懸念が過大/過小なら修正する
 - 「Xがこのアルゴリズムを適用しているという根拠はXで確認できる/できない」と明言する
 - 最終ラウンドでは「Xの現実に最も整合する戦略」を裁定として示す
+
+【画像プロンプト作成時の追加役割】
+- Xで実際にバズっているAI美女アカウントの画像傾向（構図・雰囲気・エンゲージメント率）をリアルタイムで調査し、プロンプトに反映すべきトレンドを報告する
+- 提案されたプロンプトが「X上でエンゲージメントを取れる画像」になるかを現場データで判断する
+- AI美女画像でセンシティブ判定を受けたアカウントの事例があれば共有し、回避策を提示する
 
 【禁止事項】
 - 憶測での発言（「おそらく〜」は使わない。確認できない場合は「Xでは確認できなかった」と明言）
