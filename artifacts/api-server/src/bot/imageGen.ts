@@ -1,7 +1,10 @@
 /**
  * 画像生成モジュール
- * - Nanobanana2（Google Gemini 3.1 Flash Image）: プライマリ
- * - DALL-E 3 (OpenAI): フォールバック（Nanobananaクレジット不足時に自動切替）
+ * - fal.ai Realistic Vision (プライマリ): NSFW対応・フォトリアル特化
+ * - Nanobanana2 (セカンダリ): 参照画像対応
+ * - DALL-E 3 (最終フォールバック): 安全重視
+ *
+ * 優先順位: fal.ai → Nanobanana2 → DALL-E 3
  */
 
 const NANOBANANA_API_BASE = 'https://api.nanobananaapi.ai/api/v1/nanobanana';
@@ -9,10 +12,12 @@ const CALLBACK_URL = 'https://asset-manager-3-gomishu0930.replit.app/api/nanoban
 const POLL_INTERVAL_MS = 5000;
 const POLL_TIMEOUT_MS = 120000;
 
+const FAL_API_BASE = 'https://queue.fal.run';
+
 let _nanobananaDisabled = false;
 let _nanobananaDisabledUntil = 0;
 
-function getApiKey(): string {
+function getNanobananaKey(): string {
   return process.env.NANOBANANA_API_KEY ?? '';
 }
 
@@ -20,49 +25,82 @@ function getOpenAIKey(): string {
   return process.env.OPENAI_API_KEY ?? '';
 }
 
+function getFalKey(): string {
+  return process.env.FAL_KEY ?? '';
+}
+
+export function isFalEnabled(): boolean {
+  return !!getFalKey();
+}
+
 export function isNanobananaEnabled(): boolean {
-  return !!getApiKey();
+  return !!getNanobananaKey();
 }
 
 export function isDalleEnabled(): boolean {
   return !!getOpenAIKey();
 }
 
-export function getImageGenStatus(): { primary: string; fallback: string; nanobananaDisabled: boolean } {
+export type ImageEngine = 'fal' | 'nanobanana' | 'dalle' | 'auto';
+
+export function getImageGenStatus(): {
+  primary: string;
+  secondary: string;
+  fallback: string;
+  nanobananaDisabled: boolean;
+  activeEngine: string;
+} {
+  const nanoDisabled = _nanobananaDisabled && Date.now() < _nanobananaDisabledUntil;
+  let active = 'なし';
+  if (isFalEnabled()) active = 'fal.ai Realistic Vision';
+  else if (isNanobananaEnabled() && !nanoDisabled) active = 'Nanobanana2';
+  else if (isDalleEnabled()) active = 'DALL-E 3';
+
   return {
-    primary: isNanobananaEnabled() ? 'Nanobanana2 (有効)' : 'Nanobanana2 (キー未設定)',
+    primary: isFalEnabled() ? 'fal.ai (有効)' : 'fal.ai (キー未設定)',
+    secondary: isNanobananaEnabled() ? (nanoDisabled ? 'Nanobanana2 (クレジット不足)' : 'Nanobanana2 (有効)') : 'Nanobanana2 (キー未設定)',
     fallback: isDalleEnabled() ? 'DALL-E 3 (有効)' : 'DALL-E 3 (キー未設定)',
-    nanobananaDisabled: _nanobananaDisabled && Date.now() < _nanobananaDisabledUntil,
+    nanobananaDisabled: nanoDisabled,
+    activeEngine: active,
   };
 }
 
 export interface GenerateImageOptions {
   referenceImageUrls?: string[];
   safetyTolerance?: number;
-  forceDalle?: boolean;
+  engine?: ImageEngine;
 }
 
 export async function generateImage(prompt: string, options?: GenerateImageOptions): Promise<string> {
-  const useNano = isNanobananaEnabled()
-    && !options?.forceDalle
-    && !(_nanobananaDisabled && Date.now() < _nanobananaDisabledUntil);
+  const engine = options?.engine ?? 'auto';
+  const hasRefs = (options?.referenceImageUrls?.filter(u => u?.startsWith('http'))?.length ?? 0) > 0;
 
-  if (useNano) {
+  if (engine === 'fal') return await generateWithFal(prompt);
+  if (engine === 'nanobanana') return await generateWithNanobanana(prompt, options);
+  if (engine === 'dalle') return await generateWithDalle(prompt);
+
+  if (hasRefs && isNanobananaEnabled() && !(_nanobananaDisabled && Date.now() < _nanobananaDisabledUntil)) {
     try {
       return await generateWithNanobanana(prompt, options);
     } catch (e: any) {
-      const msg = e.message ?? '';
-      if (msg.includes('insufficient') || msg.includes('credit') || msg.includes('top up')) {
-        console.warn(`  ⚠ [Nanobanana] クレジット不足検出 → 1時間DALL-E 3に自動切替`);
-        _nanobananaDisabled = true;
-        _nanobananaDisabledUntil = Date.now() + 3600000;
-      } else {
-        console.warn(`  ⚠ [Nanobanana] 生成失敗: ${msg} → DALL-E 3にフォールバック`);
-      }
-      if (isDalleEnabled()) {
-        return await generateWithDalle(prompt);
-      }
-      throw e;
+      handleNanobananaError(e);
+    }
+  }
+
+  if (isFalEnabled()) {
+    try {
+      return await generateWithFal(prompt);
+    } catch (e: any) {
+      console.warn(`  ⚠ [fal.ai] 生成失敗: ${e.message} → 次のエンジンへ`);
+    }
+  }
+
+  const nanoOk = isNanobananaEnabled() && !(_nanobananaDisabled && Date.now() < _nanobananaDisabledUntil);
+  if (nanoOk && !hasRefs) {
+    try {
+      return await generateWithNanobanana(prompt, options);
+    } catch (e: any) {
+      handleNanobananaError(e);
     }
   }
 
@@ -70,11 +108,116 @@ export async function generateImage(prompt: string, options?: GenerateImageOptio
     return await generateWithDalle(prompt);
   }
 
-  throw new Error('画像生成サービスが利用できません（Nanobanana: クレジット不足 / DALL-E: キー未設定）');
+  throw new Error('画像生成サービスが利用できません');
 }
 
+function handleNanobananaError(e: any) {
+  const msg = e.message ?? '';
+  if (msg.includes('insufficient') || msg.includes('credit') || msg.includes('top up')) {
+    console.warn(`  ⚠ [Nanobanana] クレジット不足 → 1時間無効化`);
+    _nanobananaDisabled = true;
+    _nanobananaDisabledUntil = Date.now() + 3600000;
+  } else {
+    console.warn(`  ⚠ [Nanobanana] 生成失敗: ${msg}`);
+  }
+}
+
+// ─── fal.ai Realistic Vision ─────────────────────────────────────────────────
+
+async function generateWithFal(prompt: string): Promise<string> {
+  const apiKey = getFalKey();
+  if (!apiKey) throw new Error('FAL_KEY が設定されていません');
+
+  console.log(`  🎯 [fal.ai] Realistic Vision 画像生成開始...`);
+
+  const negativeStart = prompt.indexOf('Negative:');
+  let mainPrompt = prompt;
+  let negativePrompt = 'deformed, blurry, bad anatomy, disfigured, mutation, watermark, text, censored, low quality, jpeg artifacts';
+  if (negativeStart !== -1) {
+    mainPrompt = prompt.slice(0, negativeStart).trim();
+    negativePrompt = prompt.slice(negativeStart + 'Negative:'.length).trim() + ', ' + negativePrompt;
+  }
+
+  const submitRes = await fetch(`${FAL_API_BASE}/fal-ai/realistic-vision`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: mainPrompt,
+      negative_prompt: negativePrompt,
+      model_name: 'SG161222/Realistic_Vision_V5.1_noVAE',
+      image_size: { width: 768, height: 1024 },
+      num_inference_steps: 35,
+      guidance_scale: 7.5,
+      num_images: 1,
+      enable_safety_checker: false,
+      scheduler: 'DPM++ SDE Karras',
+      format: 'png',
+    }),
+  });
+
+  const submitJson = (await submitRes.json()) as any;
+
+  if (!submitRes.ok) {
+    throw new Error(`fal.ai submit失敗: ${submitJson?.detail ?? submitJson?.message ?? submitRes.status}`);
+  }
+
+  if (submitJson?.images?.[0]?.url) {
+    const url = submitJson.images[0].url;
+    console.log(`  🎯 [fal.ai] 即時生成完了！ ${url.slice(0, 80)}...`);
+    return url;
+  }
+
+  const requestId = submitJson?.request_id;
+  if (!requestId) {
+    throw new Error('fal.ai: request_idが取得できませんでした');
+  }
+
+  console.log(`  🎯 [fal.ai] キュー投入 request_id=${requestId} → ポーリング開始`);
+  return await pollFalTask(requestId, apiKey);
+}
+
+async function pollFalTask(requestId: string, apiKey: string): Promise<string> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    await sleep(3000);
+
+    const statusRes = await fetch(
+      `${FAL_API_BASE}/fal-ai/realistic-vision/requests/${requestId}/status`,
+      { headers: { 'Authorization': `Key ${apiKey}` } },
+    );
+    const statusJson = (await statusRes.json()) as any;
+    const status = statusJson?.status;
+
+    if (status === 'COMPLETED') {
+      const resultRes = await fetch(
+        `https://queue.fal.run/fal-ai/realistic-vision/requests/${requestId}`,
+        { headers: { 'Authorization': `Key ${apiKey}` } },
+      );
+      const resultJson = (await resultRes.json()) as any;
+      const imageUrl = resultJson?.images?.[0]?.url;
+      if (!imageUrl) throw new Error('fal.ai: 画像URLが取得できませんでした');
+      console.log(`  🎯 [fal.ai] 生成完了！ ${imageUrl.slice(0, 80)}...`);
+      return imageUrl;
+    }
+
+    if (status === 'FAILED') {
+      throw new Error(`fal.ai 生成失敗: ${statusJson?.error ?? '不明なエラー'}`);
+    }
+
+    console.log(`  🎯 [fal.ai] 生成中... (status=${status})`);
+  }
+
+  throw new Error('fal.ai タイムアウト（120秒）');
+}
+
+// ─── Nanobanana2 ──────────────────────────────────────────────────────────────
+
 async function generateWithNanobanana(prompt: string, options?: GenerateImageOptions): Promise<string> {
-  const apiKey = getApiKey();
+  const apiKey = getNanobananaKey();
   if (!apiKey) throw new Error('NANOBANANA_API_KEY が設定されていません');
 
   const refs = options?.referenceImageUrls?.filter(u => u && u.startsWith('http')) ?? [];
@@ -113,8 +256,44 @@ async function generateWithNanobanana(prompt: string, options?: GenerateImageOpt
   if (!taskId) throw new Error('taskIdが取得できませんでした');
 
   console.log(`  🍌 [Nanobanana2] タスク生成完了 taskId=${taskId} → ポーリング開始`);
-  return await pollTask(taskId, apiKey);
+  return await pollNanobananaTask(taskId, apiKey);
 }
+
+async function pollNanobananaTask(taskId: string, apiKey: string): Promise<string> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    await sleep(POLL_INTERVAL_MS);
+
+    const res = await fetch(
+      `${NANOBANANA_API_BASE}/record-info?taskId=${encodeURIComponent(taskId)}`,
+      { headers: { 'Authorization': `Bearer ${apiKey}` } },
+    );
+    const json = (await res.json()) as any;
+    const data = json.data;
+
+    if (!data) continue;
+
+    const flag: number = data.successFlag;
+
+    if (flag === 1) {
+      const imageUrl = data.response?.resultImageUrl ?? data.response?.originImageUrl;
+      if (!imageUrl) throw new Error('画像URLが取得できませんでした');
+      console.log(`  🍌 [Nanobanana2] 生成完了！ ${imageUrl.slice(0, 80)}`);
+      return imageUrl;
+    }
+
+    if (flag === 2 || flag === 3) {
+      throw new Error(`Nanobanana生成失敗 flag=${flag}: ${data.errorMessage ?? '不明'}`);
+    }
+
+    console.log(`  🍌 [Nanobanana2] 生成中... (flag=${flag})`);
+  }
+
+  throw new Error('Nanobanana2 タイムアウト（120秒）');
+}
+
+// ─── DALL-E 3 (最終フォールバック) ────────────────────────────────────────────
 
 async function generateWithDalle(prompt: string): Promise<string> {
   const apiKey = getOpenAIKey();
@@ -156,39 +335,7 @@ async function generateWithDalle(prompt: string): Promise<string> {
   return imageUrl;
 }
 
-async function pollTask(taskId: string, apiKey: string): Promise<string> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    await sleep(POLL_INTERVAL_MS);
-
-    const res = await fetch(
-      `${NANOBANANA_API_BASE}/record-info?taskId=${encodeURIComponent(taskId)}`,
-      { headers: { 'Authorization': `Bearer ${apiKey}` } },
-    );
-    const json = (await res.json()) as any;
-    const data = json.data;
-
-    if (!data) continue;
-
-    const flag: number = data.successFlag;
-
-    if (flag === 1) {
-      const imageUrl = data.response?.resultImageUrl ?? data.response?.originImageUrl;
-      if (!imageUrl) throw new Error('画像URLが取得できませんでした');
-      console.log(`  🍌 [Nanobanana2] 生成完了！ ${imageUrl.slice(0, 80)}`);
-      return imageUrl;
-    }
-
-    if (flag === 2 || flag === 3) {
-      throw new Error(`Nanobanana生成失敗 flag=${flag}: ${data.errorMessage ?? '不明'}`);
-    }
-
-    console.log(`  🍌 [Nanobanana2] 生成中... (flag=${flag})`);
-  }
-
-  throw new Error('Nanobanana2 タイムアウト（120秒）');
-}
+// ─── プロンプトビルダー ───────────────────────────────────────────────────────
 
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
   const faceBase = 'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps';
@@ -216,7 +363,7 @@ export function buildImagePrompt(tweetText: string, productTitle?: string): stri
 
   const base = `${faceBase}, ${sceneHint}, shot on Sony A7IV 85mm f/1.4, volumetric haze, film grain, 8K, photorealistic, shallow depth of field`;
 
-  return `${base}. Negative: nude, naked, explicit, NSFW, nipple, underwear, lingerie, cartoon, anime, CGI, plastic skin, airbrushed skin.`;
+  return `${base}. Negative: cartoon, anime, CGI, plastic skin, airbrushed skin, deformed, blurry, bad anatomy, disfigured, mutation, watermark.`;
 }
 
 function sleep(ms: number) {

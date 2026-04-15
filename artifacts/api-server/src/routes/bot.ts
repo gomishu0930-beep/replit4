@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getStats, getAllPosts, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getRebrandlyData, recordPostManual } from '../bot/storage.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
-import { generateImage, getImageGenStatus } from '../bot/imageGen.js';
+import { generateImage, getImageGenStatus, type ImageEngine } from '../bot/imageGen.js';
 import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageScorer.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds, fetchItems, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
@@ -233,15 +233,17 @@ router.post('/bot/rebrandly/sync', async (_req, res) => {
 });
 
 router.post('/bot/nanobanana/generate', async (req, res) => {
-  const { prompt, referenceImageUrls, safetyTolerance, forceDalle } = req.body ?? {};
+  const { prompt, referenceImageUrls, safetyTolerance, engine } = req.body ?? {};
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
   try {
+    const validEngines = ['auto', 'fal', 'nanobanana', 'dalle'];
+    const selectedEngine: ImageEngine = validEngines.includes(engine) ? engine : 'auto';
     const imageUrl = await generateImage(prompt.trim(), {
       referenceImageUrls: referenceImageUrls ?? undefined,
       safetyTolerance: safetyTolerance ?? 4,
-      forceDalle: !!forceDalle,
+      engine: selectedEngine,
     });
-    res.json({ ok: true, imageUrl, engine: forceDalle ? 'dall-e-3' : 'auto' });
+    res.json({ ok: true, imageUrl, engine: selectedEngine });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

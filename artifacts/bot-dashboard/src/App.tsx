@@ -574,7 +574,7 @@ function StudioTab() {
   const [genStep, setGenStep] = useState<"search" | "result">("search");
   const [refImages, setRefImages] = useState<string[]>([]);
   const [useRef, setUseRef] = useState(true);
-  const [forceDalle, setForceDalle] = useState(false);
+  const [imageEngine, setImageEngine] = useState<string>("auto");
 
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
@@ -630,8 +630,8 @@ function StudioTab() {
     if (!prompt.trim()) return;
     setLoading(true); setError("");
     try {
-      const body: Record<string, any> = { prompt: prompt.trim(), forceDalle };
-      if (useRef && refImages.length > 0 && !forceDalle) {
+      const body: Record<string, any> = { prompt: prompt.trim(), engine: imageEngine };
+      if (useRef && refImages.length > 0 && imageEngine !== 'fal' && imageEngine !== 'dalle') {
         body.referenceImageUrls = refImages;
       }
       const res = await fetch(`${API}/api/bot/nanobanana/generate`, {
@@ -878,15 +878,23 @@ function StudioTab() {
               </div>
             )}
 
-            <div className="mt-3 flex items-center gap-2">
-              <label className="flex items-center gap-1.5 cursor-pointer bg-zinc-800 border border-white/10 rounded-lg px-2.5 py-1.5">
-                <input type="checkbox" checked={forceDalle} onChange={e => setForceDalle(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded accent-amber-500" />
-                <span className="text-[10px] text-zinc-300 whitespace-nowrap">DALL-E 3</span>
-              </label>
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-1">
+                {[
+                  { value: "auto", label: "自動", icon: "⚡" },
+                  { value: "fal", label: "fal.ai", icon: "🎯" },
+                  { value: "nanobanana", label: "Nano", icon: "🍌" },
+                  { value: "dalle", label: "DALL-E", icon: "🎨" },
+                ].map(e => (
+                  <button key={e.value} onClick={() => setImageEngine(e.value)}
+                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${imageEngine === e.value ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+                    {e.icon} {e.label}
+                  </button>
+                ))}
+              </div>
               <button onClick={handleGenerate} disabled={loading || !prompt.trim()}
-                className="flex-1 py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
-                {loading ? "生成中..." : forceDalle ? "🎨 DALL-E 3で生成" : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "🖼️ 画像を生成"}
+                className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
+                {loading ? "生成中..." : imageEngine === "fal" ? "🎯 fal.ai で生成" : imageEngine === "dalle" ? "🎨 DALL-E 3で生成" : imageEngine === "nanobanana" ? "🍌 Nanobananaで生成" : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "⚡ 画像を生成"}
               </button>
             </div>
           </div>

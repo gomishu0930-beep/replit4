@@ -34,7 +34,7 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 - **Build**: esbuild (single bundle, ~2.5mb)
 - **Storage**: GCS (Google Cloud Storage)
 - **AI**: OpenAI GPT-4o, Anthropic Claude, Grok (X API)
-- **Image Gen**: Nanobanana2 (プライマリ) → DALL-E 3 (フォールバック) + GPT-4o Vision scoring
+- **Image Gen**: fal.ai Realistic Vision (プライマリ・NSFW対応) → Nanobanana2 (参照画像対応) → DALL-E 3 (最終フォールバック) + GPT-4o Vision scoring
 - **Dashboard**: React + Vite + TanStack Query + Recharts + Tailwind
 
 ## Key Commands
