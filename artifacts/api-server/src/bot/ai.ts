@@ -389,44 +389,67 @@ ${grokSection}${ownSection}${extSection}
   "imagePrompt": "投稿に添える画像のプロンプト（英語）"
 }
 
-★★★ imagePromptの生成ルール（最重要 — 作品に忠実な画像を生成すること） ★★★
+★★★ imagePromptの生成ルール（最重要 — 可愛い日本人ベース + 作品連動） ★★★
 
 imagePromptは、この作品の「サムネイル」として使える画像を生成するためのものです。
-作品タイトル・フルタイトル・ジャンル・出演者情報を徹底的に読み取り、作品の場面を忠実に再現してください。
+「可愛い日本人」のベース品質を維持しつつ、作品の場面を忠実に再現します。
 
-【手順】
-1. フルタイトルから「誰が・どこで・何をしている・どんな状況か」を読み取る
-2. ジャンルから衣装・体型・雰囲気のキーワードを抽出する
-3. 女優名がある場合、その女優の一般的な外見特徴を推定する（髪型・体型等）
-4. 上記を全て組み合わせて、この作品専用のプロンプトを作る
+【構造】プロンプトは以下の順序で構成:
+① 品質タグ（固定） → ② 可愛さベース（年齢層で切り替え） → ③ SFW確保 → ④ 作品連動[SCENE][OUTFIT][EXPRESSION] → ⑤ カメラ（場面連動） → ⑥ ネガティブ
 
-【タイトル→場面の変換例】
-- 「妻が一人旅で不在中、義妹とホテルでお泊り不倫」→ young japanese woman, hotel room, dim warm lighting, wearing casual loungewear, lying on hotel bed, guilty yet seductive expression, evening atmosphere
-- 「巨乳ナースの誘惑 深夜の病室で二人きり」→ japanese woman with large bust, nurse uniform, hospital room at night, dim fluorescent lighting, leaning forward seductively, stethoscope around neck
-- 「女教師の放課後 生徒に迫られて…」→ japanese woman wearing teacher outfit with glasses, empty classroom after school, standing near blackboard, flustered expression, sunset through windows
-- 「素人OL 昼休みの密会」→ japanese office lady, business blouse and pencil skirt, modern office restroom or stairwell, nervous expression, midday lighting
+【① 品質タグ（必ず先頭に置く）】
+(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo,
 
-【ジャンル→キーワード変換】
-- 巨乳/爆乳 → large bust, fitted top emphasizing chest
-- 美乳/微乳 → slender figure, small bust
-- OL/女教師 → office blouse / teacher outfit with glasses
-- ナース → nurse uniform, hospital setting
-- 人妻/熟女 → mature elegant woman, wedding ring visible
-- JK/制服 → school uniform, sailor outfit
-- 水着 → bikini swimsuit, poolside or beach
-- メイド → maid outfit, cafe interior
-- 痴漢/電車 → crowded train, standing, nervous expression
-- 不倫/浮気 → hotel room, dim lighting, guilty expression
-- コスプレ → cosplay outfit matching the character
-- マッサージ → massage table, spa room, towel
-- 温泉/風呂 → hot spring inn, yukata, steamy atmosphere
-- 中出し/3P → (場面設定のみ使用: bedroom, multiple angles)
+【② 可愛さベース（年齢層で切り替え）】
+■ 20〜25歳（デフォルト — JK/素人/彼女系/アイドル系）:
+cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps,
 
-【出力フォーマット（必ずこの構造で）】
-RAW photo, [女性の具体的外見: 髪型・体型・年齢層], [作品の衣装/服装], [場面の具体的な背景・場所], [表情・ポーズ], [照明・雰囲気], shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze, 8K, photorealistic, shallow depth of field. Negative: cartoon, anime, CGI, plastic skin, airbrushed skin, deformed, blurry, bad anatomy, watermark.
+■ 26〜35歳（OL/人妻/お姉さん系）:
+beautiful japanese woman, soft feminine features, gentle rounded cheeks, almond-shaped sophisticated eyes with natural catchlight, elegant smile, side-swept bangs, layered medium-length dark brown hair, warm natural glow, glossy lips, natural blush, natural skin texture with visible pores, delicate collarbone, refined jawline,
+
+■ 36歳以上（熟女/マダム系）:
+elegant mature japanese beauty, refined features, high cheekbones, defined jawline, deep expressive eyes with wisdom, sophisticated smile, layered medium-length hair, luminous skin, subtle makeup, natural skin texture, graceful neck and collarbone,
+
+【③ SFW確保キーワード（必ず含める）】
+covered chest, modest neckline, appropriate clothing,
+
+【④ 作品連動（タイトル・ジャンルから読み取って差し替え）】
+in a [SCENE], wearing [OUTFIT], with [EXPRESSION],
+
+タイトル→場面の読み取り例:
+- 「VR 制服女子が教室で…」→ [SCENE]=japanese high-school classroom, afternoon sunlight [OUTFIT]=neat sailor uniform, skirt at knee [EXPRESSION]=shy side-glance smile
+- 「巨乳OLの残業誘惑」→ [SCENE]=modern office at night, desk lamp [OUTFIT]=fitted business blouse, pencil skirt [EXPRESSION]=seductive lean, looking up
+- 「彼女と初めてのお泊り」→ [SCENE]=cozy bedroom, warm lamp light [OUTFIT]=casual pajamas, oversized t-shirt [EXPRESSION]=bashful smile, sitting on bed
+- 「温泉旅館の若女将」→ [SCENE]=traditional japanese inn, wooden corridor [OUTFIT]=elegant yukata, loosely tied obi [EXPRESSION]=welcoming gentle bow
+- 「控えめ水着の天使」→ [SCENE]=tropical beach, crystal water, golden hour [OUTFIT]=modest one-piece swimsuit [EXPRESSION]=playful hair flip, sunlit smile
+
+ジャンル→キーワード:
+- 巨乳/爆乳 → large bust, fitted top
+- OL → office blouse, pencil skirt, office setting
+- ナース → nurse uniform, hospital
+- 制服/JK → sailor uniform, classroom
+- 人妻 → elegant casual, kitchen/living room
+- 水着 → swimsuit, beach/pool
+- メイド → maid outfit, cafe
+- 温泉 → yukata, inn
+- 不倫 → hotel room, dim lighting
+
+【⑤ カメラ設定（場面に応じて選択）】
+- 室内・接写・VR・自撮り風 → shot on Sony A7IV 35mm f/1.8
+- 屋内・半身（オフィス/ベッド/教室）→ shot on Sony A7IV 50mm f/2.0
+- 屋外・全身・グラビア → shot on Sony A7IV 85mm f/1.4
+共通: soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze
+
+【⑥ ネガティブ（必ず末尾に Negative: で始める）】
+Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
+
+【完成例（VR制服物の場合）】
+(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, natural skin texture with visible pores, covered chest, modest neckline, appropriate clothing, in a japanese high-school classroom with afternoon sunlight, wearing neat sailor uniform with skirt at knee, with shy side-glance smile, soft diffused golden-hour sunlight, creamy cinematic bokeh, shot on Sony A7IV 35mm f/1.8, film grain, volumetric haze. Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
 
 【禁止事項】
-- 毎回同じ顔テンプレートを使い回すこと（baby face, round chubby cheeks...の固定文をそのまま使うな）
+- 品質タグ(photorealistic:1.3)を省略すること
+- SFWキーワード(covered chest等)を省略すること
+- ネガティブプロンプトの重み付け(worst quality:1.4)を省略すること
 - 作品と無関係な一般的ポートレートにすること
 - 全て英語で記述すること`;
 

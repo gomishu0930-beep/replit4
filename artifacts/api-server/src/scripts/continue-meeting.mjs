@@ -5,7 +5,7 @@
 
 const API = 'http://localhost:8080';
 const SESSION_ID = 'meeting-1775894258369';
-const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【最終ラウンド（R5）で必ず以下の形式で成果物を明示すること】\n【メインツイート】ここに本文（140字以内・具体的エピソード・えっちな表現OK）\n【リプライ1】ここに本文（140字以内・続き）\n【リプライ2】ここに本文（140字以内・FANZA作品URL誘導で締め）\n【画像プロンプト（英語）】ここにプロンプト（フォトリアリスティック・アイドル的可愛さ: baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, see-through bangs, dark brown hair・情緒的・アニメNG）\n\nトーン: 大人の男性が昔の甘酸っぱい体験を懐かしく振り返るスタイル。ハッシュタグなし。';
+const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【最終ラウンド（R5）で必ず以下の形式で成果物を明示すること】\n【メインツイート】ここに本文（140字以内・具体的エピソード・えっちな表現OK）\n【リプライ1】ここに本文（140字以内・続き）\n【リプライ2】ここに本文（140字以内・FANZA作品URL誘導で締め）\n【画像プロンプト（英語）】プロンプト構造: ① (photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo → ② 可愛さベース（年齢に応じて選択）→ ③ covered chest, modest neckline → ④ in a [SCENE], wearing [OUTFIT], with [EXPRESSION] → ⑤ カメラ（35mm/50mm/85mm場面連動）→ ⑥ 照明 golden-hour, bokeh, film grain → ⑦ Negative: (worst quality:1.4), (low quality:1.4), CGI, digital art\n\nトーン: 大人の男性が昔の甘酸っぱい体験を懐かしく振り返るスタイル。ハッシュタグなし。';
 
 async function apiPost(path, body) {
   const r = await fetch(`${API}${path}`, {
@@ -131,7 +131,7 @@ if (!content.tweet || content.tweet.length < 5) {
 // 3. 画像生成（nanobanana2）
 let imageUrl = null;
 const imgPromptToUse = content.imgPrompt ||
-  'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps, nostalgic summer evening, soft warm lighting, melancholic mood, reminiscing memories, shot on Sony A7IV 85mm f/1.4, cinematic portrait, volumetric haze, film grain, photorealistic, 8K, no anime, no cartoon, no CGI, no plastic skin';
+  '(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, covered chest, modest neckline, appropriate clothing, nostalgic summer evening, in a quiet residential street at dusk, wearing casual summer clothes, with melancholic reminiscing expression, soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze, shot on Sony A7IV 50mm f/2.0. Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils';
 
 console.log('\n🍌 Nanobanana2で画像生成中...');
 console.log('プロンプト:', imgPromptToUse.slice(0, 120));

@@ -30,16 +30,16 @@ Rate the given AI-generated image on these 10 technical/aesthetic criteria (each
 
 ## Scoring Criteria (0-10 each × 10 = max 100)
 
-1. **Face Roundness (顔の丸み)** — Does the generated face have a round, baby-face quality with soft chubby cheeks? (10 = perfect round baby face)
-2. **Eye Size & Sparkle (目の大きさ・輝き)** — Are the eyes large, round, sparkling with visible aegyo sal (tear trough highlight)? (10 = ideal anime-inspired large eyes with natural catchlight)
-3. **Nose Shape (鼻の形)** — Is the nose small, round, and cute (button nose)? (10 = perfectly petite and proportional)
-4. **Mouth & Smile (口元の可愛さ)** — Is the mouth small with naturally upturned corners in a gentle smile? (10 = ideal gentle smile)
-5. **Skin Realism (肌の透明感)** — Does the skin show natural texture with visible pores and peach fuzz, NOT plastic/airbrushed? (10 = photorealistic skin with subsurface scattering)
-6. **Hair Quality (髪の質感・ツヤ)** — Does the hair have natural shine, stray wisps, and realistic texture? (10 = photography-level hair rendering)
-7. **Expression Naturalness (表情の自然さ)** — Does the expression look natural and unforced? (10 = candid, effortless expression)
-8. **Overall Proportion (全体バランス)** — Are facial features well-balanced and proportional? No AI artifacts or asymmetry? (10 = golden ratio proportions)
-9. **Photorealism (写真のリアル感)** — Does it look like a real photograph? No CGI/plastic/mannequin look? (10 = indistinguishable from real RAW photo)
-10. **Aura & Mood (オーラ・雰囲気)** — Does the image convey warm, approachable idol-like charm with cinematic lighting? (10 = professional idol photoshoot quality)
+1. **可愛さ・魅力 (Cuteness/Appeal)** — Does the face convey Japanese idol-like cuteness? Soft features, youthful charm, approachable beauty? For mature subjects: elegance and sophistication instead. (10 = irresistible charm)
+2. **目の表現 (Eye Expression)** — Are the eyes expressive, sparkling with natural catchlight? Do they convey emotion? (10 = captivating, soulful eyes with visible catchlight)
+3. **肌のリアリズム (Skin Realism)** — Does the skin show natural texture with visible pores, NOT plastic/airbrushed? Warm skin tone with natural glow? (10 = photorealistic skin with subsurface scattering)
+4. **表情の自然さ (Expression)** — Does the expression look natural, unforced, and emotionally engaging? (10 = candid, effortless expression that tells a story)
+5. **髪の質感 (Hair Quality)** — Does the hair have natural shine, stray wisps, and realistic texture? (10 = photography-level hair rendering)
+6. **衣装・場面の一致 (Outfit/Scene Match)** — Does the outfit and scene setting match what was intended? Is it contextually appropriate? (10 = perfect scene/outfit coherence)
+7. **照明・雰囲気 (Lighting/Mood)** — Is the lighting cinematic with golden-hour warmth, bokeh, and volumetric haze? (10 = professional photoshoot lighting)
+8. **構図バランス (Composition)** — Are proportions correct? No AI artifacts, asymmetry, or extra limbs? (10 = flawless composition)
+9. **写真リアリズム (Photorealism)** — Does it look like a real photograph? No CGI/plastic/mannequin look? (10 = indistinguishable from real RAW photo)
+10. **バズ力 (Viral Potential)** — Would this image stop scrolling on X/Twitter? Eye-catching, thumb-stopping quality? (10 = guaranteed engagement)
 
 ## Response Format (JSON only)
 
@@ -47,16 +47,16 @@ Respond ONLY with the following JSON. No other text.
 
 {
   "items": [
-    { "category": "顔の丸み", "score": 8, "comment": "Round face with soft cheeks, good baby face quality" },
-    { "category": "目の大きさ・輝き", "score": 7, "comment": "..." },
-    { "category": "鼻の形", "score": 8, "comment": "..." },
-    { "category": "口元の可愛さ", "score": 7, "comment": "..." },
-    { "category": "肌の透明感", "score": 8, "comment": "..." },
-    { "category": "髪の質感・ツヤ", "score": 7, "comment": "..." },
-    { "category": "表情の自然さ", "score": 8, "comment": "..." },
-    { "category": "全体バランス", "score": 7, "comment": "..." },
-    { "category": "写真のリアル感", "score": 8, "comment": "..." },
-    { "category": "オーラ・雰囲気", "score": 7, "comment": "..." }
+    { "category": "可愛さ・魅力", "score": 8, "comment": "Cute idol-like charm with soft features" },
+    { "category": "目の表現", "score": 7, "comment": "..." },
+    { "category": "肌のリアリズム", "score": 8, "comment": "..." },
+    { "category": "表情の自然さ", "score": 7, "comment": "..." },
+    { "category": "髪の質感", "score": 8, "comment": "..." },
+    { "category": "衣装・場面の一致", "score": 7, "comment": "..." },
+    { "category": "照明・雰囲気", "score": 8, "comment": "..." },
+    { "category": "構図バランス", "score": 7, "comment": "..." },
+    { "category": "写真リアリズム", "score": 8, "comment": "..." },
+    { "category": "バズ力", "score": 7, "comment": "..." }
   ],
   "summary": "Overall quality assessment in 2-3 sentences (Japanese)",
   "improvements": ["Improvement point 1 (Japanese)", "Improvement point 2 (Japanese)"],

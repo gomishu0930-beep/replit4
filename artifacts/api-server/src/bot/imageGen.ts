@@ -132,10 +132,11 @@ async function generateWithFal(prompt: string): Promise<string> {
 
   const negativeStart = prompt.indexOf('Negative:');
   let mainPrompt = prompt;
-  let negativePrompt = 'deformed, blurry, bad anatomy, disfigured, mutation, watermark, text, censored, low quality, jpeg artifacts';
+  let negativePrompt = '(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped';
   if (negativeStart !== -1) {
     mainPrompt = prompt.slice(0, negativeStart).trim();
-    negativePrompt = prompt.slice(negativeStart + 'Negative:'.length).trim() + ', ' + negativePrompt;
+    const userNeg = prompt.slice(negativeStart + 'Negative:'.length).trim();
+    if (userNeg) negativePrompt = userNeg;
   }
 
   const startTime = Date.now();
@@ -150,11 +151,12 @@ async function generateWithFal(prompt: string): Promise<string> {
       negative_prompt: negativePrompt,
       model_name: 'SG161222/Realistic_Vision_V5.1_noVAE',
       image_size: { width: 768, height: 1024 },
-      num_inference_steps: 30,
-      guidance_scale: 7.5,
+      num_inference_steps: 28,
+      guidance_scale: 7.0,
       num_images: 1,
       enable_safety_checker: false,
-      scheduler: 'DPM++ SDE Karras',
+      scheduler: 'DPM++ 2M Karras',
+      clip_skip: 2,
       format: 'jpeg',
     }),
   });
@@ -297,40 +299,55 @@ async function generateWithDalle(prompt: string): Promise<string> {
 
 // ─── プロンプトビルダー（テンプレート版 — Claude生成失敗時のフォールバック） ──
 
+const QUALITY_PREFIX = '(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo';
+
+const FACE_YOUNG = 'cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps';
+const FACE_MATURE = 'beautiful japanese woman, soft feminine features, gentle rounded cheeks, almond-shaped sophisticated eyes with natural catchlight, elegant smile, side-swept bangs, layered medium-length dark brown hair, warm natural glow, glossy lips, natural skin texture with visible pores, delicate collarbone, refined jawline';
+const FACE_OLDER = 'elegant mature japanese beauty, refined features, high cheekbones, defined jawline, deep expressive eyes with wisdom, sophisticated smile, layered medium-length hair, luminous skin, subtle makeup, natural skin texture, graceful neck and collarbone';
+
+const SFW_TAGS = 'covered chest, modest neckline, appropriate clothing';
+const LIGHTING = 'soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze';
+const NEGATIVE = '(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped';
+
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
   const src = productTitle || tweetText;
 
-  const sceneMap: [RegExp, string[]][] = [
-    [/温泉|風呂|入浴/, ['japanese woman', 'wearing yukata loosely draped', 'hot spring inn, steamy atmosphere, wooden bath', 'relaxed expression, wet hair']],
-    [/OL|オフィス|上司|部下|会社/, ['japanese office lady', 'wearing fitted business blouse and pencil skirt', 'modern office, glass windows, city view', 'confident pose, adjusting glasses']],
-    [/教師|先生|授業/, ['japanese woman with glasses', 'wearing teacher outfit, white blouse, tight skirt', 'empty classroom after hours, blackboard, sunset light', 'flustered expression, holding textbook']],
-    [/ナース|看護|病院/, ['japanese woman', 'wearing nurse uniform, stethoscope around neck', 'hospital room at night, dim lighting', 'leaning forward, caring expression']],
-    [/メイド|喫茶/, ['young japanese woman', 'wearing classic maid outfit with headband and apron', 'cozy vintage cafe interior, warm lighting', 'cheerful smile, serving pose']],
-    [/制服|JK|女子校/, ['young japanese woman', 'wearing school sailor uniform, plaid skirt', 'school hallway with lockers, afternoon light', 'shy expression, looking away']],
-    [/水着|プール|海|ビーチ/, ['japanese woman', 'wearing bikini swimsuit', 'tropical beach, crystal clear water, golden hour', 'playful smile, sunlit skin, wet']],
-    [/人妻|奥さん|妻/, ['mature japanese woman, elegant', 'wearing casual apron over home clothes, wedding ring', 'modern kitchen, warm domestic lighting', 'gentle smile with hint of loneliness']],
-    [/電車|痴漢|通勤/, ['japanese woman', 'wearing office attire, blouse slightly disheveled', 'inside crowded train, handrail, motion blur', 'nervous expression, biting lip']],
-    [/マッサージ|エステ/, ['japanese woman lying face down', 'wrapped in white towel', 'luxury spa room, candles, oil bottles', 'eyes closed, relaxed expression']],
-    [/コスプレ/, ['japanese woman', 'wearing elaborate cosplay outfit', 'convention booth, colorful backdrop', 'energetic pose, peace sign']],
-    [/不倫|浮気|密会/, ['japanese woman', 'wearing elegant cocktail dress', 'dimly lit hotel room, city night view from window', 'guilty yet seductive expression, sitting on bed edge']],
-    [/巨乳|爆乳/, ['japanese woman with large bust', 'wearing tight fitted top', 'casual bedroom setting, soft window light', 'looking at camera, hair over shoulder']],
-    [/素人|個人撮影/, ['natural looking japanese woman', 'wearing casual everyday clothes', 'apartment room, natural daylight, messy background', 'candid expression, selfie angle']],
-    [/熟女/, ['mature japanese woman in her 40s, elegant features', 'wearing sophisticated dress', 'upscale bar or restaurant, warm amber lighting', 'knowing smile, wine glass in hand']],
+  const sceneMap: [RegExp, string[], string, string][] = [
+    [/温泉|風呂|入浴/, ['wearing yukata loosely draped', 'traditional japanese hot spring inn, steamy wooden bath', 'relaxed expression, wet hair'], 'young', '50mm f/2.0'],
+    [/OL|オフィス|上司|部下|会社/, ['wearing fitted business blouse and pencil skirt', 'modern office with glass windows, city view', 'confident pose, adjusting glasses'], 'mature', '50mm f/2.0'],
+    [/教師|先生|授業/, ['wearing teacher outfit, white blouse, tight skirt, glasses', 'empty classroom after hours, blackboard, sunset light', 'flustered expression, holding textbook'], 'mature', '50mm f/2.0'],
+    [/ナース|看護|病院/, ['wearing nurse uniform, stethoscope around neck', 'hospital room at night, dim fluorescent lighting', 'leaning forward, caring expression'], 'young', '50mm f/2.0'],
+    [/メイド|喫茶/, ['wearing classic maid outfit with headband and apron', 'cozy vintage cafe interior, warm lighting', 'cheerful smile, serving pose'], 'young', '50mm f/2.0'],
+    [/制服|JK|女子校/, ['wearing school sailor uniform, plaid skirt at knee', 'school hallway with lockers, afternoon sunlight', 'shy expression, looking away'], 'young', '35mm f/1.8'],
+    [/水着|プール|海|ビーチ/, ['wearing modest one-piece swimsuit', 'tropical beach, crystal clear water, golden hour', 'playful smile, sunlit skin'], 'young', '85mm f/1.4'],
+    [/人妻|奥さん|妻/, ['wearing casual apron over home clothes, wedding ring visible', 'modern kitchen, warm domestic lighting', 'gentle smile with hint of loneliness'], 'mature', '50mm f/2.0'],
+    [/電車|痴漢|通勤/, ['wearing office attire, blouse', 'inside crowded train, handrail, motion blur', 'nervous expression'], 'mature', '35mm f/1.8'],
+    [/マッサージ|エステ/, ['wrapped in white towel', 'luxury spa room, candles, oil bottles', 'eyes closed, relaxed expression'], 'young', '50mm f/2.0'],
+    [/コスプレ/, ['wearing elaborate cosplay outfit', 'convention booth, colorful backdrop', 'energetic pose, peace sign'], 'young', '85mm f/1.4'],
+    [/不倫|浮気|密会/, ['wearing elegant cocktail dress', 'dimly lit hotel room, city night view from window', 'guilty yet seductive expression, sitting on bed edge'], 'mature', '50mm f/2.0'],
+    [/巨乳|爆乳/, ['wearing tight fitted top', 'casual bedroom setting, soft window light', 'looking at camera, hair over shoulder'], 'young', '85mm f/1.4'],
+    [/素人|個人撮影/, ['wearing casual everyday clothes', 'apartment room, natural daylight', 'candid expression, selfie angle'], 'young', '35mm f/1.8'],
+    [/熟女/, ['wearing sophisticated dress', 'upscale bar or restaurant, warm amber lighting', 'knowing smile, wine glass in hand'], 'older', '85mm f/1.4'],
   ];
 
-  let person = 'beautiful japanese woman';
   let outfit = 'wearing casual clothes';
   let scene = 'softly lit indoor setting';
   let expression = 'natural expression';
+  let ageType = 'young';
+  let camera = '50mm f/2.0';
 
-  for (const [re, parts] of sceneMap) {
+  for (const [re, parts, age, cam] of sceneMap) {
     if (re.test(src)) {
-      [person, outfit, scene, expression] = parts;
+      [outfit, scene, expression] = parts;
+      ageType = age;
+      camera = cam;
       break;
     }
   }
 
-  return `RAW photo, ${person}, ${outfit}, ${scene}, ${expression}, shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze, 8K, photorealistic, shallow depth of field. Negative: cartoon, anime, CGI, plastic skin, airbrushed skin, deformed, blurry, bad anatomy, watermark.`;
+  const faceBase = ageType === 'older' ? FACE_OLDER : ageType === 'mature' ? FACE_MATURE : FACE_YOUNG;
+
+  return `${QUALITY_PREFIX}, ${faceBase}, ${SFW_TAGS}, ${outfit}, in a ${scene}, with ${expression}, ${LIGHTING}, shot on Sony A7IV ${camera}. Negative: ${NEGATIVE}`;
 }
 
 function sleep(ms: number) {

@@ -3,7 +3,7 @@
  */
 
 const API = 'http://localhost:8080';
-const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【必須成果物（最終ラウンドで必ず明示すること）】\n①【メインツイート】〜140字以内\n②【リプライ1】〜140字以内（続き）\n③【リプライ2】〜140字以内（FANZA作品への誘導で締め）\n④【画像プロンプト（英語）】nanobanana2用・冒頭に"RAW photo"必須・フォトリアリスティック・アイドル的可愛さ(baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps)・末尾に"shot on Sony A7IV 85mm f/1.4, volumetric haze, film grain, 8K"必須・情緒的・アニメNG・CGI NG・plastic skin NG\n\n投稿トーン: 大人の男性が昔の甘酸っぱいえっちな体験を懐かしく語るスタイル。具体的エピソード風。ハッシュタグなし。';
+const AGENDA = '猥談×思い出語り投稿を作成してください。\n\n【必須成果物（最終ラウンドで必ず明示すること）】\n①【メインツイート】〜140字以内\n②【リプライ1】〜140字以内（続き）\n③【リプライ2】〜140字以内（FANZA作品への誘導で締め）\n④【画像プロンプト（英語）】\n  構造: ① 品質タグ (photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo → ② 可愛さベース（年齢に応じて cute japanese idol girl/beautiful japanese woman/elegant mature japanese beauty + 顔特徴） → ③ SFW確保 covered chest, modest neckline, appropriate clothing → ④ 作品連動 in a [SCENE], wearing [OUTFIT], with [EXPRESSION] → ⑤ カメラ（場面連動: 室内接写=35mm f/1.8 / 屋内半身=50mm f/2.0 / 屋外全身=85mm f/1.4） → ⑥ 照明 soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze → ⑦ ネガティブ Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, CGI, digital art, illustration, painting, 3d render, deformed\n\n投稿トーン: 大人の男性が昔の甘酸っぱいえっちな体験を懐かしく語るスタイル。具体的エピソード風。ハッシュタグなし。';
 
 async function post(path, body) {
   const r = await fetch(`${API}${path}`, {

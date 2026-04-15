@@ -161,13 +161,20 @@ const PROMPT_CREATION_INSTRUCTION = `
 会議で画像・動画プロンプトを作成・改善する場合、以下を必ず守ること:
 
 1. **採点基準10項目すべてで高得点（各8点以上）を狙う**プロンプトを構築する
-   - 顔の丸み / 目の大きさ・輝き / 鼻の形 / 口元の可愛さ / 肌の透明感
-   - 髪の質感・ツヤ / 表情の自然さ / 全体バランス / 写真のリアル感 / オーラ・雰囲気
-2. **共通顔プロンプトを必ずベースに使用**（省略・改変禁止）:
-   RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps
-3. **リアリティ強化キーワード必須**: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze（動画はanamorphic lens flare追加）
-4. **ネガティブプロンプト必須**: plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, overexposed, underexposed
-5. **投稿タイプ別の構図・衣装・表情を正確に適用**（ルールブックのセクション5〜8参照）
+   - 可愛さ・魅力 / 目の表現 / 肌のリアリズム / 表情の自然さ / 髪の質感
+   - 衣装・場面の一致 / 照明・雰囲気 / 構図バランス / 写真リアリズム / バズ力
+2. **プロンプト構造（6段階）を必ず遵守**:
+   ① 品質タグ: (photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo
+   ② 可愛さベース（年齢層で切り替え）:
+     - 20-25歳: cute japanese idol girl, baby face, round chubby cheeks, sparkling eyes with aegyo sal, see-through bangs...
+     - 26-35歳: beautiful japanese woman, soft feminine features, almond-shaped sophisticated eyes, side-swept bangs...
+     - 36歳以上: elegant mature japanese beauty, refined features, high cheekbones, deep expressive eyes...
+   ③ SFW確保: covered chest, modest neckline, appropriate clothing
+   ④ 作品連動: in a [SCENE], wearing [OUTFIT], with [EXPRESSION]
+   ⑤ カメラ（場面連動）: 室内接写=35mm f/1.8 / 屋内半身=50mm f/2.0 / 屋外全身=85mm f/1.4
+   ⑥ 照明: soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze
+3. **ネガティブプロンプト（重み付き）**: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils
+4. **投稿タイプ別の構図・衣装・表情を正確に適用**（ルールブックのセクション5〜8参照）
 6. **VS構図ではGirl A = dark brown hair / Girl B = light brown hairで差別化**
 7. プロンプト提案時は以下のフォーマットで出力:
 
