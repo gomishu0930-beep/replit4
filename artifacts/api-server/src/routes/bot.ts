@@ -7,7 +7,7 @@ import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageSco
 import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds, fetchItems, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
-import { getSafetyStatus, validatePost, recordPostEvent } from '../bot/safety-engine.js';
+import { getSafetyStatus, validatePost, recordPostEvent, updateFollowerCount } from '../bot/safety-engine.js';
 import { generateTweetText } from '../bot/ai.js';
 import { resolveShortUrl } from '../bot/rebrandly.js';
 
@@ -85,7 +85,19 @@ router.post('/bot/posts/sync-timeline', async (_req, res) => {
       });
       if (isNew) newCount++; else updatedCount++;
     }
-    return res.json({ success: true, total: tweets.length, newCount, updatedCount });
+
+    let followerCount: number | null = null;
+    try {
+      const info = await getAccountInfo();
+      if (info) {
+        updateFollowerCount(info.followersCount);
+        followerCount = info.followersCount;
+      }
+    } catch (e: any) {
+      console.warn('  ⚠ フォロワー数自動取得失敗:', e.message);
+    }
+
+    return res.json({ success: true, total: tweets.length, newCount, updatedCount, followerCount });
   } catch (e: any) {
     return res.status(500).json({ error: e.message ?? 'タイムライン取得失敗' });
   }
