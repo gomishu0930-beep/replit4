@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-15T04:19:12.427Z",
+  "lastCheckAt": "2026-04-15T04:32:11.144Z",
   "lastIssueAt": "2026-04-15T04:03:20.556Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "healthy",
@@ -7,26 +7,6 @@
   "recoveryCount": 44,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-15T03:22:20.611Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 267.3h 無投稿"
-    },
-    {
-      "at": "2026-04-15T03:22:20.611Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-15T03:22:26.510Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-15T03:22:26.510Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
     {
       "at": "2026-04-15T03:22:26.510Z",
       "level": "recovery",
@@ -256,6 +236,26 @@
       "at": "2026-04-15T04:19:12.427Z",
       "level": "info",
       "detail": "最終投稿から 0.6h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T04:27:41.077Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T04:27:41.176Z",
+      "level": "info",
+      "detail": "最終投稿から 0.7h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T04:32:11.144Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T04:32:11.145Z",
+      "level": "info",
+      "detail": "最終投稿から 0.8h — 正常範囲"
     }
   ]
 }
