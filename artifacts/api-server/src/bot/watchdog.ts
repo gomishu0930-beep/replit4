@@ -9,7 +9,7 @@
  */
 
 import { fetchItems, getSampleImages, getRandomItems } from './fanza.js';
-import { uploadImages, postTweet, replyToTweet } from './twitter.js';
+import { uploadImages, postTweet, replyToTweet, isBotPaused } from './twitter.js';
 import { generateTweetText, generateEngagementReply } from './ai.js';
 import { recordPost, getStats, getTopPatterns, getExternalTopPatterns } from './storage.js';
 import { readJson, writeJson } from './cloudStore.js';
@@ -233,6 +233,13 @@ async function runWatchdogCycle(): Promise<void> {
   _state.status = 'issue';
   _state.issueCount++;
   _state.lastIssueAt = now;
+
+  if (isBotPaused()) {
+    addEvent('info', 'ボット停止中（凍結/手動停止）→ 回復投稿をスキップ');
+    _state.status = 'failed';
+    await saveState();
+    return;
+  }
 
   addEvent('info', '診断開始: FANZA API / Twitter API をテスト中...');
 

@@ -133,7 +133,8 @@ async function postMyFansSlot(label: string) {
 export async function triggerEmergencyPost(): Promise<void> {
   const items = await getRandomItems(1);
   if (items.length === 0) throw new Error('緊急投稿: アイテム取得失敗');
-  await postFanzaItem(items[0], 'emergency', '緊急回復投稿');
+  const result = await postFanzaItem(items[0], 'emergency', '緊急回復投稿');
+  if (result === null) throw new Error('緊急投稿: 安全制限により投稿不可');
 }
 
 async function runScheduledSlot(label: string) {

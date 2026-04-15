@@ -1,3 +1,12 @@
 {
-  "snapshots": []
+  "snapshots": [
+    {
+      "followersCount": 111,
+      "followingCount": 257,
+      "tweetCount": 323,
+      "username": "ero_senpai1",
+      "note": "手動記録",
+      "recordedAt": "2026-04-15T04:02:05.360Z"
+    }
+  ]
 }

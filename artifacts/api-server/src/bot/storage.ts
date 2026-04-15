@@ -250,7 +250,9 @@ export function getStats() {
   const last7 = posts.filter(
     (p) => new Date(p.postedAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
   );
-  const lastPost = posts.length > 0 ? posts[posts.length - 1] : null;
+  const lastPost = posts.length > 0
+    ? posts.reduce((a, b) => new Date(a.postedAt).getTime() >= new Date(b.postedAt).getTime() ? a : b)
+    : null;
   const withMetrics = posts.filter((p) => p.metrics);
   const totalLikes = withMetrics.reduce((sum, p) => sum + (p.metrics?.like_count || 0), 0);
   const totalRTs = withMetrics.reduce((sum, p) => sum + (p.metrics?.retweet_count || 0), 0);

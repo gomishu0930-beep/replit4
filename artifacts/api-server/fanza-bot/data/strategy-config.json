@@ -9,17 +9,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 40,
-    "avgNewPatterns": 38.45565753540286,
-    "totalCycles": 317
+    "avgNewPatterns": 39.24327219234739,
+    "totalCycles": 319
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
       "status": "confirmed",
-      "finding": "317サイクル実績 / 平均新規パターン 38.5件/サイクル",
+      "finding": "319サイクル実績 / 平均新規パターン 39.2件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-15T03:40:54.008Z"
+      "testedAt": "2026-04-15T04:05:34.856Z"
     },
     {
       "id": "type-weights",
@@ -33,17 +33,17 @@
       "id": "dynamic-templates",
       "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
       "status": "confirmed",
-      "finding": "直近 14件の平均スコア 0.9 vs 以前 0.5 (+85.7%)",
+      "finding": "直近 28件の平均スコア 18.0 vs 以前 0.5 (+3266.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-15T03:40:54.307Z"
+      "testedAt": "2026-04-15T04:05:34.857Z"
     },
     {
       "id": "posting-hours",
       "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
       "status": "confirmed",
-      "finding": "最高スロット: 21時 (avg 1.0) / 最低スロット: 12時 (avg 0.6)",
+      "finding": "最高スロット: 0時 (avg 162.7) / 最低スロット: 9時 (avg 0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-15T03:40:54.307Z"
+      "testedAt": "2026-04-15T04:05:34.857Z"
     },
     {
       "id": "content-5types",
@@ -87,6 +87,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-15T04:05:34.857Z",
+      "cycle": 319,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-15T03:59:15.750Z",
+      "cycle": 318,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-15T03:40:54.308Z",
       "cycle": 317,
@@ -422,24 +436,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-13T19:48:46.237Z",
-      "cycle": 270,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-13T14:56:55.800Z",
-      "cycle": 269,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-15T03:40:54.308Z",
-  "version": 321,
+  "lastEvaluatedAt": "2026-04-15T04:05:34.857Z",
+  "version": 323,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

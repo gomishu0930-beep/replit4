@@ -190,23 +190,20 @@ type Tab = "poll" | "senpai" | "studio" | "data";
 
 function Dashboard() {
   const [tab, setTab] = useState<Tab>("poll");
-  const [tick, setTick] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
 
-  useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 30000); return () => clearInterval(id); }, []);
-
   const { data: status } = useQuery<BotStatus>({
-    queryKey: ["botStatus", tick],
+    queryKey: ["botStatus"],
     queryFn: () => fetch(`${API}/api/bot/status`).then(r => r.json()),
     refetchInterval: 30000,
   });
   const { data: postsData, refetch: refetchPosts } = useQuery<{ posts: Post[] }>({
-    queryKey: ["botPosts", tick],
+    queryKey: ["botPosts"],
     queryFn: () => fetch(`${API}/api/bot/posts`).then(r => r.json()),
     refetchInterval: 60000,
   });
   const { data: safetyData, refetch: refetchSafety } = useQuery<SafetyStatus>({
-    queryKey: ["safety", tick],
+    queryKey: ["safety"],
     queryFn: () => fetch(`${API}/api/safety/status`).then(r => r.json()),
     refetchInterval: 30000,
   });
