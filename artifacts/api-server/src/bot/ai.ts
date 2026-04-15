@@ -389,13 +389,46 @@ ${grokSection}${ownSection}${extSection}
   "imagePrompt": "投稿に添える画像のプロンプト（英語）"
 }
 
-imagePromptのルール:
-- 共通顔ベース必須: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
-- カメラ: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze
-- 作品タイトルとジャンルから場面・衣装・表情を具体的に指定:
-  - 温泉→yukata, hot spring / OL→office blouse / ナース→nurse uniform / 制服→sailor uniform / 人妻→elegant mature woman / 水着→one-piece swimsuit / メイド→maid outfit / 不倫→hotel room, dim lighting
-- ネガティブ末尾必須: Negative: nude, naked, explicit, NSFW, nipple, underwear, lingerie, cartoon, anime, CGI, plastic skin, airbrushed skin
-- 全て英語。安全性重要：露出のない衣装。下着・ランジェリー禁止。`;
+★★★ imagePromptの生成ルール（最重要 — 作品に忠実な画像を生成すること） ★★★
+
+imagePromptは、この作品の「サムネイル」として使える画像を生成するためのものです。
+作品タイトル・フルタイトル・ジャンル・出演者情報を徹底的に読み取り、作品の場面を忠実に再現してください。
+
+【手順】
+1. フルタイトルから「誰が・どこで・何をしている・どんな状況か」を読み取る
+2. ジャンルから衣装・体型・雰囲気のキーワードを抽出する
+3. 女優名がある場合、その女優の一般的な外見特徴を推定する（髪型・体型等）
+4. 上記を全て組み合わせて、この作品専用のプロンプトを作る
+
+【タイトル→場面の変換例】
+- 「妻が一人旅で不在中、義妹とホテルでお泊り不倫」→ young japanese woman, hotel room, dim warm lighting, wearing casual loungewear, lying on hotel bed, guilty yet seductive expression, evening atmosphere
+- 「巨乳ナースの誘惑 深夜の病室で二人きり」→ japanese woman with large bust, nurse uniform, hospital room at night, dim fluorescent lighting, leaning forward seductively, stethoscope around neck
+- 「女教師の放課後 生徒に迫られて…」→ japanese woman wearing teacher outfit with glasses, empty classroom after school, standing near blackboard, flustered expression, sunset through windows
+- 「素人OL 昼休みの密会」→ japanese office lady, business blouse and pencil skirt, modern office restroom or stairwell, nervous expression, midday lighting
+
+【ジャンル→キーワード変換】
+- 巨乳/爆乳 → large bust, fitted top emphasizing chest
+- 美乳/微乳 → slender figure, small bust
+- OL/女教師 → office blouse / teacher outfit with glasses
+- ナース → nurse uniform, hospital setting
+- 人妻/熟女 → mature elegant woman, wedding ring visible
+- JK/制服 → school uniform, sailor outfit
+- 水着 → bikini swimsuit, poolside or beach
+- メイド → maid outfit, cafe interior
+- 痴漢/電車 → crowded train, standing, nervous expression
+- 不倫/浮気 → hotel room, dim lighting, guilty expression
+- コスプレ → cosplay outfit matching the character
+- マッサージ → massage table, spa room, towel
+- 温泉/風呂 → hot spring inn, yukata, steamy atmosphere
+- 中出し/3P → (場面設定のみ使用: bedroom, multiple angles)
+
+【出力フォーマット（必ずこの構造で）】
+RAW photo, [女性の具体的外見: 髪型・体型・年齢層], [作品の衣装/服装], [場面の具体的な背景・場所], [表情・ポーズ], [照明・雰囲気], shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze, 8K, photorealistic, shallow depth of field. Negative: cartoon, anime, CGI, plastic skin, airbrushed skin, deformed, blurry, bad anatomy, watermark.
+
+【禁止事項】
+- 毎回同じ顔テンプレートを使い回すこと（baby face, round chubby cheeks...の固定文をそのまま使うな）
+- 作品と無関係な一般的ポートレートにすること
+- 全て英語で記述すること`;
 
   const message = await client.messages.create({
     model: grokResearch ? 'claude-sonnet-4-5' : 'claude-haiku-4-5',
