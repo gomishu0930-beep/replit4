@@ -671,7 +671,7 @@ function StudioTab() {
 
   const QUALITY = "(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo";
   const FACE_BASE = "cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips";
-  const SFW = "covered chest, modest neckline, appropriate clothing";
+  const SEXY = "(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, skin-tight clothing, alluring pose, glistening skin";
   const LIGHTING = "soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze";
   const NEGATIVE = "(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped";
 
@@ -852,11 +852,11 @@ function StudioTab() {
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none" />
 
             <div className="flex gap-2 mt-2 flex-wrap">
-              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SFW + ", in a japanese high-school classroom with afternoon sunlight, wearing neat sailor uniform with skirt at knee, with shy side-glance smile, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
-              <MiniBtn label="OL" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman, soft feminine features, almond-shaped sophisticated eyes, elegant smile, side-swept bangs, layered dark brown hair, natural skin texture, " + SFW + ", in a modern office with glass windows and city view, wearing fitted business blouse and pencil skirt, with confident pose adjusting glasses, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
-              <MiniBtn label="彼女" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SFW + ", in a cozy bedroom with warm lamp light, wearing casual pajamas oversized t-shirt, with bashful smile sitting on bed, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
-              <MiniBtn label="温泉" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SFW + ", in a traditional japanese hot spring inn with wooden corridor, wearing elegant yukata with loosely tied obi, with welcoming gentle bow, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
-              <MiniBtn label="水着" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SFW + ", at tropical beach with crystal water and golden hour, wearing modest one-piece swimsuit, with playful hair flip sunlit smile, " + LIGHTING + ", shot on Sony A7IV 85mm f/1.4. Negative: " + NEGATIVE)} />
+              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a japanese high-school classroom with afternoon sunlight, wearing micro mini sailor uniform with unbuttoned blouse showing cleavage and thigh-high socks, with seductive upward gaze biting lip, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
+              <MiniBtn label="OL" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman, soft feminine features, almond-shaped sophisticated eyes, elegant smile, side-swept bangs, layered dark brown hair, natural skin texture, " + SEXY + ", in a modern office at night with city view, wearing unbuttoned white blouse with visible bra straps and ultra-tight pencil skirt, with seductive lean forward showing deep cleavage, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
+              <MiniBtn label="彼女" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a cozy bedroom with warm lamp light, wearing sheer lace camisole with bare shoulders and short shorts, with inviting smile lying on bed, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
+              <MiniBtn label="水着" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", at tropical beach with crystal water and golden hour, wearing string bikini micro triangle top high-cut bottom wet glistening skin, with arching back wet body playful smile, " + LIGHTING + ", shot on Sony A7IV 85mm f/1.4. Negative: " + NEGATIVE)} />
+              <MiniBtn label="ナース" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a hospital room at night with dim lighting, wearing tight nurse uniform with deep V neckline short skirt thigh-high white stockings, with leaning forward showing cleavage caring seductive expression, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
             </div>
 
             {refImages.length > 0 && (

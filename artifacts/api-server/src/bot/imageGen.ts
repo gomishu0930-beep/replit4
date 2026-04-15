@@ -305,7 +305,7 @@ const FACE_YOUNG = 'cute japanese idol girl, baby face, round chubby cheeks, sma
 const FACE_MATURE = 'beautiful japanese woman, soft feminine features, gentle rounded cheeks, almond-shaped sophisticated eyes with natural catchlight, elegant smile, side-swept bangs, layered medium-length dark brown hair, warm natural glow, glossy lips, natural skin texture with visible pores, delicate collarbone, refined jawline';
 const FACE_OLDER = 'elegant mature japanese beauty, refined features, high cheekbones, defined jawline, deep expressive eyes with wisdom, sophisticated smile, layered medium-length hair, luminous skin, subtle makeup, natural skin texture, graceful neck and collarbone';
 
-const SFW_TAGS = 'covered chest, modest neckline, appropriate clothing';
+const SEXY_TAGS = '(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, skin-tight clothing, alluring pose, glistening skin';
 const LIGHTING = 'soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze';
 const NEGATIVE = '(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped';
 
@@ -313,21 +313,21 @@ export function buildImagePrompt(tweetText: string, productTitle?: string): stri
   const src = productTitle || tweetText;
 
   const sceneMap: [RegExp, string[], string, string][] = [
-    [/温泉|風呂|入浴/, ['wearing yukata loosely draped', 'traditional japanese hot spring inn, steamy wooden bath', 'relaxed expression, wet hair'], 'young', '50mm f/2.0'],
-    [/OL|オフィス|上司|部下|会社/, ['wearing fitted business blouse and pencil skirt', 'modern office with glass windows, city view', 'confident pose, adjusting glasses'], 'mature', '50mm f/2.0'],
-    [/教師|先生|授業/, ['wearing teacher outfit, white blouse, tight skirt, glasses', 'empty classroom after hours, blackboard, sunset light', 'flustered expression, holding textbook'], 'mature', '50mm f/2.0'],
-    [/ナース|看護|病院/, ['wearing nurse uniform, stethoscope around neck', 'hospital room at night, dim fluorescent lighting', 'leaning forward, caring expression'], 'young', '50mm f/2.0'],
-    [/メイド|喫茶/, ['wearing classic maid outfit with headband and apron', 'cozy vintage cafe interior, warm lighting', 'cheerful smile, serving pose'], 'young', '50mm f/2.0'],
-    [/制服|JK|女子校/, ['wearing school sailor uniform, plaid skirt at knee', 'school hallway with lockers, afternoon sunlight', 'shy expression, looking away'], 'young', '35mm f/1.8'],
-    [/水着|プール|海|ビーチ/, ['wearing modest one-piece swimsuit', 'tropical beach, crystal clear water, golden hour', 'playful smile, sunlit skin'], 'young', '85mm f/1.4'],
-    [/人妻|奥さん|妻/, ['wearing casual apron over home clothes, wedding ring visible', 'modern kitchen, warm domestic lighting', 'gentle smile with hint of loneliness'], 'mature', '50mm f/2.0'],
-    [/電車|痴漢|通勤/, ['wearing office attire, blouse', 'inside crowded train, handrail, motion blur', 'nervous expression'], 'mature', '35mm f/1.8'],
-    [/マッサージ|エステ/, ['wrapped in white towel', 'luxury spa room, candles, oil bottles', 'eyes closed, relaxed expression'], 'young', '50mm f/2.0'],
-    [/コスプレ/, ['wearing elaborate cosplay outfit', 'convention booth, colorful backdrop', 'energetic pose, peace sign'], 'young', '85mm f/1.4'],
-    [/不倫|浮気|密会/, ['wearing elegant cocktail dress', 'dimly lit hotel room, city night view from window', 'guilty yet seductive expression, sitting on bed edge'], 'mature', '50mm f/2.0'],
-    [/巨乳|爆乳/, ['wearing tight fitted top', 'casual bedroom setting, soft window light', 'looking at camera, hair over shoulder'], 'young', '85mm f/1.4'],
-    [/素人|個人撮影/, ['wearing casual everyday clothes', 'apartment room, natural daylight', 'candid expression, selfie angle'], 'young', '35mm f/1.8'],
-    [/熟女/, ['wearing sophisticated dress', 'upscale bar or restaurant, warm amber lighting', 'knowing smile, wine glass in hand'], 'older', '85mm f/1.4'],
+    [/温泉|風呂|入浴/, ['wearing yukata sliding off one shoulder, exposed collarbone and upper chest, bare legs', 'traditional japanese hot spring inn, steamy wooden bath', 'flushed cheeks, wet hair clinging to skin'], 'young', '50mm f/2.0'],
+    [/OL|オフィス|上司|部下|会社/, ['wearing unbuttoned white blouse with visible bra straps, ultra-tight pencil skirt riding up, crossed legs', 'modern office with glass windows, city view at night', 'seductive lean forward showing deep cleavage'], 'mature', '50mm f/2.0'],
+    [/教師|先生|授業/, ['wearing tight white blouse unbuttoned low, mini skirt, glasses, thigh-high stockings', 'empty classroom after hours, blackboard, sunset light', 'leaning against desk, seductive gaze over glasses'], 'mature', '50mm f/2.0'],
+    [/ナース|看護|病院/, ['wearing tight nurse uniform with deep V neckline, short skirt, thigh-high white stockings', 'hospital room at night, dim fluorescent lighting', 'leaning forward showing cleavage, caring seductive expression'], 'young', '50mm f/2.0'],
+    [/メイド|喫茶/, ['wearing micro maid outfit with frilly garter belt, deep neckline, bare thighs', 'cozy vintage cafe interior, warm lighting', 'bending forward playfully, showing cleavage'], 'young', '50mm f/2.0'],
+    [/制服|JK|女子校/, ['wearing micro mini sailor uniform, unbuttoned blouse showing cleavage, thigh-high socks', 'school hallway with lockers, afternoon sunlight', 'seductive upward gaze, biting lip'], 'young', '35mm f/1.8'],
+    [/水着|プール|海|ビーチ/, ['wearing string bikini, micro triangle top, high-cut bottom, wet glistening skin', 'tropical beach, crystal clear water, golden hour', 'arching back, wet body, playful smile'], 'young', '85mm f/1.4'],
+    [/人妻|奥さん|妻/, ['wearing sheer negligee, bare shoulders, kitchen apron barely covering', 'modern kitchen, warm domestic lighting', 'inviting expression, leaning against counter'], 'mature', '50mm f/2.0'],
+    [/電車|痴漢|通勤/, ['wearing tight office blouse with buttons straining, mini skirt', 'inside crowded train, handrail, motion blur', 'flustered expression, clothes slightly disheveled'], 'mature', '35mm f/1.8'],
+    [/マッサージ|エステ/, ['minimal towel barely covering, oiled glistening skin, exposed back and legs', 'luxury spa room, candles, oil bottles', 'eyes half-closed, lips parted, relaxed sensual expression'], 'young', '50mm f/2.0'],
+    [/コスプレ/, ['wearing revealing cosplay outfit, exposed midriff, short skirt', 'convention booth, colorful backdrop', 'energetic sexy pose'], 'young', '85mm f/1.4'],
+    [/不倫|浮気|密会/, ['wearing sheer lace lingerie, lace teddy, bare legs', 'dimly lit hotel room, city night view from window', 'seductive expression, lying on bed'], 'mature', '50mm f/2.0'],
+    [/巨乳|爆乳/, ['wearing tight low-cut top showing deep cleavage, push-up effect', 'casual bedroom setting, soft window light', 'leaning forward, hair over shoulder, alluring gaze'], 'young', '85mm f/1.4'],
+    [/素人|個人撮影/, ['wearing camisole with thin straps, short shorts, bare legs', 'apartment room, natural daylight', 'candid selfie angle, slightly shy but inviting'], 'young', '35mm f/1.8'],
+    [/熟女/, ['wearing form-fitting cocktail dress with deep slit, exposed legs', 'upscale bar or restaurant, warm amber lighting', 'knowing seductive smile, wine glass in hand'], 'older', '85mm f/1.4'],
   ];
 
   let outfit = 'wearing casual clothes';
@@ -347,7 +347,7 @@ export function buildImagePrompt(tweetText: string, productTitle?: string): stri
 
   const faceBase = ageType === 'older' ? FACE_OLDER : ageType === 'mature' ? FACE_MATURE : FACE_YOUNG;
 
-  return `${QUALITY_PREFIX}, ${faceBase}, ${SFW_TAGS}, ${outfit}, in a ${scene}, with ${expression}, ${LIGHTING}, shot on Sony A7IV ${camera}. Negative: ${NEGATIVE}`;
+  return `${QUALITY_PREFIX}, ${faceBase}, ${SEXY_TAGS}, ${outfit}, in a ${scene}, with ${expression}, ${LIGHTING}, shot on Sony A7IV ${camera}. Negative: ${NEGATIVE}`;
 }
 
 function sleep(ms: number) {

@@ -395,7 +395,7 @@ imagePromptは、この作品の「サムネイル」として使える画像を
 「可愛い日本人」のベース品質を維持しつつ、作品の場面を忠実に再現します。
 
 【構造】プロンプトは以下の順序で構成:
-① 品質タグ（固定） → ② 可愛さベース（年齢層で切り替え） → ③ SFW確保 → ④ 作品連動[SCENE][OUTFIT][EXPRESSION] → ⑤ カメラ（場面連動） → ⑥ ネガティブ
+① 品質タグ（固定） → ② 可愛さベース（年齢層で切り替え） → ③ セクシー演出 → ④ 作品連動[SCENE][OUTFIT][EXPRESSION] → ⑤ カメラ（場面連動） → ⑥ ネガティブ
 
 【① 品質タグ（必ず先頭に置く）】
 (photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo,
@@ -410,29 +410,30 @@ beautiful japanese woman, soft feminine features, gentle rounded cheeks, almond-
 ■ 36歳以上（熟女/マダム系）:
 elegant mature japanese beauty, refined features, high cheekbones, defined jawline, deep expressive eyes with wisdom, sophisticated smile, layered medium-length hair, luminous skin, subtle makeup, natural skin texture, graceful neck and collarbone,
 
-【③ SFW確保キーワード（必ず含める）】
-covered chest, modest neckline, appropriate clothing,
+【③ セクシー演出キーワード（必ず含める — 露出度を最大限に高める）】
+(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, short skirt, thigh gap, skin-tight clothing, alluring pose, glistening skin,
 
 【④ 作品連動（タイトル・ジャンルから読み取って差し替え）】
 in a [SCENE], wearing [OUTFIT], with [EXPRESSION],
 
-タイトル→場面の読み取り例:
-- 「VR 制服女子が教室で…」→ [SCENE]=japanese high-school classroom, afternoon sunlight [OUTFIT]=neat sailor uniform, skirt at knee [EXPRESSION]=shy side-glance smile
-- 「巨乳OLの残業誘惑」→ [SCENE]=modern office at night, desk lamp [OUTFIT]=fitted business blouse, pencil skirt [EXPRESSION]=seductive lean, looking up
-- 「彼女と初めてのお泊り」→ [SCENE]=cozy bedroom, warm lamp light [OUTFIT]=casual pajamas, oversized t-shirt [EXPRESSION]=bashful smile, sitting on bed
-- 「温泉旅館の若女将」→ [SCENE]=traditional japanese inn, wooden corridor [OUTFIT]=elegant yukata, loosely tied obi [EXPRESSION]=welcoming gentle bow
-- 「控えめ水着の天使」→ [SCENE]=tropical beach, crystal water, golden hour [OUTFIT]=modest one-piece swimsuit [EXPRESSION]=playful hair flip, sunlit smile
+タイトル→場面の読み取り例（サンプル画像の最も露出度の高い衣装を参考に）:
+- 「VR 制服女子が教室で…」→ [SCENE]=japanese high-school classroom, afternoon sunlight [OUTFIT]=micro mini sailor uniform, unbuttoned blouse showing cleavage, thigh-high socks [EXPRESSION]=seductive upward gaze, biting lip
+- 「巨乳OLの残業誘惑」→ [SCENE]=modern office at night, desk lamp [OUTFIT]=unbuttoned white blouse with visible bra straps, ultra-tight pencil skirt riding up [EXPRESSION]=seductive lean forward showing deep cleavage
+- 「彼女と初めてのお泊り」→ [SCENE]=cozy bedroom, warm lamp light [OUTFIT]=sheer lace camisole, bare shoulders, short shorts [EXPRESSION]=inviting smile lying on bed
+- 「温泉旅館の若女将」→ [SCENE]=traditional japanese inn, steamy bath [OUTFIT]=yukata falling off one shoulder, exposed collarbone and upper chest, bare legs [EXPRESSION]=flushed cheeks, wet hair clinging
+- 「水着グラビア」→ [SCENE]=tropical beach, crystal water, golden hour [OUTFIT]=string bikini, micro triangle top, high-cut bottom [EXPRESSION]=arching back, wet glistening body
 
-ジャンル→キーワード:
-- 巨乳/爆乳 → large bust, fitted top
-- OL → office blouse, pencil skirt, office setting
-- ナース → nurse uniform, hospital
-- 制服/JK → sailor uniform, classroom
-- 人妻 → elegant casual, kitchen/living room
-- 水着 → swimsuit, beach/pool
-- メイド → maid outfit, cafe
-- 温泉 → yukata, inn
-- 不倫 → hotel room, dim lighting
+ジャンル→キーワード（最大露出で）:
+- 巨乳/爆乳 → (large bust:1.3), deep cleavage, push-up effect, tight low-cut top
+- OL → unbuttoned blouse, visible bra straps, ultra-tight skirt, crossed legs
+- ナース → tight nurse uniform, deep V neckline, short skirt, thigh-high stockings
+- 制服/JK → micro mini skirt, unbuttoned blouse, thigh-high socks, visible midriff
+- 人妻 → sheer negligee, bare shoulders, kitchen apron over lingerie
+- 水着 → string bikini, micro bikini, high-cut, wet glistening skin
+- メイド → micro maid outfit, frilly garter belt, deep neckline, bare thighs
+- 温泉 → yukata sliding off shoulders, wet skin, steamy, bare legs
+- 不倫 → sheer lingerie, lace teddy, hotel bed, dim lighting
+- マッサージ → minimal towel, oiled skin, exposed back and legs
 
 【⑤ カメラ設定（場面に応じて選択）】
 - 室内・接写・VR・自撮り風 → shot on Sony A7IV 35mm f/1.8
@@ -444,12 +445,12 @@ in a [SCENE], wearing [OUTFIT], with [EXPRESSION],
 Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
 
 【完成例（VR制服物の場合）】
-(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, natural skin texture with visible pores, covered chest, modest neckline, appropriate clothing, in a japanese high-school classroom with afternoon sunlight, wearing neat sailor uniform with skirt at knee, with shy side-glance smile, soft diffused golden-hour sunlight, creamy cinematic bokeh, shot on Sony A7IV 35mm f/1.8, film grain, volumetric haze. Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
+(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, natural skin texture with visible pores, (cleavage:1.2), deep neckline, bare shoulders, exposed midriff, glistening skin, in a japanese high-school classroom with afternoon sunlight, wearing micro mini sailor uniform with unbuttoned blouse showing cleavage and thigh-high socks, with seductive upward gaze, soft diffused golden-hour sunlight, creamy cinematic bokeh, shot on Sony A7IV 35mm f/1.8, film grain, volumetric haze. Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
 
 【禁止事項】
 - 品質タグ(photorealistic:1.3)を省略すること
-- SFWキーワード(covered chest等)を省略すること
-- ネガティブプロンプトの重み付け(worst quality:1.4)を省略すること
+- セクシー演出キーワード(cleavage, deep neckline等)を省略すること
+- 露出を控えめにすること（サンプル画像の中で最も露出度の高い衣装を常に選ぶ）
 - 作品と無関係な一般的ポートレートにすること
 - 全て英語で記述すること`;
 
