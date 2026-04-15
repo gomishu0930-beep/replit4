@@ -574,6 +574,7 @@ function StudioTab() {
   const [genStep, setGenStep] = useState<"search" | "result">("search");
   const [refImages, setRefImages] = useState<string[]>([]);
   const [useRef, setUseRef] = useState(true);
+  const [forceDalle, setForceDalle] = useState(false);
 
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
@@ -629,8 +630,8 @@ function StudioTab() {
     if (!prompt.trim()) return;
     setLoading(true); setError("");
     try {
-      const body: Record<string, any> = { prompt: prompt.trim() };
-      if (useRef && refImages.length > 0) {
+      const body: Record<string, any> = { prompt: prompt.trim(), forceDalle };
+      if (useRef && refImages.length > 0 && !forceDalle) {
         body.referenceImageUrls = refImages;
       }
       const res = await fetch(`${API}/api/bot/nanobanana/generate`, {
@@ -877,10 +878,17 @@ function StudioTab() {
               </div>
             )}
 
-            <button onClick={handleGenerate} disabled={loading || !prompt.trim()}
-              className="mt-3 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
-              {loading ? "生成中..." : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "🖼️ 画像を生成"}
-            </button>
+            <div className="mt-3 flex items-center gap-2">
+              <label className="flex items-center gap-1.5 cursor-pointer bg-zinc-800 border border-white/10 rounded-lg px-2.5 py-1.5">
+                <input type="checkbox" checked={forceDalle} onChange={e => setForceDalle(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-amber-500" />
+                <span className="text-[10px] text-zinc-300 whitespace-nowrap">DALL-E 3</span>
+              </label>
+              <button onClick={handleGenerate} disabled={loading || !prompt.trim()}
+                className="flex-1 py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
+                {loading ? "生成中..." : forceDalle ? "🎨 DALL-E 3で生成" : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "🖼️ 画像を生成"}
+              </button>
+            </div>
           </div>
 
           {error && <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{error}</div>}
