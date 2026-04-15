@@ -10,6 +10,7 @@ import { getWatchdogState } from '../bot/watchdog.js';
 import { getSafetyStatus, validatePost, recordPostEvent, updateFollowerCount } from '../bot/safety-engine.js';
 import { generateTweetText } from '../bot/ai.js';
 import { resolveShortUrl } from '../bot/rebrandly.js';
+import { researchBuzzForItem } from '../bot/grok.js';
 
 const router = Router();
 
@@ -371,26 +372,37 @@ router.post('/bot/generate-tweet', requireAdminToken, async (req, res) => {
       genre: Array.isArray(rawItem.genre) ? rawItem.genre : [],
     };
     const tweetType = type === 'keyword' ? 'random' : type;
-    const result = await generateTweetText(item, tweetType);
 
-    let shortUrl = '';
-    if (item.affiliateURL && shortenLink) {
-      try {
-        shortUrl = await resolveShortUrl(item.affiliateURL, item.content_id, item.title);
-      } catch (e: any) {
-        console.warn('短縮URL生成失敗:', e.message);
-        shortUrl = item.affiliateURL;
-      }
-    } else {
-      shortUrl = item.affiliateURL || '';
-    }
+    const [grokResearch, shortUrlResult] = await Promise.all([
+      Promise.race([
+        researchBuzzForItem(item.title, item.genre),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Grok timeout 30s')), 30000)),
+      ]).catch((e: any) => {
+        console.warn('  ⚠ Grok市場調査失敗（Claudeのみで生成）:', e.message);
+        return '';
+      }),
+      (async () => {
+        if (item.affiliateURL && shortenLink) {
+          try {
+            return await resolveShortUrl(item.affiliateURL, item.content_id, item.title);
+          } catch (e: any) {
+            console.warn('短縮URL生成失敗:', e.message);
+            return item.affiliateURL;
+          }
+        }
+        return item.affiliateURL || '';
+      })(),
+    ]);
+
+    const result = await generateTweetText(item, tweetType, [], [], grokResearch || undefined);
 
     res.json({
       ok: true,
       tweet: result.text,
       imagePrompt: result.imagePrompt,
       affiliateURL: item.affiliateURL,
-      shortUrl,
+      shortUrl: shortUrlResult,
+      grokResearch: grokResearch ? true : false,
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

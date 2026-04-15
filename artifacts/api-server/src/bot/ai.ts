@@ -291,6 +291,7 @@ export interface TweetWithImagePrompt {
 
 async function generateWithClaude(
   item: any, type: string, topPatterns: any[], externalPatterns: any[] = [],
+  grokResearch?: string,
 ): Promise<TweetWithImagePrompt | null> {
   const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
@@ -307,8 +308,8 @@ async function generateWithClaude(
   const typeLabel = buildTypeLabel(type);
   const genreList: string[] = item.genre ?? [];
 
-  const ownExamples = topPatterns.slice(0, 2);
-  const extExamples = externalPatterns.slice(0, 2);
+  const ownExamples = topPatterns.slice(0, 3);
+  const extExamples = externalPatterns.slice(0, 3);
 
   const ownSection = ownExamples.length > 0
     ? `\n【自分の過去高エンゲージメント投稿（スタイル参考）】:\n${ownExamples.map((p, i) => `例${i + 1}: ${p.text}`).join('\n\n')}\n`
@@ -318,69 +319,9 @@ async function generateWithClaude(
     ? `\n【他アカウントの高エンゲージメント投稿（スタイル参考のみ）】:\n${extExamples.map((p, i) => `参考${i + 1}: ${p.text}`).join('\n\n')}\n`
     : '';
 
-  // セール情報（スロット種別がsaleの場合は詳細を渡す）
   const saleHint = type === 'sale'
     ? '\n- ※セール中のため「期間限定」「今だけ」「セール終了前に」といった緊急性ワードを必ず含める'
     : '';
-
-  // 投稿毎に6型をランダム選択（同型文の連投を防ぐ）
-  const contentTypes = [
-    {
-      name: 'レビュー型',
-      hook: '「正直に言う」「実際に確かめた」「結論を言う」系のフック',
-      style: '個人の感想・体験談として書く。「〜だった」「〜がわかった」の過去形が効果的。',
-    },
-    {
-      name: '比較型',
-      hook: '「〜よりも」「〜より断然」「比較した結果」系のフック',
-      style: '何かと比較して優位性を示す。「他と違う点」を1つ具体的に挙げる。',
-    },
-    {
-      name: 'ランキング型',
-      hook: '「今一番」「個人的1位」「ぶっちぎり」系のフック',
-      style: '順位・序列で表現する。「なぜこれが1位か」の理由を1行で添える。',
-    },
-    {
-      name: '失敗回避型',
-      hook: '「知らないと損」「見逃すと後悔」「注意して」系のフック',
-      style: '「このまま知らずにいると〜」という危機感から入り、解決策として作品を提示。',
-    },
-    {
-      name: '共感型',
-      hook: '「あるある」「これわかる人いる？」「正直に言う」系のフック',
-      style: 'ユーザーが共感する状況・感情から始め、自然に作品につなげる。問いかけで終わると反応率UP。',
-    },
-    {
-      name: 'シナリオ型',
-      hook: 'FANZAのタイトルに書かれているシチュエーションをそのまま物語として語る。タイトルを見ればシナリオはすでにある。',
-      style: `
-★ 最重要ルール：FANZAのタイトルには「誰が・誰と・どこで・どういう状況か」が既に書かれている。それをそのまま物語口調にして語ること。創作は不要。
-
-構造（以下を厳守）：
-  1行目：作品のシチュエーションから引き出した禁断・背徳フレーズ
-          例：タイトルに「妻が一人旅で不在中、義妹とホテルで〜」→「妻の不在中に義妹と…ダメだとわかってる。でも」
-  2〜3行目：タイトルのシナリオを自然な文章で語る（タイトルを言い換える感じ）
-  最後行：「AV女優名：{actress}」を必ず入れ → 「リプ欄へ👇」
-
-参考：
-  タイトル「妻が一人旅で不在中、義妹のみあとホテルでお泊り不倫デート」
-  → ツイート「不倫はダメだが、それが気持ち良い。妻が一人旅で不在中、義妹のみあとホテルで密会お泊り不倫。妻との関係が冷めていく中で、可愛すぎる義妹に… AV女優名：七沢みあ / リプ欄へ👇」
-
-フルタイトル（参考にしてよい）：${fullTitle}`,
-    },
-  ];
-
-  // シナリオ型の選択確率を高める（参考ツイートの高エンゲージメントを反映）
-  const typeWeights = [1, 1, 1, 1, 1, 2]; // シナリオ型は2倍
-  const totalWeight = typeWeights.reduce((a, b) => a + b, 0);
-  let rand = Math.random() * totalWeight;
-  let selectedTypeIdx = 0;
-  for (let i = 0; i < typeWeights.length; i++) {
-    rand -= typeWeights[i];
-    if (rand <= 0) { selectedTypeIdx = i; break; }
-  }
-  const selectedType = contentTypes[selectedTypeIdx];
-  _lastContentType = selectedType.name; // 型を記録（schedulerがrecordPostで使用）
 
   const actressLine = actress
     ? `- 出演者: ${actress}`
@@ -389,9 +330,23 @@ async function generateWithClaude(
     ? `- ジャンル: ${genreList.join('・')}`
     : '';
 
-  const prompt = `あなたは日本のSNSバイラルコンテンツの専門家です。動画配信サービスの紹介ツイートを1件作成してください。
+  const grokSection = grokResearch
+    ? `\n═══════════════════════════════════════
+📡 【Grokリアルタイム市場調査結果 — これが最重要情報】
+═══════════════════════════════════════
+${grokResearch.slice(0, 2000)}
+═══════════════════════════════════════
+★ 上記の調査結果に基づいて、「今この瞬間にバズる型」でツイートを作ること。
+★ Grokが推奨するフック・トーン・切り口を最優先で採用すること。
+★ 固定テンプレートのような投稿は厳禁。調査結果を反映した新鮮な文体にすること。\n`
+    : '';
 
-作品情報:
+  _lastContentType = grokResearch ? 'Grok調査型' : 'Claude生成型';
+
+  const prompt = `あなたは日本のX（旧Twitter）で毎日バズを生み出すプロのコピーライターです。
+以下の作品情報と市場調査結果を元に、「今この瞬間」最もバズりやすいツイートを1件作成してください。
+
+═══════ 作品情報 ═══════
 - タイトル: ${title}
 - フルタイトル: ${fullTitle}
 ${actressLine}
@@ -399,24 +354,34 @@ ${genreLine}
 - カテゴリ: ${typeLabel}
 - レビュー数: ${reviewCount}件
 - 平均評価: ${reviewAvg}点${saleHint}
-${ownSection}${extSection}
-【今回の投稿タイプ：${selectedType.name}】
-フック例: ${selectedType.hook}
-文体: ${selectedType.style}
+${grokSection}${ownSection}${extSection}
+═══════ 生成ルール ═══════
 
-【バズるための絶対ルール】
-① 1行目：スクロールを止めるフック（${selectedType.name}らしいもの）
-② 2〜3行目：具体的な情報（出演者・タイトルまたはシナリオ）
-③ 数字の根拠 or AV女優名を明記（どちらか必ず入れる）
-④ 最後：「リプ欄へ👇」または「以下ポスト欄よりリンクをご覧下さい。」のCTA
+【構造の自由度】
+固定の型は使わない。上記の市場調査結果から最適な「型」を自分で判断して使うこと。
+ただし以下の要素は必ず含める:
+① 1行目: スクロールを0.3秒で止めるフック（調査結果で推奨された形式を優先）
+② 本文: 作品の具体的な魅力（タイトルのシナリオ展開、女優名、数字のどれか）
+③ 最終行: 「リプ欄へ👇」のCTA
 
-【厳守事項】
+【バリエーション確保】
+- 前回と同じフック・同じ文体は使わない
+- 以下のアプローチからランダムに選ぶか、調査結果に最適なものを選ぶ:
+  a) シナリオ語り型: タイトルの場面をそのまま物語として語る（「妻の不在中に義妹と…」）
+  b) 発見報告型: 「〇〇見つけてしまった」「〇〇がやばすぎる件」
+  c) 問いかけ型: 「これわかる人いる？」「どっち派？」
+  d) 衝撃事実型: 「レビュー〇〇件ってどういうことだよ」
+  e) 背徳感型: 深夜向け。罪悪感・禁断の雰囲気
+  f) トレンド便乗型: 今日のトレンドワードと絡める
+  g) 実体験風型: 「昨日の夜これ見て寝れなくなった」
+
+【絶対ルール】
 - 必ず 🔞 から始める（1文字目）
-- ハッシュタグ（#）は一切使わない ← 重要
-- 日本語140文字以内
-- 絵文字は1〜3個（シナリオ型は絵文字少なめでリアル感を出す）
-- 「リプ欄へ👇」を含める
-- 「人気女優」「トップ女優」「著名女優」などの曖昧な表現は使わない ← 厳禁
+- ハッシュタグ（#）は一切使わない
+- 日本語140文字以内（短いほどバズる）
+- 絵文字は0〜3個（多すぎると逆効果）
+- 「人気女優」「トップ女優」等の曖昧表現は禁止
+- AV女優名がある場合は必ず入れる
 
 以下のJSON形式で出力してください（説明文不要、JSONのみ）:
 {
@@ -425,29 +390,16 @@ ${ownSection}${extSection}
 }
 
 imagePromptのルール:
-- 共通顔ベース必須（これを必ず先頭に含める）: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
+- 共通顔ベース必須: RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, dark brown hair, natural skin texture with visible pores, fine peach fuzz on cheeks
 - カメラ: shot on Sony A7IV 85mm f/1.4, film grain, volumetric haze
-- 【重要】作品タイトルとジャンルから特徴を読み取り、衣装・シチュエーション・背景・表情を具体的に指定すること:
-  - タイトルの場面設定（例: 「温泉」→hot spring inn, yukata / 「オフィス」→office, business attire / 「学校」→classroom, school uniform）
-  - ジャンルキーワード変換例:
-    - 巨乳・爆乳 → large bust, fitted top
-    - OL・女教師・ナース → office lady blouse, teacher outfit, nurse uniform
-    - 人妻・熟女 → elegant mature woman, wedding ring, kitchen apron
-    - JK・女子校生 → school uniform, sailor uniform, plaid skirt
-    - コスプレ → cosplay outfit
-    - 水着 → swimsuit, poolside
-    - メイド → maid outfit, cafe interior
-    - 痴漢・電車 → crowded train interior, standing, nervous expression
-    - 不倫・浮気 → hotel room, dim lighting, guilty expression
-    - マッサージ → massage table, spa room, towel
-  - 表情も場面に合わせる（恥じらい→shy blushing / 誘惑→seductive gaze / 無邪気→innocent smile）
+- 作品タイトルとジャンルから場面・衣装・表情を具体的に指定:
+  - 温泉→yukata, hot spring / OL→office blouse / ナース→nurse uniform / 制服→sailor uniform / 人妻→elegant mature woman / 水着→one-piece swimsuit / メイド→maid outfit / 不倫→hotel room, dim lighting
 - ネガティブ末尾必須: Negative: nude, naked, explicit, NSFW, nipple, underwear, lingerie, cartoon, anime, CGI, plastic skin, airbrushed skin
-- 全て英語で記述
-- 安全性重要：露出のない衣装にすること。水着はワンピース型のみ。下着・ランジェリーは禁止。`;
+- 全て英語。安全性重要：露出のない衣装。下着・ランジェリー禁止。`;
 
   const message = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 600,
+    model: grokResearch ? 'claude-sonnet-4-5' : 'claude-haiku-4-5',
+    max_tokens: 800,
     messages: [
       { role: 'user', content: prompt },
     ],
@@ -636,9 +588,10 @@ export async function generateTweetText(
   type: string,
   topPatterns: any[] = [],
   externalPatterns: any[] = [],
+  grokResearch?: string,
 ): Promise<TweetWithImagePrompt> {
   try {
-    const result = await generateWithClaude(item, type, topPatterns, externalPatterns);
+    const result = await generateWithClaude(item, type, topPatterns, externalPatterns, grokResearch);
     if (result) {
       console.log('  ✨ Claude で文章生成成功');
       return result;

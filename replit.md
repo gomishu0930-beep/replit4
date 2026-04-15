@@ -58,8 +58,8 @@ artifacts/api-server/src/bot/
   twitter.ts          — X (Twitter) API integration + pause/resume
   rebrandly.ts        — URL shortening + click tracking
   watchdog.ts         — bot health monitoring
-  ai.ts               — AI text generation
-  grok.ts             — Grok API for X insights
+  ai.ts               — AI text generation（Grok調査→Claude生成パイプライン統合済み）
+  grok.ts             — Grok API for X insights + researchBuzzForItem()リアルタイム市場調査
   imageGen.ts         — Nanobanana2 画像生成 API（text-to-image + image-to-image参照生成対応）
   imageScorer.ts      — 橋本環奈スコア自動採点 (GPT-4o Vision)
   contact.ts          — notification stubs

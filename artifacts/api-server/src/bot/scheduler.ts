@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateImpressionTweet, buildManualPostFeedback } from './ai.js';
+import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
@@ -55,7 +56,18 @@ async function postFanzaItem(item: any, type: string, label: string) {
 
   const topPatterns = getTopPatterns(10);
   const externalPatterns = getExternalTopPatterns(10);
-  const genResult = await generateTweetText(item, type, topPatterns, externalPatterns);
+  const rawGenre = item.iteminfo?.genre ?? item.genre ?? [];
+  const genres: string[] = Array.isArray(rawGenre)
+    ? rawGenre.map((g: any) => typeof g === 'string' ? g : g?.name ?? '').filter(Boolean)
+    : [];
+  const grokResearch = await Promise.race([
+    researchBuzzForItem(item.title, genres),
+    new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Grok timeout 30s')), 30000)),
+  ]).catch((e: any) => {
+    console.warn(`  ⚠ [Scheduler] Grok調査スキップ: ${e.message}`);
+    return '';
+  });
+  const genResult = await generateTweetText(item, type, topPatterns, externalPatterns, grokResearch || undefined);
   const text = genResult.text;
   const imagePrompt = genResult.imagePrompt;
   if (imagePrompt) console.log(`  🖼️ 画像プロンプト: ${imagePrompt.slice(0, 80)}...`);

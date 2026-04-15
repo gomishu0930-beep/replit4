@@ -162,6 +162,54 @@ export async function getViralAVPostExamples(celebrity: string): Promise<string>
   }
 }
 
+// ─── スタジオ用: 作品に合ったリアルタイムバズ調査 ─────────────────────────────
+
+export async function researchBuzzForItem(itemTitle: string, genres: string[]): Promise<string> {
+  const genreHint = genres.length > 0 ? genres.slice(0, 5).join('・') : '';
+  const nowJst = new Date(Date.now() + 9 * 3600000);
+  const hour = nowJst.getHours();
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][nowJst.getDay()];
+
+  try {
+    console.log('  🦅 [Grok] リアルタイム市場調査開始...');
+    const text = await queryGrok(
+      `あなたはXのFANZA・アダルト系アフィリエイト投稿の市場調査員です。
+以下の作品を宣伝するツイートを作るために、今Xで何がバズっているかリアルタイム調査してください。
+
+対象作品ジャンル: ${genreHint || '一般'}
+作品タイトル参考: ${itemTitle.slice(0, 50)}
+現在時刻: ${dayOfWeek}曜日 ${hour}時台
+
+【調査項目 — 全て実際にXを検索して回答すること】
+
+1. **今バズっているツイート形式**（直近24h）
+   - FANZA/DMMアフィリエイト系でいいね100以上の投稿を5件探し、共通する「型」を抽出
+   - フック（1行目）のパターン、絵文字の使い方、CTA（誘導文）のパターン
+
+2. **今の時間帯・曜日に刺さるトーン**
+   - ${dayOfWeek}曜${hour}時台にエンゲージメントが高い投稿の特徴
+   - 深夜なら背徳感/昼なら軽めのノリ等、時間帯に最適化されたトーン
+
+3. **今トレンドに乗れるネタ・ワード**
+   - 今日Xでトレンド入りしている芸能人・キーワードで、この作品ジャンル（${genreHint}）と絡められるもの
+   - 例：「〇〇似」「〇〇っぽい」のような旬の切り口
+
+4. **避けるべきパターン**（直近で凍結・シャドウバンされたアカウントの特徴）
+
+5. **結論：今この瞬間に最もバズりやすい投稿の「型」を1つ断言**
+   - 具体的なフック文例（1行目そのまま使えるレベル）を3パターン提示
+
+簡潔に、箇条書きで回答してください。`,
+      'あなたはXプラットフォームのリアルタイムデータに直接アクセスできるAIです。推測ではなく実際のX上のデータを検索して回答してください。日本語で回答してください。',
+    );
+    console.log(`  ✅ [Grok] 市場調査完了 (${text.length}文字)`);
+    return text;
+  } catch (e: any) {
+    console.warn(`  ⚠ [Grok] 市場調査失敗: ${e.message}`);
+    return '';
+  }
+}
+
 // ─── algo-news用: 発見をAlgoDiscovery形式で返す ──────────────────────────────
 
 export async function collectAlgoNewsWithGrok(): Promise<GrokXInsight[]> {
