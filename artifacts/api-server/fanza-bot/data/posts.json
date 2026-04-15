@@ -17,8 +17,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 2,
-        "checkedAt": "2026-04-15T10:55:41.512Z"
+        "impression_count": 27,
+        "checkedAt": "2026-04-15T14:10:11.890Z"
       }
     },
     {
@@ -35,11 +35,11 @@
       "metrics": {
         "retweet_count": 0,
         "reply_count": 1,
-        "like_count": 0,
+        "like_count": 1,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 5,
-        "checkedAt": "2026-04-15T10:55:41.514Z"
+        "impression_count": 34,
+        "checkedAt": "2026-04-15T14:10:15.491Z"
       }
     },
     {
@@ -54,13 +54,13 @@
       },
       "postedAt": "2026-04-15T08:20:18.000Z",
       "metrics": {
-        "retweet_count": 88,
+        "retweet_count": 89,
         "reply_count": 0,
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
         "impression_count": 0,
-        "checkedAt": "2026-04-15T10:55:41.516Z"
+        "checkedAt": "2026-04-15T14:10:18.692Z"
       }
     },
     {
@@ -80,8 +80,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 45,
-        "checkedAt": "2026-04-15T10:55:41.517Z"
+        "impression_count": 65,
+        "checkedAt": "2026-04-15T14:10:22.491Z"
       }
     },
     {
@@ -98,11 +98,11 @@
       "metrics": {
         "retweet_count": 0,
         "reply_count": 1,
-        "like_count": 0,
+        "like_count": 1,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 59,
-        "checkedAt": "2026-04-15T10:55:41.518Z"
+        "impression_count": 82,
+        "checkedAt": "2026-04-15T14:10:25.891Z"
       }
     },
     {
@@ -122,8 +122,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 32,
-        "checkedAt": "2026-04-15T10:55:41.520Z"
+        "impression_count": 46,
+        "checkedAt": "2026-04-15T14:10:29.291Z"
       }
     },
     {
@@ -143,8 +143,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 41,
-        "checkedAt": "2026-04-15T10:55:41.522Z"
+        "impression_count": 62,
+        "checkedAt": "2026-04-15T14:10:32.991Z"
       }
     },
     {
@@ -164,8 +164,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 32,
-        "checkedAt": "2026-04-15T10:55:41.523Z"
+        "impression_count": 41,
+        "checkedAt": "2026-04-15T14:10:34.745Z"
       }
     },
     {
@@ -185,8 +185,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 47,
-        "checkedAt": "2026-04-15T10:55:41.523Z"
+        "impression_count": 58,
+        "checkedAt": "2026-04-15T14:10:37.792Z"
       }
     },
     {
@@ -206,8 +206,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 33,
-        "checkedAt": "2026-04-15T10:55:41.524Z"
+        "impression_count": 38,
+        "checkedAt": "2026-04-15T14:10:41.190Z"
       }
     },
     {
@@ -227,8 +227,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 43,
-        "checkedAt": "2026-04-15T10:55:41.525Z"
+        "impression_count": 49,
+        "checkedAt": "2026-04-15T14:10:44.690Z"
       }
     },
     {
@@ -248,8 +248,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 78,
-        "checkedAt": "2026-04-15T10:55:41.526Z"
+        "impression_count": 89,
+        "checkedAt": "2026-04-15T14:10:46.491Z"
       }
     },
     {
@@ -264,13 +264,13 @@
       },
       "postedAt": "2026-04-14T15:29:20.000Z",
       "metrics": {
-        "retweet_count": 226,
+        "retweet_count": 264,
         "reply_count": 0,
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
         "impression_count": 0,
-        "checkedAt": "2026-04-15T10:55:41.527Z"
+        "checkedAt": "2026-04-15T14:10:48.290Z"
       }
     },
     {
