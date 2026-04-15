@@ -38,11 +38,11 @@ export async function generateImage(prompt: string, options?: GenerateImageOptio
     safety_tolerance: String(safetyTolerance),
   };
 
+  body.type = 'TEXTTOIAMGE';
+
   if (refs.length > 0) {
     body.referenceImageUrls = refs.slice(0, 4);
     console.log(`  🍌 [Nanobanana2] 参照画像 ${refs.length}枚 → image-to-image モード`);
-  } else {
-    body.type = 'TEXTTOIAMGE';
   }
 
   const res = await fetch(`${NANOBANANA_API_BASE}/generate`, {
