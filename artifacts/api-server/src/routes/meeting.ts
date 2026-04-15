@@ -43,7 +43,6 @@ router.post('/bot/meeting/research', async (req, res) => {
   const { topic } = req.body ?? {};
   if (!topic?.trim()) { res.status(400).json({ error: 'topic は必須です' }); return; }
 
-  // ペンディングセッションを即時作成してキャッシュに登録
   const pendingId = `research-${Date.now()}`;
   const pendingSession = {
     id: pendingId, topic: topic.trim(),
@@ -52,13 +51,76 @@ router.post('/bot/meeting/research', async (req, res) => {
   };
   getResearches().unshift(pendingSession as any);
 
-  // 202 Accepted を即時返却（タイムアウトを回避）
   res.status(202).json({ session: pendingSession });
 
-  // バックグラウンドでリサーチ実行（pendingIdを渡して既存エントリを更新）
   runDeepResearch(topic.trim(), pendingId).catch((e: any) =>
     console.error('  ❌ Deep Research エラー:', e.message),
   );
+});
+
+router.post('/bot/meeting/research-lite', async (req, res) => {
+  const { topic } = req.body ?? {};
+  if (!topic?.trim()) { res.status(400).json({ error: 'topic は必須です' }); return; }
+
+  try {
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-search-preview',
+      web_search_options: {},
+      messages: [
+        { role: 'system', content: 'あなたはAI画像・動画生成技術の専門リサーチャーです。ウェブ検索で最新情報を調査し、日本語で回答してください。' },
+        { role: 'user', content: topic.trim() },
+      ],
+    } as any);
+    const result = response.choices[0]?.message?.content ?? '';
+    res.json({ result, model: response.model });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/meeting/call-ai', async (req, res) => {
+  const { model, system, user } = req.body ?? {};
+  if (!model || !user) { res.status(400).json({ error: 'model, user required' }); return; }
+
+  try {
+    if (model === 'grok') {
+      const { queryGrok } = await import('../bot/grok.js');
+      const result = await queryGrok(user, system);
+      res.json({ result });
+    } else if (model === 'claude') {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const anthropic = new Anthropic({
+        apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy',
+        baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+      });
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 4000,
+        system: system || '',
+        messages: [{ role: 'user', content: user }],
+      });
+      const block = response.content[0];
+      res.json({ result: block.type === 'text' ? block.text : '' });
+    } else if (model === 'o3') {
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const response = await openai.chat.completions.create({
+        model: 'o3',
+        messages: [
+          ...(system ? [{ role: 'system' as const, content: system }] : []),
+          { role: 'user' as const, content: user },
+        ],
+        max_completion_tokens: 4000,
+      } as any);
+      res.json({ result: response.choices[0]?.message?.content ?? '' });
+    } else {
+      res.status(400).json({ error: 'Unknown model. Use grok, claude, or o3' });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── Meeting Sessions ────────────────────────────────────────────────────────
