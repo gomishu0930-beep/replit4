@@ -12,7 +12,7 @@ const CALLBACK_URL = 'https://asset-manager-3-gomishu0930.replit.app/api/nanoban
 const POLL_INTERVAL_MS = 5000;
 const POLL_TIMEOUT_MS = 120000;
 
-const FAL_API_BASE = 'https://queue.fal.run';
+const FAL_SYNC_BASE = 'https://fal.run';
 
 let _nanobananaDisabled = false;
 let _nanobananaDisabledUntil = 0;
@@ -122,13 +122,13 @@ function handleNanobananaError(e: any) {
   }
 }
 
-// ─── fal.ai Realistic Vision ─────────────────────────────────────────────────
+// ─── fal.ai Realistic Vision（同期API） ──────────────────────────────────────
 
 async function generateWithFal(prompt: string): Promise<string> {
   const apiKey = getFalKey();
   if (!apiKey) throw new Error('FAL_KEY が設定されていません');
 
-  console.log(`  🎯 [fal.ai] Realistic Vision 画像生成開始...`);
+  console.log(`  🎯 [fal.ai] Realistic Vision 画像生成開始（同期モード）...`);
 
   const negativeStart = prompt.indexOf('Negative:');
   let mainPrompt = prompt;
@@ -138,7 +138,8 @@ async function generateWithFal(prompt: string): Promise<string> {
     negativePrompt = prompt.slice(negativeStart + 'Negative:'.length).trim() + ', ' + negativePrompt;
   }
 
-  const submitRes = await fetch(`${FAL_API_BASE}/fal-ai/realistic-vision`, {
+  const startTime = Date.now();
+  const res = await fetch(`${FAL_SYNC_BASE}/fal-ai/realistic-vision`, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${apiKey}`,
@@ -149,69 +150,28 @@ async function generateWithFal(prompt: string): Promise<string> {
       negative_prompt: negativePrompt,
       model_name: 'SG161222/Realistic_Vision_V5.1_noVAE',
       image_size: { width: 768, height: 1024 },
-      num_inference_steps: 35,
+      num_inference_steps: 30,
       guidance_scale: 7.5,
       num_images: 1,
       enable_safety_checker: false,
       scheduler: 'DPM++ SDE Karras',
-      format: 'png',
+      format: 'jpeg',
     }),
   });
 
-  const submitJson = (await submitRes.json()) as any;
+  const json = (await res.json()) as any;
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-  if (!submitRes.ok) {
-    throw new Error(`fal.ai submit失敗: ${submitJson?.detail ?? submitJson?.message ?? submitRes.status}`);
+  if (!res.ok) {
+    throw new Error(`fal.ai 生成失敗: ${json?.detail ?? json?.message ?? res.status}`);
   }
 
-  if (submitJson?.images?.[0]?.url) {
-    const url = submitJson.images[0].url;
-    console.log(`  🎯 [fal.ai] 即時生成完了！ ${url.slice(0, 80)}...`);
-    return url;
-  }
+  const imageUrl = json?.images?.[0]?.url;
+  if (!imageUrl) throw new Error('fal.ai: 画像URLが取得できませんでした');
 
-  const requestId = submitJson?.request_id;
-  if (!requestId) {
-    throw new Error('fal.ai: request_idが取得できませんでした');
-  }
-
-  console.log(`  🎯 [fal.ai] キュー投入 request_id=${requestId} → ポーリング開始`);
-  return await pollFalTask(requestId, apiKey);
-}
-
-async function pollFalTask(requestId: string, apiKey: string): Promise<string> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    await sleep(3000);
-
-    const statusRes = await fetch(
-      `${FAL_API_BASE}/fal-ai/realistic-vision/requests/${requestId}/status`,
-      { headers: { 'Authorization': `Key ${apiKey}` } },
-    );
-    const statusJson = (await statusRes.json()) as any;
-    const status = statusJson?.status;
-
-    if (status === 'COMPLETED') {
-      const resultRes = await fetch(
-        `https://queue.fal.run/fal-ai/realistic-vision/requests/${requestId}`,
-        { headers: { 'Authorization': `Key ${apiKey}` } },
-      );
-      const resultJson = (await resultRes.json()) as any;
-      const imageUrl = resultJson?.images?.[0]?.url;
-      if (!imageUrl) throw new Error('fal.ai: 画像URLが取得できませんでした');
-      console.log(`  🎯 [fal.ai] 生成完了！ ${imageUrl.slice(0, 80)}...`);
-      return imageUrl;
-    }
-
-    if (status === 'FAILED') {
-      throw new Error(`fal.ai 生成失敗: ${statusJson?.error ?? '不明なエラー'}`);
-    }
-
-    console.log(`  🎯 [fal.ai] 生成中... (status=${status})`);
-  }
-
-  throw new Error('fal.ai タイムアウト（120秒）');
+  const inferenceTime = json?.timings?.inference ? `${json.timings.inference.toFixed(1)}s` : '?';
+  console.log(`  🎯 [fal.ai] 生成完了！ 推論${inferenceTime} / 合計${elapsed}s / ${imageUrl.slice(0, 80)}...`);
+  return imageUrl;
 }
 
 // ─── Nanobanana2 ──────────────────────────────────────────────────────────────
