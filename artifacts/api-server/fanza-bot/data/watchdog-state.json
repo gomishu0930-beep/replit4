@@ -1,5 +1,5 @@
 {
-  "lastCheckAt": "2026-04-15T04:32:11.144Z",
+  "lastCheckAt": "2026-04-15T08:41:33.233Z",
   "lastIssueAt": "2026-04-15T04:03:20.556Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "healthy",
@@ -7,56 +7,6 @@
   "recoveryCount": 44,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-04-15T03:22:26.510Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-15T03:22:37.311Z",
-      "level": "recovery",
-      "detail": "✅ 自動回復成功 (通算 38回目)"
-    },
-    {
-      "at": "2026-04-15T03:34:17.995Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-15T03:34:17.995Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 267.5h 無投稿"
-    },
-    {
-      "at": "2026-04-15T03:34:17.995Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-15T03:34:18.749Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-15T03:34:18.749Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-15T03:34:18.749Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-15T03:34:21.660Z",
-      "level": "recovery",
-      "detail": "✅ 自動回復成功 (通算 39回目)"
-    },
-    {
-      "at": "2026-04-15T03:38:39.207Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
     {
       "at": "2026-04-15T03:38:39.207Z",
       "level": "warn",
@@ -256,6 +206,56 @@
       "at": "2026-04-15T04:32:11.145Z",
       "level": "info",
       "detail": "最終投稿から 0.8h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T04:35:44.436Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T04:35:44.437Z",
+      "level": "info",
+      "detail": "最終投稿から 0.9h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T05:12:41.971Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T05:12:42.268Z",
+      "level": "info",
+      "detail": "最終投稿から 1.5h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T06:09:30.269Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T06:09:30.269Z",
+      "level": "info",
+      "detail": "最終投稿から 2.4h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T08:20:37.710Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T08:20:37.810Z",
+      "level": "info",
+      "detail": "最終投稿から 4.6h — 正常範囲"
+    },
+    {
+      "at": "2026-04-15T08:41:33.233Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-15T08:41:33.233Z",
+      "level": "info",
+      "detail": "最終投稿から 5h — 正常範囲"
     }
   ]
 }
