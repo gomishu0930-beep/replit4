@@ -389,68 +389,60 @@ ${grokSection}${ownSection}${extSection}
   "imagePrompt": "投稿に添える画像のプロンプト（英語）"
 }
 
-★★★ imagePromptの生成ルール（最重要 — 可愛い日本人ベース + 作品連動） ★★★
+★★★ imagePromptの生成ルール（最重要 — Pony V6 4-Block構造） ★★★
 
 imagePromptは、この作品の「サムネイル」として使える画像を生成するためのものです。
-「可愛い日本人」のベース品質を維持しつつ、作品の場面を忠実に再現します。
+Pony Diffusion V6 XL（SDXL系）で生成します。4-Block構造で高品質を実現。
 
-【構造】プロンプトは以下の順序で構成:
-① 品質タグ（固定） → ② 可愛さベース（年齢層で切り替え） → ③ セクシー演出 → ④ 作品連動[SCENE][OUTFIT][EXPRESSION] → ⑤ カメラ（場面連動） → ⑥ ネガティブ
+【構造】プロンプトは4つのBlockで構成:
+Block-A: Technical（品質タグ・score系） → Block-B: Character（年齢/体型/顔） → Block-C: Content（衣装/場面/表情） → Block-D: Style（照明/カメラ）
+最後に Negative: で締める
 
-【① 品質タグ（必ず先頭に置く）】
-(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo,
+【Block-A: Technical（必ず先頭）】
+score_9, score_8_up, score_7_up, source_photo, (masterpiece:1.3), (best quality:1.2), 8k uhd, RAW photo, highres,
 
-【② 可愛さベース（年齢層で切り替え）】
-■ 20〜25歳（デフォルト — JK/素人/彼女系/アイドル系）:
-cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, straight medium-length dark brown hair, delicate collarbone highlight, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps,
+【Block-B: Character（年齢層で切り替え）】
+■ 20〜25歳（デフォルト）:
+1girl, 20yo japanese woman, cute idol face, round chubby cheeks, small cute button nose, large sparkling eyes, gentle smile, see-through bangs, straight medium-length dark brown hair, porcelain skin, natural skin texture with visible pores, light blush, glossy lips,
 
 ■ 26〜35歳（OL/人妻/お姉さん系）:
-beautiful japanese woman, soft feminine features, gentle rounded cheeks, almond-shaped sophisticated eyes with natural catchlight, elegant smile, side-swept bangs, layered medium-length dark brown hair, warm natural glow, glossy lips, natural blush, natural skin texture with visible pores, delicate collarbone, refined jawline,
+1girl, 28yo japanese woman, beautiful soft feminine features, almond-shaped sophisticated eyes, elegant smile, side-swept bangs, layered dark brown hair, warm natural glow, natural skin texture, delicate collarbone, refined jawline,
 
 ■ 36歳以上（熟女/マダム系）:
-elegant mature japanese beauty, refined features, high cheekbones, defined jawline, deep expressive eyes with wisdom, sophisticated smile, layered medium-length hair, luminous skin, subtle makeup, natural skin texture, graceful neck and collarbone,
+1girl, 38yo japanese woman, elegant mature beauty, refined features, high cheekbones, deep expressive eyes, sophisticated smile, layered medium-length hair, luminous skin, graceful neck and collarbone,
 
-【③ セクシー演出キーワード（必ず含める — 露出度を最大限に高める）】
-(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, short skirt, thigh gap, skin-tight clothing, alluring pose, glistening skin,
+【Block-C: Content（作品連動 — 最大露出で）】
+セクシー共通: (cleavage:1.2), deep neckline, bare shoulders, exposed midriff, skin-tight clothing, alluring pose, glistening skin, dynamic angle,
+作品テンプレ: wearing [OUTFIT], in a [SCENE], [EXPRESSION],
 
-【④ 作品連動（タイトル・ジャンルから読み取って差し替え）】
-in a [SCENE], wearing [OUTFIT], with [EXPRESSION],
+タイトル→場面の変換例（サンプル画像の最も露出度の高い衣装を参考に）:
+- 制服系 → wearing micro mini sailor uniform, unbuttoned blouse showing cleavage, thigh-high socks, in school hallway with afternoon sunlight, seductive upward gaze
+- OL系 → wearing unbuttoned white blouse with visible bra straps, ultra-tight pencil skirt, in modern office at night, seductive lean forward
+- 水着系 → wearing string bikini micro triangle top high-cut bottom, at tropical beach golden hour, arching back wet glistening body
+- 温泉系 → wearing yukata sliding off one shoulder bare legs, in japanese hot spring inn steamy bath, flushed cheeks wet hair
+- ナース → wearing tight nurse uniform deep V neckline thigh-high stockings, in hospital room dim lighting, leaning forward showing cleavage
+- メイド → wearing micro maid outfit frilly garter belt bare thighs, in vintage cafe, bending forward playfully
+- 人妻 → wearing sheer negligee bare shoulders kitchen apron, in modern kitchen warm lighting, inviting expression
+- 巨乳/爆乳 → (large bust:1.3), tight low-cut top deep cleavage push-up effect
+- 不倫 → wearing sheer lace lingerie lace teddy, in dimly lit hotel room, seductive lying on bed
+- マッサージ → minimal towel barely covering oiled glistening skin, in luxury spa candles, lips parted relaxed sensual
 
-タイトル→場面の読み取り例（サンプル画像の最も露出度の高い衣装を参考に）:
-- 「VR 制服女子が教室で…」→ [SCENE]=japanese high-school classroom, afternoon sunlight [OUTFIT]=micro mini sailor uniform, unbuttoned blouse showing cleavage, thigh-high socks [EXPRESSION]=seductive upward gaze, biting lip
-- 「巨乳OLの残業誘惑」→ [SCENE]=modern office at night, desk lamp [OUTFIT]=unbuttoned white blouse with visible bra straps, ultra-tight pencil skirt riding up [EXPRESSION]=seductive lean forward showing deep cleavage
-- 「彼女と初めてのお泊り」→ [SCENE]=cozy bedroom, warm lamp light [OUTFIT]=sheer lace camisole, bare shoulders, short shorts [EXPRESSION]=inviting smile lying on bed
-- 「温泉旅館の若女将」→ [SCENE]=traditional japanese inn, steamy bath [OUTFIT]=yukata falling off one shoulder, exposed collarbone and upper chest, bare legs [EXPRESSION]=flushed cheeks, wet hair clinging
-- 「水着グラビア」→ [SCENE]=tropical beach, crystal water, golden hour [OUTFIT]=string bikini, micro triangle top, high-cut bottom [EXPRESSION]=arching back, wet glistening body
+【Block-D: Style（照明・カメラ）】
+- 室内接写 → soft studio lighting, kodak portra 400, shallow depth of field, bokeh, shot on Canon EOS R5, 35mm f/1.8
+- 屋内半身 → soft studio lighting, kodak portra 400, shallow depth of field, bokeh, shot on Canon EOS R5, 50mm f/2.0
+- 屋外全身 → soft studio lighting, kodak portra 400, shallow depth of field, bokeh, shot on Canon EOS R5, 85mm f/1.4
+共通: cinematic color grading, film grain
 
-ジャンル→キーワード（最大露出で）:
-- 巨乳/爆乳 → (large bust:1.3), deep cleavage, push-up effect, tight low-cut top
-- OL → unbuttoned blouse, visible bra straps, ultra-tight skirt, crossed legs
-- ナース → tight nurse uniform, deep V neckline, short skirt, thigh-high stockings
-- 制服/JK → micro mini skirt, unbuttoned blouse, thigh-high socks, visible midriff
-- 人妻 → sheer negligee, bare shoulders, kitchen apron over lingerie
-- 水着 → string bikini, micro bikini, high-cut, wet glistening skin
-- メイド → micro maid outfit, frilly garter belt, deep neckline, bare thighs
-- 温泉 → yukata sliding off shoulders, wet skin, steamy, bare legs
-- 不倫 → sheer lingerie, lace teddy, hotel bed, dim lighting
-- マッサージ → minimal towel, oiled skin, exposed back and legs
+【Negative（必ず末尾に Negative: で始める）】
+Negative: score_4, score_3, score_2, score_1, (worst quality:1.4), (low quality:1.4), anime, cartoon, 3d render, doll, uncanny valley, plastic skin, airbrushed skin, wax figure, mannequin, deformed hands, extra fingers, deformed iris, deformed pupils, watermark, text, logo, cropped, blurry
 
-【⑤ カメラ設定（場面に応じて選択）】
-- 室内・接写・VR・自撮り風 → shot on Sony A7IV 35mm f/1.8
-- 屋内・半身（オフィス/ベッド/教室）→ shot on Sony A7IV 50mm f/2.0
-- 屋外・全身・グラビア → shot on Sony A7IV 85mm f/1.4
-共通: soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze
-
-【⑥ ネガティブ（必ず末尾に Negative: で始める）】
-Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
-
-【完成例（VR制服物の場合）】
-(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, natural skin texture with visible pores, (cleavage:1.2), deep neckline, bare shoulders, exposed midriff, glistening skin, in a japanese high-school classroom with afternoon sunlight, wearing micro mini sailor uniform with unbuttoned blouse showing cleavage and thigh-high socks, with seductive upward gaze, soft diffused golden-hour sunlight, creamy cinematic bokeh, shot on Sony A7IV 35mm f/1.8, film grain, volumetric haze. Negative: (worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped
+【完成例（制服系）】
+score_9, score_8_up, score_7_up, source_photo, (masterpiece:1.3), (best quality:1.2), 8k uhd, RAW photo, highres, 1girl, 20yo japanese woman, cute idol face, round chubby cheeks, small cute button nose, large sparkling eyes, gentle smile, see-through bangs, straight medium-length dark brown hair, porcelain skin, natural skin texture with visible pores, (cleavage:1.2), deep neckline, bare shoulders, alluring pose, glistening skin, wearing micro mini sailor uniform unbuttoned blouse showing cleavage thigh-high socks, in school hallway with afternoon sunlight, seductive upward gaze biting lip, soft studio lighting, kodak portra 400, shallow depth of field, bokeh, shot on Canon EOS R5 35mm f/1.8, cinematic color grading, film grain. Negative: score_4, score_3, score_2, score_1, (worst quality:1.4), (low quality:1.4), anime, cartoon, 3d render, doll, uncanny valley, plastic skin, airbrushed skin, wax figure, mannequin, deformed hands, extra fingers, deformed iris, deformed pupils, watermark, text, logo, cropped, blurry
 
 【禁止事項】
-- 品質タグ(photorealistic:1.3)を省略すること
+- score_9 タグを省略すること（Pony V6では必須）
 - セクシー演出キーワード(cleavage, deep neckline等)を省略すること
-- 露出を控えめにすること（サンプル画像の中で最も露出度の高い衣装を常に選ぶ）
+- 露出を控えめにすること（最大露出の衣装を常に選ぶ）
 - 作品と無関係な一般的ポートレートにすること
 - 全て英語で記述すること`;
 

@@ -34,7 +34,7 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 - **Build**: esbuild (single bundle, ~2.5mb)
 - **Storage**: GCS (Google Cloud Storage)
 - **AI**: OpenAI GPT-4o, Anthropic Claude, Grok (X API)
-- **Image Gen**: fal.ai Realistic Vision (プライマリ・NSFW対応) → Nanobanana2 (参照画像対応) → DALL-E 3 (最終フォールバック) + GPT-4o Vision scoring
+- **Image Gen**: fal.ai SDXL + Pony V6スタイル4-Block (プライマリ・fal-ai/lora) → fal.ai Realistic Vision V5.1 (セカンダリ・FANZA商用) → Nanobanana2 (参照画像対応) → DALL-E 3 (最終FB) + GPT-4o Vision scoring
 - **Dashboard**: React + Vite + TanStack Query + Recharts + Tailwind
 
 ## Key Commands
@@ -60,7 +60,7 @@ artifacts/api-server/src/bot/
   watchdog.ts         — bot health monitoring
   ai.ts               — AI text generation（Grok調査→Claude生成パイプライン統合済み）
   grok.ts             — Grok API for X insights + researchBuzzForItem()リアルタイム市場調査
-  imageGen.ts         — Nanobanana2 画像生成 API（text-to-image + image-to-image参照生成対応）
+  imageGen.ts         — 画像生成（fal.ai SDXL/Pony V6スタイル4-Block + RV5.1 + Nanobanana2 + DALL-E 3 フォールバック）
   imageScorer.ts      — 橋本環奈スコア自動採点 (GPT-4o Vision)
   contact.ts          — notification stubs
   celebrity.ts        — celebrity stubs (legacy)

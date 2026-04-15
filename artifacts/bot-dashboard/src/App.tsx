@@ -881,8 +881,8 @@ function StudioTab() {
             <div className="mt-3 space-y-2">
               <div className="flex gap-1">
                 {[
-                  { value: "auto", label: "自動", icon: "⚡" },
-                  { value: "fal", label: "fal.ai", icon: "🎯" },
+                  { value: "auto", label: "自動(Pony V6)", icon: "🐴" },
+                  { value: "fal", label: "Pony V6", icon: "🐴" },
                   { value: "nanobanana", label: "Nano", icon: "🍌" },
                   { value: "dalle", label: "DALL-E", icon: "🎨" },
                 ].map(e => (
@@ -894,7 +894,7 @@ function StudioTab() {
               </div>
               <button onClick={handleGenerate} disabled={loading || !prompt.trim()}
                 className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
-                {loading ? "生成中..." : imageEngine === "fal" ? "🎯 fal.ai で生成" : imageEngine === "dalle" ? "🎨 DALL-E 3で生成" : imageEngine === "nanobanana" ? "🍌 Nanobananaで生成" : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "⚡ 画像を生成"}
+                {loading ? "生成中..." : imageEngine === "fal" ? "🐴 Pony V6 で生成" : imageEngine === "dalle" ? "🎨 DALL-E 3で生成" : imageEngine === "nanobanana" ? "🍌 Nanobananaで生成" : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "🐴 Pony V6 で生成"}
               </button>
             </div>
           </div>
