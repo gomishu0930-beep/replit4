@@ -110,18 +110,56 @@ function typePill(t: string): string {
 }
 
 
-const POLL_TEMPLATES = [
-  { time: "10:30", label: "Poll①", template: "みんなはどっち派？🗳️\n\n正直に答えてね💦\n#FANZA" },
-  { time: "20:15", label: "Poll②", template: "【エロ投票】どっち派？👉\n\n🗳️ 投票してね！\n#FANZA" },
-];
 const DAY_THEMES = [
-  { day: "月", theme: "ジャンル対決", example: "巨乳 vs 美乳 vs 貧乳" },
-  { day: "火", theme: "シチュ対決", example: "不倫 vs 寝取られ" },
-  { day: "水", theme: "属性対決", example: "JD vs OL vs 人妻" },
-  { day: "木", theme: "プレイ対決", example: "正常位 vs 後背位 vs 騎乗位" },
-  { day: "金", theme: "新作予想", example: "今週のFANZA1位は？" },
-  { day: "土", theme: "ランキング", example: "歴代最高AV女優は？" },
-  { day: "日", theme: "フリー", example: "フォロワーリクエスト" },
+  {
+    day: "月", theme: "ジャンル対決",
+    polls: [
+      { time: "10:30", text: "🔞正直に答えて！\n\nどのジャンルが一番好き？🗳️\n#FANZA", choices: ["巨乳", "美乳", "貧乳", "爆乳"] },
+      { time: "20:15", text: "🔞夜の投票タイム🗳️\n\nぶっちゃけどれが好み？\n#FANZA", choices: ["素人", "企画", "単体女優", "VR"] },
+    ],
+  },
+  {
+    day: "火", theme: "シチュ対決",
+    polls: [
+      { time: "10:30", text: "🔞このシチュどっちが興奮する？🗳️\n\n正直に投票して💦\n#FANZA", choices: ["不倫・浮気", "寝取られ"] },
+      { time: "20:15", text: "🔞究極の二択🗳️\n\nどっち派？\n#FANZA", choices: ["痴漢もの", "マッサージ"] },
+    ],
+  },
+  {
+    day: "水", theme: "属性対決",
+    polls: [
+      { time: "10:30", text: "🔞ぶっちゃけどの属性が最強？🗳️\n\n投票してね！\n#FANZA", choices: ["JD（女子大生）", "OL", "人妻"] },
+      { time: "20:15", text: "🔞夜の属性バトル🗳️\n\nどれに一番惹かれる？\n#FANZA", choices: ["ナース", "女教師", "メイド", "CA"] },
+    ],
+  },
+  {
+    day: "木", theme: "体型・見た目対決",
+    polls: [
+      { time: "10:30", text: "🔞正直に答えてほしい🗳️\n\n女の子の体型、どれが好み？\n#FANZA", choices: ["スレンダー", "ぽっちゃり", "筋肉質", "グラマー"] },
+      { time: "20:15", text: "🔞見た目の好み投票🗳️\n\nどっち派？\n#FANZA", choices: ["清楚系", "ギャル系"] },
+    ],
+  },
+  {
+    day: "金", theme: "新作・トレンド",
+    polls: [
+      { time: "10:30", text: "🔞今週のFANZA新作🗳️\n\nどれが気になる？\n\n（選択肢にその週の注目作品タイトルを入れる）\n#FANZA", choices: ["作品A", "作品B", "作品C"] },
+      { time: "20:15", text: "🔞週末に見るなら？🗳️\n\n今週の推し作品を投票で決めよう！\n#FANZA", choices: ["ランキング1位", "新作", "セール品", "過去の名作"] },
+    ],
+  },
+  {
+    day: "土", theme: "ランキング・歴代",
+    polls: [
+      { time: "10:30", text: "🔞歴代最強を決めよう🗳️\n\nあなたの推しは？\n\n（選択肢にAV女優名を入れる）\n#FANZA", choices: ["女優A", "女優B", "女優C", "女優D"] },
+      { time: "20:15", text: "🔞殿堂入り作品はどれ？🗳️\n\n何度でも見返す名作を教えて！\n#FANZA", choices: ["選択肢1", "選択肢2", "選択肢3"] },
+    ],
+  },
+  {
+    day: "日", theme: "フリー・リクエスト",
+    polls: [
+      { time: "10:30", text: "🔞日曜アンケート🗳️\n\n来週どんなPollが見たい？\n#FANZA", choices: ["ジャンル対決", "女優対決", "シチュ対決", "おまかせ"] },
+      { time: "20:15", text: "🔞フォロワーに聞きたい🗳️\n\n普段FANZAでどう探してる？\n#FANZA", choices: ["ランキング", "新作", "セール", "キーワード検索"] },
+    ],
+  },
 ];
 
 function getNextPostTime() {
@@ -254,7 +292,6 @@ function Dashboard() {
               <p className="text-[36px] font-black text-white text-center tracking-tight">{formatCountdown(countdown)}</p>
               <p className="text-[11px] text-zinc-500 text-center mt-1">
                 今日: <span className="text-blue-400 font-medium">{todayTheme.day}曜 — {todayTheme.theme}</span>
-                <span className="text-zinc-600 ml-1">（{todayTheme.example}）</span>
               </p>
             </div>
 
@@ -270,20 +307,29 @@ function Dashboard() {
             </div>
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-2">テンプレート（タップでコピー）</p>
-              {POLL_TEMPLATES.map(t => (
-                <div key={t.time} className="bg-black/30 rounded-xl p-3 mb-2 last:mb-0 flex items-start gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">{t.time}</span>
-                      <span className="text-[11px] text-zinc-400">{t.label}</span>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">今日のPoll（{todayTheme.day}曜: {todayTheme.theme}）</p>
+              {todayTheme.polls.map((poll, idx) => (
+                <div key={poll.time} className="bg-black/30 rounded-xl p-3 mb-3 last:mb-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">{poll.time}</span>
+                      <span className="text-[11px] text-zinc-400">Poll {idx + 1}</span>
                     </div>
-                    <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed">{t.template}</pre>
+                    <button onClick={() => copyTpl(poll.text, poll.time)}
+                      className="px-3 py-1 rounded-lg text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-all">
+                      {copied === poll.time ? "✅ コピー済み" : "本文コピー"}
+                    </button>
                   </div>
-                  <button onClick={() => copyTpl(t.template, t.time)}
-                    className="shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-all">
-                    {copied === t.time ? "✅" : "コピー"}
-                  </button>
+                  <pre className="text-[11px] text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed mb-2">{poll.text}</pre>
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-zinc-600 uppercase tracking-wider">投票の選択肢（Xの📊から入力）:</p>
+                    {poll.choices.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-zinc-800/50 rounded-lg px-3 py-1.5">
+                        <span className="text-[10px] text-blue-400 font-bold w-4">{i + 1}.</span>
+                        <span className="text-[11px] text-white">{c}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
