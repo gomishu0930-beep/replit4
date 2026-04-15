@@ -60,7 +60,7 @@ artifacts/api-server/src/bot/
   watchdog.ts         — bot health monitoring
   ai.ts               — AI text generation
   grok.ts             — Grok API for X insights
-  imageGen.ts         — Nanobanana2 画像生成 API
+  imageGen.ts         — Nanobanana2 画像生成 API（text-to-image + image-to-image参照生成対応）
   imageScorer.ts      — 橋本環奈スコア自動採点 (GPT-4o Vision)
   contact.ts          — notification stubs
   celebrity.ts        — celebrity stubs (legacy)
@@ -82,7 +82,7 @@ artifacts/bot-dashboard/src/
 
 1. **Poll Lab** (@fanza_poll_lab): 手動投稿支援 — 次回投稿カウントダウン・投稿前チェックリスト・テンプレートコピー・曜日テーマ一覧
 2. **先輩** (@ero_senpai1): API接続 — 安全レベル監視・KPI (インプ/クリック/いいね/RT)・操作 (TL同期/リンク同期/指標更新)・凍結回避ルール・ボット制御
-3. **スタジオ**: 画像生成 (Nanobanana2) + 採点 (GPT-4o Vision, 橋本環奈100点基準) — プロンプト入力・プリセットボタン・URL採点・生成+採点
+3. **スタジオ**: FANZA検索→投稿文生成→画像生成 (Nanobanana2, 参照画像img2img対応) + 採点 (GPT-4o Vision, 橋本環奈100点基準)
 4. **データ**: 投稿履歴・IP/EV推移グラフ・リスクスコア推移・クリック計測 (Rebrandly)・月額コスト
 
 ## API Endpoints

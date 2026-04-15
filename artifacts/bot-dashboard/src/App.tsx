@@ -575,9 +575,11 @@ function StudioTab() {
   const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null; shortUrl: string } | null>(null);
   const [tweetCopied, setTweetCopied] = useState<string | null>(null);
   const [genStep, setGenStep] = useState<"search" | "result">("search");
+  const [refImages, setRefImages] = useState<string[]>([]);
+  const [useRef, setUseRef] = useState(true);
 
   const handleSearch = async () => {
-    setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search");
+    setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
     try {
       const params = new URLSearchParams({ type: searchType, count: "10" });
       if (searchType === "keyword" && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
@@ -590,6 +592,7 @@ function StudioTab() {
 
   const handleSelectAndGenerate = async (item: FanzaItem) => {
     setSelectedItem(item); setLoading(true); setError(""); setTweetResult(null);
+    setRefImages(item.sampleImages?.slice(0, 4) ?? []);
     try {
       const res = await fetch(`${API}/api/bot/generate-tweet`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -629,9 +632,13 @@ function StudioTab() {
     if (!prompt.trim()) return;
     setLoading(true); setError("");
     try {
+      const body: Record<string, any> = { prompt: prompt.trim() };
+      if (useRef && refImages.length > 0) {
+        body.referenceImageUrls = refImages;
+      }
       const res = await fetch(`${API}/api/bot/nanobanana/generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -854,9 +861,28 @@ function StudioTab() {
               <MiniBtn label="メイド" onClick={() => setPrompt(p => p + ", wearing maid outfit, cafe background")} />
             </div>
 
+            {refImages.length > 0 && (
+              <div className="mt-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] text-indigo-300 font-semibold uppercase tracking-wider">📷 参照画像（{refImages.length}枚）</p>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={useRef} onChange={e => setUseRef(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded accent-indigo-500" />
+                    <span className="text-[10px] text-indigo-300">参照ON</span>
+                  </label>
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto">
+                  {refImages.map((url, i) => (
+                    <img key={i} src={url} alt={`ref-${i}`} className={`w-14 h-14 rounded-lg object-cover border ${useRef ? 'border-indigo-500/50' : 'border-white/10 opacity-40'}`} />
+                  ))}
+                </div>
+                {useRef && <p className="text-[9px] text-indigo-400/60 mt-1.5">サンプル画像の雰囲気を参考に生成します</p>}
+              </div>
+            )}
+
             <button onClick={handleGenerate} disabled={loading || !prompt.trim()}
               className="mt-3 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-110">
-              {loading ? "生成中..." : "🖼️ 画像を生成"}
+              {loading ? "生成中..." : useRef && refImages.length > 0 ? "🖼️ 参照画像で生成" : "🖼️ 画像を生成"}
             </button>
           </div>
 

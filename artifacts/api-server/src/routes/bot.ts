@@ -219,10 +219,13 @@ router.post('/bot/rebrandly/sync', async (_req, res) => {
 });
 
 router.post('/bot/nanobanana/generate', async (req, res) => {
-  const { prompt } = req.body ?? {};
+  const { prompt, referenceImageUrls, safetyTolerance } = req.body ?? {};
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt は必須です' }); return; }
   try {
-    const imageUrl = await generateImage(prompt.trim());
+    const imageUrl = await generateImage(prompt.trim(), {
+      referenceImageUrls: referenceImageUrls ?? undefined,
+      safetyTolerance: safetyTolerance ?? 4,
+    });
     res.json({ ok: true, imageUrl });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

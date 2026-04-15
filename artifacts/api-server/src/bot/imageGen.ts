@@ -1,6 +1,8 @@
 /**
  * Nanobanana2（Google Gemini 3.1 Flash Image）画像生成
  * nanobananaapi.ai 経由
+ * - テキストのみ生成（text-to-image）
+ * - サンプル画像参照生成（image-to-image）対応
  */
 
 const NANOBANANA_API_BASE = 'https://api.nanobananaapi.ai/api/v1/nanobanana';
@@ -16,12 +18,32 @@ export function isNanobananaEnabled(): boolean {
   return !!getApiKey();
 }
 
-/**
- * テキストプロンプトから画像を生成し、画像URLを返す
- */
-export async function generateImage(prompt: string): Promise<string> {
+export interface GenerateImageOptions {
+  referenceImageUrls?: string[];
+  safetyTolerance?: number;
+}
+
+export async function generateImage(prompt: string, options?: GenerateImageOptions): Promise<string> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('NANOBANANA_API_KEY が設定されていません');
+
+  const refs = options?.referenceImageUrls?.filter(u => u && u.startsWith('http')) ?? [];
+  const safetyTolerance = options?.safetyTolerance ?? 4;
+
+  const body: Record<string, any> = {
+    prompt,
+    numImages: 1,
+    image_size: '9:16',
+    callBackUrl: CALLBACK_URL,
+    safety_tolerance: String(safetyTolerance),
+  };
+
+  if (refs.length > 0) {
+    body.referenceImageUrls = refs.slice(0, 4);
+    console.log(`  🍌 [Nanobanana2] 参照画像 ${refs.length}枚 → image-to-image モード`);
+  } else {
+    body.type = 'TEXTTOIAMGE';
+  }
 
   const res = await fetch(`${NANOBANANA_API_BASE}/generate`, {
     method: 'POST',
@@ -29,13 +51,7 @@ export async function generateImage(prompt: string): Promise<string> {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      prompt,
-      numImages: 1,
-      type: 'TEXTTOIAMGE',
-      image_size: '9:16',
-      callBackUrl: CALLBACK_URL,
-    }),
+    body: JSON.stringify(body),
   });
 
   const json = (await res.json()) as any;
@@ -84,9 +100,6 @@ async function pollTask(taskId: string, apiKey: string): Promise<string> {
   throw new Error('Nanobanana2 タイムアウト（120秒）');
 }
 
-/**
- * ツイート内容と商品情報からNanobanana2用の画像プロンプトを生成する
- */
 export function buildImagePrompt(tweetText: string, productTitle?: string): string {
   const faceBase = 'RAW photo, cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, mouth corners slightly upturned, see-through bangs, dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips, tiny beauty mark near jawline, natural stray hair wisps';
 
