@@ -1,0 +1,18 @@
+Runtime: Node.js workspace (pnpm)
+Main backend: artifacts/api-server
+Backend dev: pnpm run build && pnpm run start
+Backend build: node ./build.mjs
+Backend start: node --enable-source-maps ./dist/index.mjs
+
+Frontend 1: artifacts/mockup-sandbox
+Frontend 1 dev: vite dev
+Frontend 1 build: vite build
+Frontend 1 preview: vite preview
+
+Frontend 2: artifacts/bot-dashboard
+Frontend 2 dev: vite --config vite.config.ts --host 0.0.0.0
+Frontend 2 build: vite build --config vite.config.ts
+Frontend 2 serve: vite preview --config vite.config.ts --host 0.0.0.0
+
+Package manager: pnpm workspace
+Uses Object Storage: yes

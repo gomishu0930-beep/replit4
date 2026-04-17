@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-3.11"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -26,5 +26,10 @@ timeoutMs = 20000
 
 [userenv]
 
-[userenv.shared]
-NANOBANANA_API_KEY = "bace1ee62d71cf056c04f9619461c203"
+
+
+[objectStorage]
+defaultBucketID = "replit-objstore-d1d25208-c118-4823-ab4e-4ec919bf4b01"
+
+[nix]
+packages = ["zip"]
