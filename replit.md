@@ -24,6 +24,16 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 - 1日フォロー上限: 50件
 - データ永続化: fanza-bot/data/safety-state.json (GCS)
 
+## 安全運用システム (v2 実装済み)
+
+- **`bot/run-config.ts`**: AUTO_POST_ENABLED / DRY_RUN / 日/時間上限 / cooldown管理 (初期値: DRY_RUN=true, AUTO_POST=false)
+- **`bot/content-filter.ts`**: 危険ワードフィルター (未成年/非同意/強制等) + 画像プロンプト検査 / strict/moderate/permissive
+- **`bot/post-queue.ts`**: 投稿キューシステム (pending→approved/rejected/posted/failed/dry_run)
+- **`routes/queue.ts`**: `GET /api/bot/queue` / `POST /api/bot/queue/:id/approve|reject` / `DELETE /api/bot/queue`
+- **`routes/health.ts`**: 拡張ヘルスチェック (rateLimit/安全制限/フィルター/キュー情報付き)
+- **スケジューラー統合**: engagement/erotic-story/fanza/myfans全4スロット → フィルター検査→キュー追加→DRY_RUN制御
+- **テスト**: vitest 16ケース全て合格 (safety.test.ts) / `pnpm --filter @workspace/api-server test`
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

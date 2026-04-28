@@ -215,6 +215,24 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/rebrandly`).then(r => r.json()),
     refetchInterval: 600000,
   });
+  const { data: queueData, refetch: refetchQueue } = useQuery<{
+    ok: boolean; items: any[]; stats: Record<string, number>;
+  }>({
+    queryKey: ["queue"],
+    queryFn: () => fetch(`${API}/api/bot/queue`).then(r => r.json()),
+    refetchInterval: 15000,
+  });
+  const { data: runConfigData, refetch: refetchRunConfig } = useQuery<{
+    ok: boolean; config: {
+      autoPostEnabled: boolean; dryRun: boolean;
+      maxPostsPerDay: number; maxPostsPerHour: number;
+      cooldownMinutes: number; safetyStrictness: string;
+    };
+  }>({
+    queryKey: ["runConfig"],
+    queryFn: () => fetch(`${API}/api/run-config`).then(r => r.json()),
+    refetchInterval: 30000,
+  });
 
   const riskScore = safetyData?.riskScore ?? 0;
   const posts = postsData?.posts ?? [];
@@ -407,6 +425,100 @@ function Dashboard() {
                   <Rule label="連続アフィリ上限" value={`${safety.config.maxConsecutiveAffiliate}件`} sub={`現在 ${safety.consecutiveAffiliateCount}件`} />
                   <Rule label="1日フォロー上限" value={`${safety.config.maxDailyFollows}件`} sub={`本日 ${safety.todayFollowCount}件`} />
                 </div>
+              </div>
+            )}
+
+            {/* RunConfig パネル */}
+            {runConfigData?.config && (
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">⚙️ 運用設定</p>
+                  <button onClick={() => refetchRunConfig()} className="text-[9px] text-zinc-600 hover:text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800">更新</button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`rounded-xl p-3 border text-center cursor-pointer transition-all ${runConfigData.config.autoPostEnabled ? "bg-emerald-500/15 border-emerald-500/30" : "bg-zinc-800 border-white/5"}`}
+                    onClick={async () => {
+                      await fetch(`${API}/api/run-config`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ autoPostEnabled: !runConfigData.config.autoPostEnabled }) });
+                      refetchRunConfig();
+                    }}>
+                    <p className={`text-[11px] font-bold ${runConfigData.config.autoPostEnabled ? "text-emerald-400" : "text-zinc-500"}`}>{runConfigData.config.autoPostEnabled ? "✅ 自動投稿ON" : "⏸ 自動投稿OFF"}</p>
+                  </div>
+                  <div className={`rounded-xl p-3 border text-center cursor-pointer transition-all ${runConfigData.config.dryRun ? "bg-amber-500/15 border-amber-500/30" : "bg-zinc-800 border-white/5"}`}
+                    onClick={async () => {
+                      await fetch(`${API}/api/run-config`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dryRun: !runConfigData.config.dryRun }) });
+                      refetchRunConfig();
+                    }}>
+                    <p className={`text-[11px] font-bold ${runConfigData.config.dryRun ? "text-amber-400" : "text-zinc-400"}`}>{runConfigData.config.dryRun ? "🧪 DRY_RUN中" : "🟢 本番モード"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  <div className="rounded-lg bg-black/30 py-1.5 px-2">
+                    <p className="text-[9px] text-zinc-500">日上限</p>
+                    <p className="text-[13px] font-bold text-white">{runConfigData.config.maxPostsPerDay}</p>
+                  </div>
+                  <div className="rounded-lg bg-black/30 py-1.5 px-2">
+                    <p className="text-[9px] text-zinc-500">時間上限</p>
+                    <p className="text-[13px] font-bold text-white">{runConfigData.config.maxPostsPerHour}</p>
+                  </div>
+                  <div className="rounded-lg bg-black/30 py-1.5 px-2">
+                    <p className="text-[9px] text-zinc-500">安全度</p>
+                    <p className="text-[11px] font-bold text-white">{runConfigData.config.safetyStrictness}</p>
+                  </div>
+                </div>
+                {runConfigData.config.dryRun && (
+                  <p className="text-[10px] text-amber-400 bg-amber-500/5 rounded-lg px-3 py-1.5">⚠ DRY_RUN中 — スロットが実行されても実際には投稿されません</p>
+                )}
+                {!runConfigData.config.autoPostEnabled && !runConfigData.config.dryRun && (
+                  <p className="text-[10px] text-zinc-500 bg-zinc-800 rounded-lg px-3 py-1.5">ℹ 自動投稿OFF — 生成した投稿はキューに積まれますが投稿されません</p>
+                )}
+              </div>
+            )}
+
+            {/* キューパネル */}
+            {queueData && (
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">📬 投稿キュー</p>
+                  <button onClick={() => refetchQueue()} className="text-[9px] text-zinc-600 hover:text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800">更新</button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: "待機中", key: "pending", color: "text-amber-400" },
+                    { label: "投稿済", key: "posted", color: "text-emerald-400" },
+                    { label: "DRY", key: "dry_run", color: "text-blue-400" },
+                  ].map(({ label, key, color }) => (
+                    <div key={key} className="rounded-lg bg-black/30 py-2 text-center">
+                      <p className="text-[9px] text-zinc-500">{label}</p>
+                      <p className={`text-[15px] font-bold ${color}`}>{queueData.stats[key] ?? 0}</p>
+                    </div>
+                  ))}
+                </div>
+                {(queueData.stats.failed ?? 0) > 0 && (
+                  <p className="text-[10px] text-red-400">⚠ 失敗: {queueData.stats.failed}件</p>
+                )}
+                {queueData.items.filter((i: any) => i.status === "pending").slice(0, 3).map((item: any) => (
+                  <div key={item.id} className="rounded-xl bg-black/30 border border-white/5 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium">待機</span>
+                      <span className="text-[9px] text-zinc-500">{item.type}</span>
+                      <span className="text-[9px] text-zinc-600 ml-auto">{fmtDate(item.createdAt)}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-300 line-clamp-2">{item.text}</p>
+                    <div className="flex gap-1.5">
+                      <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/approve`, { method: "POST" }); refetchQueue(); }}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">
+                        ✅ 承認して投稿
+                      </button>
+                      <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/reject`, { method: "POST" }); refetchQueue(); }}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20">
+                        ❌ 却下
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {queueData.items.filter((i: any) => i.status === "pending").length === 0 && (
+                  <p className="text-[11px] text-zinc-600 text-center py-2">待機中の投稿なし</p>
+                )}
               </div>
             )}
 

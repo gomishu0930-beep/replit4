@@ -1,0 +1,70 @@
+/**
+ * 投稿キュー管理APIルート
+ * GET  /api/bot/queue              キュー一覧
+ * POST /api/bot/queue/:id/approve  承認
+ * POST /api/bot/queue/:id/reject   却下
+ * GET  /api/bot/queue/stats        統計
+ */
+
+import { Router } from 'express';
+import {
+  getQueue, getPendingQueue, approveQueueItem, rejectQueueItem,
+  getQueueStats, getQueueItem,
+} from '../bot/post-queue.js';
+import { getRunConfig, updateRunConfig } from '../bot/run-config.js';
+
+const router = Router();
+
+router.get('/bot/queue', (_req, res) => {
+  const status = (_req.query.status as string | undefined)?.split(',');
+  const items = status
+    ? getQueue(status as any)
+    : getQueue();
+  res.json({ ok: true, items: items.slice().reverse().slice(0, 50), stats: getQueueStats() });
+});
+
+router.get('/bot/queue/pending', (_req, res) => {
+  res.json({ ok: true, items: getPendingQueue(), stats: getQueueStats() });
+});
+
+router.get('/bot/queue/stats', (_req, res) => {
+  res.json({ ok: true, ...getQueueStats() });
+});
+
+router.get('/bot/queue/:id', (req, res) => {
+  const item = getQueueItem(req.params.id);
+  if (!item) { res.status(404).json({ error: 'キューアイテムが見つかりません' }); return; }
+  res.json({ ok: true, item });
+});
+
+router.post('/bot/queue/:id/approve', (req, res) => {
+  const item = approveQueueItem(req.params.id);
+  if (!item) { res.status(404).json({ error: 'キューアイテムが見つかりません' }); return; }
+  res.json({ ok: true, item });
+});
+
+router.post('/bot/queue/:id/reject', (req, res) => {
+  const item = rejectQueueItem(req.params.id);
+  if (!item) { res.status(404).json({ error: 'キューアイテムが見つかりません' }); return; }
+  res.json({ ok: true, item });
+});
+
+router.get('/run-config', (_req, res) => {
+  res.json({ ok: true, config: getRunConfig() });
+});
+
+router.patch('/run-config', (req, res) => {
+  const allowed = [
+    'autoPostEnabled', 'dryRun', 'maxPostsPerDay', 'maxPostsPerHour',
+    'cooldownMinutes', 'safetyStrictness', 'discordNotifyEnabled', 'aiReviewEnabled',
+    'categoryWeights',
+  ];
+  const partial: Record<string, any> = {};
+  for (const key of allowed) {
+    if (key in req.body) partial[key] = req.body[key];
+  }
+  updateRunConfig(partial);
+  res.json({ ok: true, config: getRunConfig() });
+});
+
+export default router;

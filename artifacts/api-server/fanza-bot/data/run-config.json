@@ -1,0 +1,16 @@
+{
+  "autoPostEnabled": false,
+  "dryRun": true,
+  "maxPostsPerDay": 3,
+  "maxPostsPerHour": 1,
+  "cooldownMinutes": 60,
+  "categoryWeights": {
+    "engagement": 40,
+    "eroticStory": 25,
+    "fanza": 25,
+    "myfans": 10
+  },
+  "safetyStrictness": "strict",
+  "discordNotifyEnabled": false,
+  "aiReviewEnabled": false
+}

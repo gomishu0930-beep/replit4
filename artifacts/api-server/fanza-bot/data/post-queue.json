@@ -1,0 +1,42 @@
+[
+  {
+    "type": "engagement",
+    "text": "テストツイート",
+    "id": "6bf3b19f-df22-4767-8b88-a631a531cdd8",
+    "status": "pending",
+    "createdAt": "2026-04-28T08:24:04.133Z",
+    "updatedAt": "2026-04-28T08:24:04.133Z"
+  },
+  {
+    "type": "engagement",
+    "text": "テストツイート pending",
+    "id": "2fdb2bfc-04ab-4801-b6a6-262316af2912",
+    "status": "pending",
+    "createdAt": "2026-04-28T08:24:04.136Z",
+    "updatedAt": "2026-04-28T08:24:04.136Z"
+  },
+  {
+    "type": "engagement",
+    "text": "approve test",
+    "id": "2f001076-cc4f-42b3-ae2e-7cf5ba2d333c",
+    "status": "approved",
+    "createdAt": "2026-04-28T08:24:04.138Z",
+    "updatedAt": "2026-04-28T08:24:04.139Z"
+  },
+  {
+    "type": "engagement",
+    "text": "reject test",
+    "id": "b9a2e448-a9a7-407a-b2b5-4de8f8ead872",
+    "status": "rejected",
+    "createdAt": "2026-04-28T08:24:04.140Z",
+    "updatedAt": "2026-04-28T08:24:04.141Z"
+  },
+  {
+    "type": "engagement",
+    "text": "stats test",
+    "id": "87053bae-99e6-4842-88a0-6a6f2db153d4",
+    "status": "rejected",
+    "createdAt": "2026-04-28T08:24:04.143Z",
+    "updatedAt": "2026-04-28T08:24:04.143Z"
+  }
+]

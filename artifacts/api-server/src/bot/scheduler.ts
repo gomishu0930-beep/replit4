@@ -4,6 +4,9 @@ import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateImpressionTweet, generateEroticStoryTweet, buildManualPostFeedback } from './ai.js';
 import { generateImage } from './imageGen.js';
+import { filterContent, filterImagePrompt } from './content-filter.js';
+import { isAutoPostEnabled, isDryRun, getRunConfig } from './run-config.js';
+import { enqueuePost, markPosted, markFailed } from './post-queue.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
@@ -72,6 +75,32 @@ async function postFanzaItem(item: any, type: string, label: string) {
   const genResult = await generateTweetText(item, type, topPatterns, externalPatterns, grokResearch || undefined);
   const text = genResult.text;
   const imagePrompt = genResult.imagePrompt;
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  if (!filterResult.safe) {
+    console.warn(`  🚫 [${label}] FANZAテキストフィルター: ${filterResult.reason}`);
+    return null;
+  }
+
+  const queueItem = enqueuePost({
+    type: 'fanza',
+    text,
+    imagePrompt: imagePrompt ?? undefined,
+    itemTitle: item.title,
+    affiliateUrl: item.affiliateURL ?? undefined,
+    filterResult,
+  });
+
+  if (isDryRun()) {
+    console.log(`  🧪 [${label}] DRY_RUN: FANZA投稿スキップ (${item.title?.slice(0, 30)})`);
+    markPosted(queueItem.id, 'dry_run');
+    return null;
+  }
+  if (!isAutoPostEnabled()) {
+    console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    return null;
+  }
+
   if (imagePrompt) console.log(`  🖼️ 画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
@@ -93,6 +122,7 @@ async function postFanzaItem(item: any, type: string, label: string) {
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
 
+  markPosted(queueItem.id, tweetId);
   recordPost({ tweetId, replyId, item, text, type, imagePrompt });
   recordPostEvent(true);
 
@@ -119,10 +149,35 @@ async function postEngagementSlot(label: string) {
   }
 
   const { text } = generateImpressionTweet(Math.random() < 0.3);
-  const tweetId = await postTweet(text, []);
-  recordPost({ tweetId, replyId: '', text, type: 'engagement' });
-  recordPostEvent(false);
-  console.log(`  ✅ [${label}] エンゲージメント投稿完了 (${tweetId})`);
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  if (!filterResult.safe) {
+    console.warn(`  🚫 [${label}] コンテンツフィルター: ${filterResult.reason}`);
+    return;
+  }
+
+  const queueItem = enqueuePost({ type: 'engagement', text, filterResult });
+
+  if (isDryRun()) {
+    console.log(`  🧪 [${label}] DRY_RUN: 投稿スキップ (text先頭: ${text.slice(0, 40)})`);
+    markPosted(queueItem.id, 'dry_run');
+    return;
+  }
+  if (!isAutoPostEnabled()) {
+    console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    return;
+  }
+
+  try {
+    const tweetId = await postTweet(text, []);
+    markPosted(queueItem.id, tweetId);
+    recordPost({ tweetId, replyId: '', text, type: 'engagement' });
+    recordPostEvent(false);
+    console.log(`  ✅ [${label}] エンゲージメント投稿完了 (${tweetId})`);
+  } catch (e: any) {
+    markFailed(queueItem.id, e.message);
+    throw e;
+  }
 }
 
 async function postMyFansSlot(label: string) {
@@ -138,7 +193,27 @@ async function postMyFansSlot(label: string) {
     '✨ 今日も新しいコンテンツをMyFansに投稿しました！\nプロフのリンクからどうぞ💖\n#MyFans #新着',
   ];
   const text = templates[Math.floor(Math.random() * templates.length)];
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  if (!filterResult.safe) {
+    console.warn(`  🚫 [${label}] MyFansフィルター: ${filterResult.reason}`);
+    return;
+  }
+
+  const queueItem = enqueuePost({ type: 'myfans', text, filterResult });
+
+  if (isDryRun()) {
+    console.log(`  🧪 [${label}] DRY_RUN: MyFans投稿スキップ`);
+    markPosted(queueItem.id, 'dry_run');
+    return;
+  }
+  if (!isAutoPostEnabled()) {
+    console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    return;
+  }
+
   const tweetId = await postTweet(text, []);
+  markPosted(queueItem.id, tweetId);
   recordPost({ tweetId, replyId: '', text, type: 'myfans' });
   recordPostEvent(true);
   console.log(`  ✅ [${label}] MyFans投稿完了 (${tweetId})`);
@@ -152,8 +227,31 @@ async function postEroticStorySlot(label: string) {
   }
 
   const { text, imagePrompt } = generateEroticStoryTweet();
-  console.log(`  🖼️ [${label}] 猥談画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
 
+  const textFilter = filterContent(text, getRunConfig().safetyStrictness);
+  if (!textFilter.safe) {
+    console.warn(`  🚫 [${label}] テキストフィルター: ${textFilter.reason}`);
+    return;
+  }
+  const promptFilter = filterImagePrompt(imagePrompt);
+  if (!promptFilter.safe) {
+    console.warn(`  🚫 [${label}] 画像プロンプトフィルター: ${promptFilter.reason}`);
+    return;
+  }
+
+  const queueItem = enqueuePost({ type: 'erotic-story', text, imagePrompt, filterResult: textFilter });
+
+  if (isDryRun()) {
+    console.log(`  🧪 [${label}] DRY_RUN: 猥談投稿スキップ (text先頭: ${text.slice(0, 40)})`);
+    markPosted(queueItem.id, 'dry_run');
+    return;
+  }
+  if (!isAutoPostEnabled()) {
+    console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    return;
+  }
+
+  console.log(`  🖼️ [${label}] 猥談画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   let mediaIds: string[] = [];
   try {
     const imageUrl = await generateImage(imagePrompt, { model: 'pony-v6' });
@@ -163,10 +261,16 @@ async function postEroticStorySlot(label: string) {
     console.warn(`  ⚠ [${label}] 画像生成失敗、テキストのみ投稿: ${e.message}`);
   }
 
-  const tweetId = await postTweet(text, mediaIds);
-  recordPost({ tweetId, replyId: '', text, type: 'engagement', imagePrompt });
-  recordPostEvent(false);
-  console.log(`  ✅ [${label}] 猥談投稿完了 (${tweetId})`);
+  try {
+    const tweetId = await postTweet(text, mediaIds);
+    markPosted(queueItem.id, tweetId);
+    recordPost({ tweetId, replyId: '', text, type: 'engagement', imagePrompt });
+    recordPostEvent(false);
+    console.log(`  ✅ [${label}] 猥談投稿完了 (${tweetId})`);
+  } catch (e: any) {
+    markFailed(queueItem.id, e.message);
+    throw e;
+  }
 }
 
 export async function triggerEmergencyPost(): Promise<void> {

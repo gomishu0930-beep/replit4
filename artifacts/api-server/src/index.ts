@@ -6,6 +6,8 @@ import { loadMeetingData } from "./bot/meeting";
 import { initTasks } from "./bot/tasks";
 import { loadPauseState } from "./bot/twitter";
 import { loadSafetyState } from "./bot/safety-engine";
+import { loadRunConfig } from "./bot/run-config";
+import { loadQueue } from "./bot/post-queue";
 
 const rawPort = process.env["PORT"];
 
@@ -34,6 +36,8 @@ const server = app.listen(port, async (err) => {
   await initTasks();
   await loadPauseState();
   loadSafetyState();
+  loadRunConfig();
+  loadQueue();
   startScheduler();
 });
 
