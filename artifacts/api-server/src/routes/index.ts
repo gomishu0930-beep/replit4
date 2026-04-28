@@ -9,6 +9,7 @@ import authRouter from "./auth";
 import secretaryRouter from "./secretary";
 import safetyRouter from "./safety";
 import queueRouter from "./queue";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(authRouter);
 router.use(secretaryRouter);
 router.use(safetyRouter);
 router.use(queueRouter);
+router.use('/analytics', analyticsRouter);
 
 export default router;

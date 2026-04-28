@@ -222,6 +222,28 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/queue`).then(r => r.json()),
     refetchInterval: 15000,
   });
+  const { data: weeklyReviewData, refetch: refetchWeeklyReview } = useQuery<{
+    ok: boolean;
+    latest: {
+      id: string; generatedAt: string; periodStart: string; periodEnd: string;
+      stats: { total: number; posted: number; dryRun: number; avgImpressions: number; avgLikes: number; topCategory: string; topTemplateCategory: string };
+      review: {
+        winningPatterns: string[]; losingPatterns: string[]; improvements: string[];
+        dangerousExpressions: string[]; increaseCategories: string[]; decreaseCategories: string[];
+        summary: string;
+      };
+    } | null;
+    history: any[];
+  }>({
+    queryKey: ["weeklyReview"],
+    queryFn: () => fetch(`${API}/api/analytics/weekly-review`).then(r => r.json()),
+    refetchInterval: 300000,
+  });
+  const { data: analyticsStatsData } = useQuery<{ ok: boolean; stats: { total: number; posted: number; dryRun: number; avgImpressions: number; avgLikes: number; topCategory: string; topTemplateCategory: string } }>({
+    queryKey: ["analyticsStats"],
+    queryFn: () => fetch(`${API}/api/analytics/stats?days=7`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
   const { data: runConfigData, refetch: refetchRunConfig } = useQuery<{
     ok: boolean; config: {
       autoPostEnabled: boolean; dryRun: boolean;
@@ -630,6 +652,106 @@ function Dashboard() {
                   })}
                 </div>
               ) : <p className="text-[11px] text-zinc-500 text-center py-4">データなし</p>}
+            </div>
+
+            {/* 投稿アナリティクス（7日間統計） */}
+            {analyticsStatsData?.stats && (
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">📈 投稿アナリティクス（7日間）</p>
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  {[
+                    { label: "総投稿数", value: analyticsStatsData.stats.total, color: "text-white" },
+                    { label: "投稿済", value: analyticsStatsData.stats.posted, color: "text-emerald-400" },
+                    { label: "DRY_RUN", value: analyticsStatsData.stats.dryRun, color: "text-amber-400" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="rounded-lg bg-black/30 py-2">
+                      <p className="text-[9px] text-zinc-500">{label}</p>
+                      <p className={`text-[15px] font-bold ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-center">
+                  <div className="rounded-lg bg-black/30 py-2">
+                    <p className="text-[9px] text-zinc-500">平均IP</p>
+                    <p className="text-[14px] font-bold text-blue-400">{analyticsStatsData.stats.avgImpressions.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-lg bg-black/30 py-2">
+                    <p className="text-[9px] text-zinc-500">多いカテゴリ</p>
+                    <p className="text-[11px] font-bold text-purple-400">{analyticsStatsData.stats.topTemplateCategory}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 週次AIレビューパネル */}
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">🤖 週次AIレビュー</p>
+                <div className="flex gap-1.5">
+                  <button onClick={() => refetchWeeklyReview()} className="text-[9px] text-zinc-600 hover:text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800">更新</button>
+                  <button onClick={async () => {
+                    await fetch(`${API}/api/analytics/weekly-review/run`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ force: true }) });
+                    setTimeout(() => refetchWeeklyReview(), 3000);
+                  }} className="text-[9px] text-blue-400 hover:text-blue-300 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                    ▶ 今すぐ実行
+                  </button>
+                </div>
+              </div>
+              {weeklyReviewData?.latest ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-black/30 px-3 py-2">
+                    <p className="text-[9px] text-zinc-500 mb-1">{weeklyReviewData.latest.id} — {fmtDate(weeklyReviewData.latest.generatedAt)}生成</p>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">{weeklyReviewData.latest.review.summary}</p>
+                  </div>
+                  {weeklyReviewData.latest.review.winningPatterns.length > 0 && (
+                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2.5">
+                      <p className="text-[9px] text-emerald-400 font-semibold mb-1.5">✅ 伸びた投稿の特徴</p>
+                      {weeklyReviewData.latest.review.winningPatterns.map((p, i) => (
+                        <p key={i} className="text-[10px] text-zinc-300 leading-relaxed">・{p}</p>
+                      ))}
+                    </div>
+                  )}
+                  {weeklyReviewData.latest.review.improvements.length > 0 && (
+                    <div className="rounded-lg bg-blue-500/5 border border-blue-500/15 px-3 py-2.5">
+                      <p className="text-[9px] text-blue-400 font-semibold mb-1.5">💡 次週の改善案</p>
+                      {weeklyReviewData.latest.review.improvements.map((p, i) => (
+                        <p key={i} className="text-[10px] text-zinc-300 leading-relaxed">・{p}</p>
+                      ))}
+                    </div>
+                  )}
+                  {weeklyReviewData.latest.review.dangerousExpressions.length > 0 && (
+                    <div className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2.5">
+                      <p className="text-[9px] text-red-400 font-semibold mb-1.5">⚠ 危険だった表現</p>
+                      {weeklyReviewData.latest.review.dangerousExpressions.map((p, i) => (
+                        <p key={i} className="text-[10px] text-red-300 leading-relaxed">・{p}</p>
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {weeklyReviewData.latest.review.increaseCategories.length > 0 && (
+                      <div className="rounded-lg bg-purple-500/5 border border-purple-500/15 px-2.5 py-2">
+                        <p className="text-[9px] text-purple-400 font-semibold mb-1">📈 増やすべき</p>
+                        {weeklyReviewData.latest.review.increaseCategories.map((c, i) => (
+                          <p key={i} className="text-[10px] text-zinc-300">・{c}</p>
+                        ))}
+                      </div>
+                    )}
+                    {weeklyReviewData.latest.review.decreaseCategories.length > 0 && (
+                      <div className="rounded-lg bg-zinc-800 border border-white/5 px-2.5 py-2">
+                        <p className="text-[9px] text-zinc-400 font-semibold mb-1">📉 減らすべき</p>
+                        {weeklyReviewData.latest.review.decreaseCategories.map((c, i) => (
+                          <p key={i} className="text-[10px] text-zinc-400">・{c}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center space-y-2">
+                  <p className="text-[12px] text-zinc-500">まだレビューがありません</p>
+                  <p className="text-[10px] text-zinc-600">毎週日曜 05:00 JST に自動実行、または「今すぐ実行」で手動実行できます</p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">

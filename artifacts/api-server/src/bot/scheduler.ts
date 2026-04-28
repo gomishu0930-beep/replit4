@@ -9,6 +9,9 @@ import { isAutoPostEnabled, isDryRun, getRunConfig } from './run-config.js';
 import { enqueuePost, markPosted, markFailed } from './post-queue.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
+import { pickFanzaTemplate } from './fanza-templates.js';
+import { recordAnalytics, loadAnalytics } from './post-analytics.js';
+import { runWeeklyReview, loadWeeklyReviews } from './weekly-review.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
 import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics } from './analytics.js';
@@ -72,9 +75,13 @@ async function postFanzaItem(item: any, type: string, label: string) {
     console.warn(`  ⚠ [Scheduler] Grok調査スキップ: ${e.message}`);
     return '';
   });
-  const genResult = await generateTweetText(item, type, topPatterns, externalPatterns, grokResearch || undefined);
-  const text = genResult.text;
-  const imagePrompt = genResult.imagePrompt;
+  // テキスト生成：新7カテゴリテンプレート（自然な口調）を使用
+  // Grok調査は引き続き実行するが、テキスト生成はpickFanzaTemplateで行う
+  const tmpl = pickFanzaTemplate(item, type);
+  const text = tmpl.text;
+  const imagePrompt: string | null = null; // FANZAは商品画像を使用
+
+  console.log(`  📝 [${label}] テンプレート: ${tmpl.templateType} (${tmpl.templateCategory})`);
 
   const filterResult = filterContent(text, getRunConfig().safetyStrictness);
   if (!filterResult.safe) {
@@ -82,10 +89,12 @@ async function postFanzaItem(item: any, type: string, label: string) {
     return null;
   }
 
+  const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
+
   const queueItem = enqueuePost({
     type: 'fanza',
     text,
-    imagePrompt: imagePrompt ?? undefined,
+    imagePrompt: undefined,
     itemTitle: item.title,
     affiliateUrl: item.affiliateURL ?? undefined,
     filterResult,
@@ -94,14 +103,49 @@ async function postFanzaItem(item: any, type: string, label: string) {
   if (isDryRun()) {
     console.log(`  🧪 [${label}] DRY_RUN: FANZA投稿スキップ (${item.title?.slice(0, 30)})`);
     markPosted(queueItem.id, 'dry_run');
+    recordAnalytics({
+      postId: queueItem.id,
+      postedAt: new Date().toISOString(),
+      provider: 'twitter',
+      productId: item.content_id ?? item.id ?? '',
+      productTitle: item.title ?? '',
+      category: 'fanza',
+      templateType: tmpl.templateType,
+      templateCategory: tmpl.templateCategory,
+      text,
+      url: item.affiliateURL ?? '',
+      shortUrl: '',
+      imageUsed: false,
+      safetyScore,
+      result: 'dry_run',
+      clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0,
+      metricsUpdatedAt: null,
+    });
     return null;
   }
   if (!isAutoPostEnabled()) {
     console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    recordAnalytics({
+      postId: queueItem.id,
+      postedAt: new Date().toISOString(),
+      provider: 'twitter',
+      productId: item.content_id ?? item.id ?? '',
+      productTitle: item.title ?? '',
+      category: 'fanza',
+      templateType: tmpl.templateType,
+      templateCategory: tmpl.templateCategory,
+      text,
+      url: item.affiliateURL ?? '',
+      shortUrl: '',
+      imageUsed: false,
+      safetyScore,
+      result: 'queued',
+      clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0,
+      metricsUpdatedAt: null,
+    });
     return null;
   }
 
-  if (imagePrompt) console.log(`  🖼️ 画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
@@ -123,6 +167,24 @@ async function postFanzaItem(item: any, type: string, label: string) {
   await replyToTweet(replyId, engagementText);
 
   markPosted(queueItem.id, tweetId);
+  recordAnalytics({
+    postId: tweetId,
+    postedAt: new Date().toISOString(),
+    provider: 'twitter',
+    productId: item.content_id ?? item.id ?? '',
+    productTitle: item.title ?? '',
+    category: 'fanza',
+    templateType: tmpl.templateType,
+    templateCategory: tmpl.templateCategory,
+    text,
+    url: item.affiliateURL ?? '',
+    shortUrl: affiliateURL,
+    imageUsed: imageUrls.length > 0,
+    safetyScore,
+    result: 'posted',
+    clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0,
+    metricsUpdatedAt: null,
+  });
   recordPost({ tweetId, replyId, item, text, type, imagePrompt });
   recordPostEvent(true);
 
@@ -157,14 +219,29 @@ async function postEngagementSlot(label: string) {
   }
 
   const queueItem = enqueuePost({ type: 'engagement', text, filterResult });
+  const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
 
   if (isDryRun()) {
     console.log(`  🧪 [${label}] DRY_RUN: 投稿スキップ (text先頭: ${text.slice(0, 40)})`);
     markPosted(queueItem.id, 'dry_run');
+    recordAnalytics({
+      postId: queueItem.id, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(エンゲージメント)', category: 'engagement',
+      templateType: 'engagement', templateCategory: 'engagement',
+      text, url: '', shortUrl: '', imageUsed: false, safetyScore,
+      result: 'dry_run', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     return;
   }
   if (!isAutoPostEnabled()) {
     console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    recordAnalytics({
+      postId: queueItem.id, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(エンゲージメント)', category: 'engagement',
+      templateType: 'engagement', templateCategory: 'engagement',
+      text, url: '', shortUrl: '', imageUsed: false, safetyScore,
+      result: 'queued', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     return;
   }
 
@@ -173,6 +250,13 @@ async function postEngagementSlot(label: string) {
     markPosted(queueItem.id, tweetId);
     recordPost({ tweetId, replyId: '', text, type: 'engagement' });
     recordPostEvent(false);
+    recordAnalytics({
+      postId: tweetId, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(エンゲージメント)', category: 'engagement',
+      templateType: 'engagement', templateCategory: 'engagement',
+      text, url: '', shortUrl: '', imageUsed: false, safetyScore,
+      result: 'posted', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     console.log(`  ✅ [${label}] エンゲージメント投稿完了 (${tweetId})`);
   } catch (e: any) {
     markFailed(queueItem.id, e.message);
@@ -241,21 +325,39 @@ async function postEroticStorySlot(label: string) {
 
   const queueItem = enqueuePost({ type: 'erotic-story', text, imagePrompt, filterResult: textFilter });
 
+  const safetyScoreEs = Math.max(0, 100 - (textFilter.blockedWords?.length ?? 0) * 20);
+
   if (isDryRun()) {
     console.log(`  🧪 [${label}] DRY_RUN: 猥談投稿スキップ (text先頭: ${text.slice(0, 40)})`);
     markPosted(queueItem.id, 'dry_run');
+    recordAnalytics({
+      postId: queueItem.id, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(猥談ストーリー)', category: 'erotic-story',
+      templateType: 'erotic-story', templateCategory: 'erotic-story',
+      text, url: '', shortUrl: '', imageUsed: false, safetyScore: safetyScoreEs,
+      result: 'dry_run', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     return;
   }
   if (!isAutoPostEnabled()) {
     console.log(`  ⏸ [${label}] AUTO_POST無効: キューに追加済み (id=${queueItem.id})`);
+    recordAnalytics({
+      postId: queueItem.id, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(猥談ストーリー)', category: 'erotic-story',
+      templateType: 'erotic-story', templateCategory: 'erotic-story',
+      text, url: '', shortUrl: '', imageUsed: false, safetyScore: safetyScoreEs,
+      result: 'queued', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     return;
   }
 
   console.log(`  🖼️ [${label}] 猥談画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
   let mediaIds: string[] = [];
+  let imageUsed = false;
   try {
     const imageUrl = await generateImage(imagePrompt, { model: 'pony-v6' });
     mediaIds = await uploadImages([imageUrl]);
+    imageUsed = true;
     console.log(`  ✅ [${label}] 画像生成・アップロード完了`);
   } catch (e: any) {
     console.warn(`  ⚠ [${label}] 画像生成失敗、テキストのみ投稿: ${e.message}`);
@@ -266,6 +368,13 @@ async function postEroticStorySlot(label: string) {
     markPosted(queueItem.id, tweetId);
     recordPost({ tweetId, replyId: '', text, type: 'engagement', imagePrompt });
     recordPostEvent(false);
+    recordAnalytics({
+      postId: tweetId, postedAt: new Date().toISOString(), provider: 'twitter',
+      productId: '', productTitle: '(猥談ストーリー)', category: 'erotic-story',
+      templateType: 'erotic-story', templateCategory: 'erotic-story',
+      text, url: '', shortUrl: '', imageUsed, safetyScore: safetyScoreEs,
+      result: 'posted', clicks: 0, impressions: 0, likes: 0, reposts: 0, replies: 0, metricsUpdatedAt: null,
+    });
     console.log(`  ✅ [${label}] 猥談投稿完了 (${tweetId})`);
   } catch (e: any) {
     markFailed(queueItem.id, e.message);
@@ -343,6 +452,14 @@ async function monitoringLoop() {
 export function startScheduler() {
   loadSafetyState();
 
+  loadAnalytics().catch((e: any) =>
+    console.warn('  ⚠ アナリティクス読み込み失敗:', e.message),
+  );
+
+  loadWeeklyReviews().catch((e: any) =>
+    console.warn('  ⚠ 週次レビュー読み込み失敗:', e.message),
+  );
+
   loadStrategyConfig().catch((e: any) =>
     console.warn('  ⚠ 戦略設定読み込み失敗:', e.message),
   );
@@ -379,6 +496,17 @@ export function startScheduler() {
       console.warn('  ⚠ キャンペーンID週次探索失敗:', e.message),
     );
     autoCompleteTask('weekly-campaign-scan', 'weekly').catch(() => {});
+  }, { timezone: 'Asia/Tokyo' });
+
+  // 日曜 05:00 JST — 週次AIレビュー（投稿実績分析・改善案生成）
+  cron.schedule('0 5 * * 0', async () => {
+    console.log('\n  📊 [週次レビュー] AI分析開始...');
+    try {
+      const result = await runWeeklyReview();
+      console.log(`  ✅ [週次レビュー] 完了: ${result.id} / ${result.stats.total}件分析 / 改善案${result.review.improvements.length}件`);
+    } catch (e: any) {
+      console.error(`  ❌ [週次レビュー] エラー: ${e.message}`);
+    }
   }, { timezone: 'Asia/Tokyo' });
 
   // 10:30 JST — エンゲージメント投稿①

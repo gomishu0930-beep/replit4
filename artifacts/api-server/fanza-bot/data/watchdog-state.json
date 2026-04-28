@@ -1,82 +1,12 @@
 {
-  "lastCheckAt": "2026-04-28T08:10:23.999Z",
-  "lastIssueAt": "2026-04-28T08:10:23.999Z",
+  "lastCheckAt": "2026-04-28T08:26:56.564Z",
+  "lastIssueAt": "2026-04-28T08:26:56.564Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 176,
+  "issueCount": 178,
   "recoveryCount": 44,
-  "consecutiveFailures": 3,
+  "consecutiveFailures": 5,
   "recentEvents": [
-    {
-      "at": "2026-04-21T16:29:10.552Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 138.1h 無投稿"
-    },
-    {
-      "at": "2026-04-21T16:29:10.552Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-21T19:20:55.605Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-21T19:20:55.605Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 141h 無投稿"
-    },
-    {
-      "at": "2026-04-21T19:20:55.605Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-22T03:03:42.612Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-22T03:03:42.612Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 148.7h 無投稿"
-    },
-    {
-      "at": "2026-04-22T03:03:42.612Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-22T03:40:59.251Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-22T03:40:59.251Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 149.3h 無投稿"
-    },
-    {
-      "at": "2026-04-22T03:40:59.251Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-22T03:58:45.795Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-22T03:58:45.796Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 149.6h 無投稿"
-    },
-    {
-      "at": "2026-04-22T03:58:45.796Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
     {
       "at": "2026-04-22T04:43:38.706Z",
       "level": "info",
@@ -256,6 +186,76 @@
       "at": "2026-04-28T08:10:27.522Z",
       "level": "error",
       "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 3回)"
+    },
+    {
+      "at": "2026-04-28T08:13:26.539Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T08:13:26.540Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 25.7h 無投稿"
+    },
+    {
+      "at": "2026-04-28T08:13:26.540Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T08:13:29.539Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T08:13:29.539Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T08:13:29.539Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T08:13:38.139Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 4回)"
+    },
+    {
+      "at": "2026-04-28T08:26:56.564Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T08:26:56.565Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 26h 無投稿"
+    },
+    {
+      "at": "2026-04-28T08:26:56.565Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T08:26:57.297Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T08:26:57.297Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T08:26:57.297Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T08:27:00.177Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 5回)"
     }
   ]
 }
