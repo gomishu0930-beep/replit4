@@ -1,187 +1,12 @@
 {
-  "lastCheckAt": "2026-04-28T08:50:00.614Z",
-  "lastIssueAt": "2026-04-28T08:50:00.614Z",
+  "lastCheckAt": "2026-04-28T09:37:18.391Z",
+  "lastIssueAt": "2026-04-28T09:37:18.391Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 181,
+  "issueCount": 186,
   "recoveryCount": 44,
-  "consecutiveFailures": 8,
+  "consecutiveFailures": 13,
   "recentEvents": [
-    {
-      "at": "2026-04-28T07:51:14.356Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 1回)"
-    },
-    {
-      "at": "2026-04-28T07:59:47.104Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-28T07:59:47.104Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 25.5h 無投稿"
-    },
-    {
-      "at": "2026-04-28T07:59:47.104Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-28T07:59:47.828Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-28T07:59:47.828Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-28T07:59:47.828Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-28T07:59:50.584Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 2回)"
-    },
-    {
-      "at": "2026-04-28T08:10:23.999Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-28T08:10:23.999Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 25.7h 無投稿"
-    },
-    {
-      "at": "2026-04-28T08:10:23.999Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-28T08:10:24.730Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-28T08:10:24.730Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-28T08:10:24.730Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-28T08:10:27.522Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 3回)"
-    },
-    {
-      "at": "2026-04-28T08:13:26.539Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-28T08:13:26.540Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 25.7h 無投稿"
-    },
-    {
-      "at": "2026-04-28T08:13:26.540Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-28T08:13:29.539Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-28T08:13:29.539Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-28T08:13:29.539Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-28T08:13:38.139Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 4回)"
-    },
-    {
-      "at": "2026-04-28T08:26:56.564Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-28T08:26:56.565Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 26h 無投稿"
-    },
-    {
-      "at": "2026-04-28T08:26:56.565Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-28T08:26:57.297Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-28T08:26:57.297Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-28T08:26:57.297Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-28T08:27:00.177Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 5回)"
-    },
-    {
-      "at": "2026-04-28T08:38:08.564Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-28T08:38:08.564Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 26.1h 無投稿"
-    },
-    {
-      "at": "2026-04-28T08:38:08.564Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-28T08:38:09.280Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-28T08:38:09.281Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-28T08:38:09.281Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
     {
       "at": "2026-04-28T08:38:12.311Z",
       "level": "error",
@@ -256,6 +81,181 @@
       "at": "2026-04-28T08:50:03.904Z",
       "level": "error",
       "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 8回)"
+    },
+    {
+      "at": "2026-04-28T08:57:22.110Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T08:57:22.111Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 26.5h 無投稿"
+    },
+    {
+      "at": "2026-04-28T08:57:22.111Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T08:57:26.811Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T08:57:26.812Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T08:57:26.812Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T08:57:32.811Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 9回)"
+    },
+    {
+      "at": "2026-04-28T08:58:34.778Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T08:58:34.977Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 26.5h 無投稿"
+    },
+    {
+      "at": "2026-04-28T08:58:34.977Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T08:58:40.777Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T08:58:40.777Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T08:58:40.777Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T08:58:48.077Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 10回)"
+    },
+    {
+      "at": "2026-04-28T09:00:14.190Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T09:00:14.289Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 26.5h 無投稿"
+    },
+    {
+      "at": "2026-04-28T09:00:14.290Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T09:00:22.190Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T09:00:22.190Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T09:00:22.190Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T09:00:31.090Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 11回)"
+    },
+    {
+      "at": "2026-04-28T09:25:07.104Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T09:25:07.104Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 26.9h 無投稿"
+    },
+    {
+      "at": "2026-04-28T09:25:07.104Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T09:25:12.503Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T09:25:12.503Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T09:25:12.503Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T09:25:19.404Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 12回)"
+    },
+    {
+      "at": "2026-04-28T09:37:18.391Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T09:37:18.391Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 27.1h 無投稿"
+    },
+    {
+      "at": "2026-04-28T09:37:18.391Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T09:37:19.129Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T09:37:19.129Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T09:37:19.129Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T09:37:21.994Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 13回)"
     }
   ]
 }
