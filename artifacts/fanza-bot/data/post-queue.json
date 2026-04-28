@@ -29,5 +29,25 @@
     "status": "pending",
     "createdAt": "2026-04-28T09:34:32.436Z",
     "updatedAt": "2026-04-28T09:34:32.436Z"
+  },
+  {
+    "type": "myfans",
+    "text": "夜更かし組さんお疲れさま〜😴テストちゃんのコンテンツで、今日も癒されてます✨気になったらチェック👉https://myfans.jp/af/test123",
+    "affiliateUrl": "https://myfans.jp/af/test123",
+    "itemTitle": "MyFans: テストちゃん",
+    "imageUrl": "https://picsum.photos/200",
+    "provider": "myfans",
+    "sourceUrl": "https://myfans.jp/test",
+    "mediaFiles": [
+      {
+        "filename": "thumb.jpg",
+        "url": "https://picsum.photos/200",
+        "type": "thumbnail"
+      }
+    ],
+    "id": "2b9c0752-b0a6-4bf2-8bf2-a1e9a51cbd94",
+    "status": "pending",
+    "createdAt": "2026-04-28T09:44:33.633Z",
+    "updatedAt": "2026-04-28T09:44:33.633Z"
   }
 ]
