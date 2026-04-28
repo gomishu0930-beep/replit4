@@ -1,6 +1,888 @@
 {
   "posts": [
     {
+      "tweetId": "2048650813070000543",
+      "replyId": "",
+      "type": "manual",
+      "text": "イヤホン片方だけ外して、雨の音だけ聞いてる時間がいちばん落ち着く。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-27T06:29:50.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 31,
+        "checkedAt": "2026-04-28T07:52:33.937Z"
+      }
+    },
+    {
+      "tweetId": "2048650811996319972",
+      "replyId": "",
+      "type": "manual",
+      "text": "ドライヤー終わったあとの静かな部屋って、妙に眠気くる。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-27T06:29:50.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 31,
+        "checkedAt": "2026-04-28T07:52:33.939Z"
+      }
+    },
+    {
+      "tweetId": "2048650682560049239",
+      "replyId": "",
+      "type": "manual",
+      "text": "寝る前に窓を少し開けたら、夜風がちょうどよくて落ち着く。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-27T06:29:19.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 27,
+        "checkedAt": "2026-04-28T07:52:33.940Z"
+      }
+    },
+    {
+      "tweetId": "2048009124378730869",
+      "replyId": "",
+      "type": "manual",
+      "text": "🌙 大人の雑談\n最近の投稿の流れで、お風呂上がりの余韻みたいな夜の雰囲気、どう思う？\n強すぎない色気って、逆に忘れにくいよね。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-25T12:00:00.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 62,
+        "checkedAt": "2026-04-28T07:52:33.941Z"
+      }
+    },
+    {
+      "tweetId": "2048006870947008830",
+      "replyId": "",
+      "type": "manual",
+      "text": "夜は少しだけ言葉がやわらかくなる。今日もゆっくりいこう。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-25T11:51:02.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 46,
+        "checkedAt": "2026-04-28T07:52:33.943Z"
+      }
+    },
+    {
+      "tweetId": "2048006763686097151",
+      "replyId": "",
+      "type": "manual",
+      "text": "今日は軽めに。夜の作業前にコーヒーでスイッチ入れた。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-25T11:50:37.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 44,
+        "checkedAt": "2026-04-28T07:52:33.944Z"
+      }
+    },
+    {
+      "tweetId": "2047741030741811568",
+      "replyId": "",
+      "type": "manual",
+      "text": "💬 今一番気になるジャンルは何ですか？\nコメントで教えてください👇",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:41.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 56,
+        "checkedAt": "2026-04-28T07:52:33.945Z"
+      }
+    },
+    {
+      "tweetId": "2047741030028771733",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔗 作品ページはこちら👇\nhttps://t.co/MV9EayBqoz",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:41.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 73,
+        "checkedAt": "2026-04-28T07:52:33.947Z"
+      }
+    },
+    {
+      "tweetId": "2047741029022151155",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞最新作危険日直撃！！子作りできるソープランド59 わか菜…🎬出演女優の演技に12人が評価5.00点💯 リプ欄へ👇 https://t.co/jT9YnA3qJ5",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:41.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 82,
+        "checkedAt": "2026-04-28T07:52:33.948Z"
+      }
+    },
+    {
+      "tweetId": "2047741025331122553",
+      "replyId": "",
+      "type": "manual",
+      "text": "💭 こういう隠れた名作、好きですか？\nいいね🤍で教えてください！",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:40.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 44,
+        "checkedAt": "2026-04-28T07:52:33.950Z"
+      }
+    },
+    {
+      "tweetId": "2047741024630661305",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔗 作品ページはこちら👇\nhttps://t.co/Z2NWUwbtpv",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:40.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 49,
+        "checkedAt": "2026-04-28T07:52:33.951Z"
+      }
+    },
+    {
+      "tweetId": "2047741023645057221",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞今月の推し作品🌟 卒業式の後に…大人になった君へ義母からの贈り物―。…(5.00⭐)を出演女優で堪能💕 12人が視聴中📺 リプ欄からどうぞ👇 https://t.co/DUbigKZOkB",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:14:39.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 56,
+        "checkedAt": "2026-04-28T07:52:33.952Z"
+      }
+    },
+    {
+      "tweetId": "2047738949066756261",
+      "replyId": "",
+      "type": "manual",
+      "text": "🌙 今夜は少しだけ大人っぽい雑談。見せすぎない雰囲気って、逆に気になるよね。あなたは夜カフェ派？部屋でまったり派？",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T18:06:25.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 42,
+        "checkedAt": "2026-04-28T07:52:33.953Z"
+      }
+    },
+    {
+      "tweetId": "2047523798287880214",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/3F2dGCIBK6",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T03:51:29.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 64,
+        "checkedAt": "2026-04-28T07:52:33.955Z"
+      }
+    },
+    {
+      "tweetId": "2047518730587095264",
+      "replyId": "",
+      "type": "manual",
+      "text": "夏の海って、日差しより視線が熱い瞬間あるよね。ちょっとだけ内緒の大人トーク、今夜しよ？🌊",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T03:31:21.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 47,
+        "checkedAt": "2026-04-28T07:52:33.956Z"
+      }
+    },
+    {
+      "tweetId": "2047514790915166439",
+      "replyId": "",
+      "type": "manual",
+      "text": "🌊夏の海って、昼は爽やかなのに夜になると急に距離が近くなるよね。\n波音だけの浜辺で、耳元でささやかれると一気にドキッとする。\nみんなが思う“海のちょっと色っぽい瞬間”はどれ？",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T03:15:41.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 79,
+        "checkedAt": "2026-04-28T07:52:33.957Z"
+      }
+    },
+    {
+      "tweetId": "2047509671372869910",
+      "replyId": "",
+      "type": "manual",
+      "text": "🌙 お色気雑談タイム\n夏の海と夜景デート、どっちの雰囲気が好き？\n海派🌊 / 夜景派🌃\n気軽に教えてください",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-24T02:55:21.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 50,
+        "checkedAt": "2026-04-28T07:52:33.959Z"
+      }
+    },
+    {
+      "tweetId": "2047373391926366287",
+      "replyId": "",
+      "type": "manual",
+      "text": "🗳️ 好みはどっち？\n👉 人気女優 or 新人女優\nコメントで！",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-23T17:53:49.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 52,
+        "checkedAt": "2026-04-28T07:52:33.960Z"
+      }
+    },
+    {
+      "tweetId": "2047373391154528501",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔗 作品ページはこちら👇\nhttps://t.co/JvHfIQWUgz",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-23T17:53:49.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 56,
+        "checkedAt": "2026-04-28T07:52:33.961Z"
+      }
+    },
+    {
+      "tweetId": "2047373390164722153",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞13件中評価5.00⭐️出演女優の最新作最終電車で遭遇した甘Sヤリマン家出ギャル！ パンチ…🎥リプ欄からどうぞ👇 https://t.co/8OfM60y9Cv",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-23T17:53:49.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 69,
+        "checkedAt": "2026-04-28T07:52:33.962Z"
+      }
+    },
+    {
+      "tweetId": "2047008861853495650",
+      "replyId": "",
+      "type": "manual",
+      "text": "RT @AkechiKynest: @108takapi_new 棒に捕まらないと座ってられない人って本気で筋力無いんだなと思ってます。\nこれやるのほぼお年寄りですからね。",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-22T17:45:18.000Z",
+      "metrics": {
+        "retweet_count": 1,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 0,
+        "checkedAt": "2026-04-28T07:52:33.964Z"
+      }
+    },
+    {
+      "tweetId": "2045805248674226440",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/5yCApHQDq1",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-19T10:02:35.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 295,
+        "checkedAt": "2026-04-28T07:52:33.965Z"
+      }
+    },
+    {
+      "tweetId": "2045805166616797464",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞【FANZA独占】Y＆M、これマジで生々しすぎる...\n素人ハメ撮りドキュメンタリーなんだけど、ハイビジョンで撮ってるから空気感がリアルすぎて💦日曜の午後にのんびり見るつもりが気づいたら3回リピートしてた\nレビュー11件で4.27点って納得の神作\nリプ欄へ👇 https://t.co/G3KqPebdHb",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-19T10:02:15.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 374,
+        "checkedAt": "2026-04-28T07:52:33.966Z"
+      }
+    },
+    {
+      "tweetId": "2045270974090948785",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/i38IBbFG7i",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T22:39:34.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 355,
+        "checkedAt": "2026-04-28T07:52:33.968Z"
+      }
+    },
+    {
+      "tweetId": "2045270848869904554",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞河北彩伽が2ヶ月禁欲で本気出した結果…\n4K独占で撮れた「潮吹き覚醒」がマジでやばい💦\nハイビジョンじゃないと見えない表情まで全部映ってる\n平均4.53点ってこういうことか\nリプ欄へ👇 https://t.co/XST253xiDr",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T22:39:04.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 2,
+        "impression_count": 440,
+        "checkedAt": "2026-04-28T07:52:33.969Z"
+      }
+    },
+    {
+      "tweetId": "2045164759788720611",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/Yqk4WmCap9",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T15:37:30.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 297,
+        "checkedAt": "2026-04-28T07:52:33.970Z"
+      }
+    },
+    {
+      "tweetId": "2045164714465120381",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞部活で鍛えて抜かれた体を堪能\nずっと部活に打ち込んでたため、男絡みがなく、うぶな姿がとてもちんぴく💘\n詳細はリプで⬇️ https://t.co/v2vxDuARuq",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T15:37:19.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 346,
+        "checkedAt": "2026-04-28T07:52:33.972Z"
+      }
+    },
+    {
+      "tweetId": "2045149529889243466",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/lONi4YY2Og",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T14:36:59.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 218,
+        "checkedAt": "2026-04-28T07:52:33.973Z"
+      }
+    },
+    {
+      "tweetId": "2045149403871375865",
+      "replyId": "",
+      "type": "manual",
+      "text": "中途1年目の岡島明来(24)、制作部なのに4K4時間自ら出演してて草\n「工口勉の成果」ってタイトルが既に背徳すぎる💦\n金曜の深夜、社畜OLのリアルな性欲がこれ\nリプ欄へ👇 https://t.co/2DHOOh6DCx",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T14:36:29.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 295,
+        "checkedAt": "2026-04-28T07:52:33.974Z"
+      }
+    },
+    {
+      "tweetId": "2045121673788359013",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/Meo0HDogX9",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T12:46:18.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 191,
+        "checkedAt": "2026-04-28T07:52:33.975Z"
+      }
+    },
+    {
+      "tweetId": "2045121576321073544",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞ヤリサーの男達に雑に寝取られといてピースなんかすんなよ…💔\n村上悠華の年下彼女NTR、4K独占で画質やばすぎる\nチャラ男乱交でノリノリになってく表情が生々しくて金曜夜に脳溶けた\nレビュー24件で4.75点ってどういうことだよ\nリプ欄へ👇 https://t.co/Fe2VmPDR1h",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T12:45:54.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 1,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 268,
+        "checkedAt": "2026-04-28T07:52:33.976Z"
+      }
+    },
+    {
+      "tweetId": "2045103755780321458",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/F4FjKKpgv8",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T11:35:06.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 157,
+        "checkedAt": "2026-04-28T07:52:33.978Z"
+      }
+    },
+    {
+      "tweetId": "2045103533347971140",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞金曜夜の神オカズ見つけた…4K画質の水着巨乳制服美少女「みゆ」がヤバすぎる😍レビュー9件で満点5.0って逆に怖いんだが💦今週末これで決まり\nリプ欄へ👇 https://t.co/1epJzohpav",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T11:34:13.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 2,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 188,
+        "checkedAt": "2026-04-28T07:52:33.979Z"
+      }
+    },
+    {
+      "tweetId": "2045091846150656152",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞金曜朝からセクテク講師による神動画\nラスト1日みんな抜いて頑張ろう☺️ https://t.co/6a34GUZT4C",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-17T10:47:46.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 3,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 153,
+        "checkedAt": "2026-04-28T07:52:33.980Z"
+      }
+    },
+    {
+      "tweetId": "2044878949487186315",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/qSXIEd3tKA",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T20:41:48.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 158,
+        "checkedAt": "2026-04-28T07:52:33.981Z"
+      }
+    },
+    {
+      "tweetId": "2044875054350229641",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞金曜朝からセクテク講師による神動画\nラスト1日みんな抜いて頑張ろう☺️ https://t.co/u1UZ8PpC9D",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T20:26:19.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 187,
+        "checkedAt": "2026-04-28T07:52:33.982Z"
+      }
+    },
+    {
+      "tweetId": "2044817653924294761",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/65cUIFChQo",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T16:38:14.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 157,
+        "checkedAt": "2026-04-28T07:52:33.984Z"
+      }
+    },
+    {
+      "tweetId": "2044817467911135491",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞 週末前の深夜に見つけた制服JKハメ撮り、これマジで沼る😱\n美乳すぎて画面から目から鱗\nリプ欄へ👇 https://t.co/ETrDVdGl86",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T16:37:29.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 188,
+        "checkedAt": "2026-04-28T07:52:33.985Z"
+      }
+    },
+    {
+      "tweetId": "2044716574054248637",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/Vqzho1eozY",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T09:56:34.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 177,
+        "checkedAt": "2026-04-28T07:52:33.986Z"
+      }
+    },
+    {
+      "tweetId": "2044716521717670395",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞るるたん✖️さもあり\n新時代のポルノスターるるたん✨\n酔っ払った圧倒的エロスに驚愕！\n\n気にな詳細は⇩リンクから\n#myfanz https://t.co/cPMZ03ThZH",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T09:56:22.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 214,
+        "checkedAt": "2026-04-28T07:52:33.987Z"
+      }
+    },
+    {
+      "tweetId": "2044598148308632041",
+      "replyId": "",
+      "type": "manual",
+      "text": "https://t.co/mjtKhrVaFB",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T02:06:00.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 198,
+        "checkedAt": "2026-04-28T07:52:33.988Z"
+      }
+    },
+    {
+      "tweetId": "2044598118600376396",
+      "replyId": "",
+      "type": "manual",
+      "text": "🔞朝からチアっぽいバトン少女のパンチラダンスで乳首ビンビン肉尻がヤバい😍💦\n涼音みあちゃんのごっくん連発に木曜の朝から元気注入される…レビュー12件全部満点ってどういうことだよ🔥\nリプ欄へ👇 https://t.co/GKU1NdCEHB",
+      "item": {
+        "id": "",
+        "title": "【手動投稿】",
+        "affiliateURL": ""
+      },
+      "postedAt": "2026-04-16T02:05:52.000Z",
+      "metrics": {
+        "retweet_count": 0,
+        "reply_count": 1,
+        "like_count": 0,
+        "quote_count": 0,
+        "bookmark_count": 0,
+        "impression_count": 235,
+        "checkedAt": "2026-04-28T07:52:33.990Z"
+      }
+    },
+    {
       "tweetId": "2044541865748533365",
       "replyId": "",
       "type": "manual",
@@ -17,8 +899,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 6,
-        "checkedAt": "2026-04-15T23:00:05.897Z"
+        "impression_count": 192,
+        "checkedAt": "2026-04-28T07:52:33.991Z"
       }
     },
     {
@@ -38,8 +920,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 9,
-        "checkedAt": "2026-04-15T23:00:06.596Z"
+        "impression_count": 252,
+        "checkedAt": "2026-04-28T07:52:33.992Z"
       }
     },
     {
@@ -59,8 +941,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 120,
-        "checkedAt": "2026-04-15T23:00:06.896Z"
+        "impression_count": 262,
+        "checkedAt": "2026-04-28T07:52:33.993Z"
       }
     },
     {
@@ -80,8 +962,8 @@
         "like_count": 1,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 154,
-        "checkedAt": "2026-04-15T23:00:06.997Z"
+        "impression_count": 325,
+        "checkedAt": "2026-04-28T07:52:33.994Z"
       }
     },
     {
@@ -96,13 +978,13 @@
       },
       "postedAt": "2026-04-15T08:20:18.000Z",
       "metrics": {
-        "retweet_count": 88,
+        "retweet_count": 89,
         "reply_count": 0,
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
         "impression_count": 0,
-        "checkedAt": "2026-04-15T23:00:07.296Z"
+        "checkedAt": "2026-04-28T07:52:33.995Z"
       }
     },
     {
@@ -122,8 +1004,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 141,
-        "checkedAt": "2026-04-15T23:00:07.397Z"
+        "impression_count": 253,
+        "checkedAt": "2026-04-28T07:52:33.997Z"
       }
     },
     {
@@ -143,8 +1025,8 @@
         "like_count": 1,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 168,
-        "checkedAt": "2026-04-15T23:00:07.696Z"
+        "impression_count": 311,
+        "checkedAt": "2026-04-28T07:52:33.998Z"
       }
     },
     {
@@ -164,8 +1046,8 @@
         "like_count": 0,
         "quote_count": 0,
         "bookmark_count": 0,
-        "impression_count": 108,
-        "checkedAt": "2026-04-15T23:00:07.797Z"
+        "impression_count": 201,
+        "checkedAt": "2026-04-28T07:52:33.999Z"
       }
     },
     {
