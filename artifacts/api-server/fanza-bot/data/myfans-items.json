@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "provider": "myfans",
+      "creator_name": "テストちゃん",
+      "source_url": "https://myfans.jp/test",
+      "affiliate_url": "https://myfans.jp/af/test123",
+      "original_text": "今日も元気にやってます！",
+      "generated_caption": "",
+      "media_files": [
+        {
+          "filename": "thumb.jpg",
+          "url": "https://picsum.photos/200",
+          "type": "thumbnail"
+        }
+      ],
+      "status": "draft",
+      "safety_notes": [],
+      "id": "92792b73-6ed0-4c4c-b4f5-00100ac82b96",
+      "created_at": "2026-04-28T08:44:11.880Z",
+      "updated_at": "2026-04-28T08:44:11.880Z"
+    }
+  ],
+  "fetch_jobs": [
+    {
+      "id": "d41a29cc-7781-442f-ba46-2a7f124adaf6",
+      "created_at": "2026-04-28T08:44:11.685Z",
+      "status": "pending",
+      "target_count": 3,
+      "instructions": "MyFans クリエイターページを開き、以下の情報を取得してください（3件）:\n- creator_name: クリエイター名\n- source_url: クリエイターページのURL\n- affiliate_url: MyFansアフィリエイトリンク (必須)\n- original_text: 投稿文テキスト\n- media_files: official_preview または thumbnail のみ (有料限定コンテンツは除外)\n\n取得後は POST /api/myfans/ingest にJSON形式で送信してください。\nAuthorization: Bearer <MYFANS_INGEST_SECRET>"
+    }
+  ]
+}

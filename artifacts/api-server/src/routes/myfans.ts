@@ -15,7 +15,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import {
   initMyfansStore,
   getMyfansItems,
@@ -54,7 +54,7 @@ const upload = multer({
   },
 });
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = new Anthropic();
 
 // ─── 認証ミドルウェア ──────────────────────────────────────────────────────────
 
@@ -245,17 +245,14 @@ router.post('/myfans/items/:id/generate-caption', async (req: Request, res: Resp
 投稿文のみを返してください（説明文は不要）。`;
 
   try {
-    const res2 = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+    const res2 = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
       max_tokens: 200,
-      temperature: 0.85,
     });
 
-    const caption = res2.choices[0]?.message?.content?.trim() ?? '';
+    const caption = (res2.content[0] as { type: string; text: string })?.text?.trim() ?? '';
 
     const safety = filterContent(caption);
     if (!safety.safe) {
