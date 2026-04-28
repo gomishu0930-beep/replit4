@@ -186,7 +186,7 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
-type Tab = "poll" | "senpai" | "studio" | "data";
+type Tab = "poll" | "senpai" | "story" | "studio" | "data";
 
 function Dashboard() {
   const [tab, setTab] = useState<Tab>("poll");
@@ -424,6 +424,8 @@ function Dashboard() {
           </div>
         )}
 
+        {tab === "story" && <StoryTab />}
+
         {tab === "studio" && <StudioTab />}
 
         {tab === "data" && (
@@ -530,15 +532,16 @@ function Dashboard() {
       <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/5 safe-area-inset-bottom z-50">
         <div className="max-w-lg mx-auto flex">
           {([
-            { key: "poll" as Tab, label: "Poll Lab", icon: "🗳️" },
+            { key: "poll" as Tab, label: "Poll", icon: "🗳️" },
             { key: "senpai" as Tab, label: "先輩", icon: "💎" },
-            { key: "studio" as Tab, label: "スタジオ", icon: "🎨" },
-            { key: "data" as Tab, label: "データ", icon: "📊" },
+            { key: "story" as Tab, label: "猥談", icon: "🔞" },
+            { key: "studio" as Tab, label: "Studio", icon: "🎨" },
+            { key: "data" as Tab, label: "Data", icon: "📊" },
           ]).map(({ key, label, icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-blue-400" : "text-zinc-600"}`}>
-              <span className="text-[18px]">{icon}</span>
-              <span className="text-[10px] font-medium">{label}</span>
+              <span className="text-[16px]">{icon}</span>
+              <span className="text-[9px] font-medium">{label}</span>
             </button>
           ))}
         </div>
@@ -999,6 +1002,201 @@ function StudioTab() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function StoryTab() {
+  const [text, setText] = useState("");
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [generatedImageUrl, setGeneratedImageUrl] = useState("");
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [postLoading, setPostLoading] = useState(false);
+  const [postedId, setPostedId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const fetchDraft = async () => {
+    setDraftLoading(true); setError(""); setPostedId(null);
+    try {
+      const res = await fetch(`${API}/api/bot/erotic-story/draft`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setText(data.text);
+      setImagePrompt(data.imagePrompt);
+      setGeneratedImageUrl("");
+    } catch (e: any) { setError(e.message); }
+    finally { setDraftLoading(false); }
+  };
+
+  const generateImage = async () => {
+    if (!imagePrompt.trim()) return;
+    setImageLoading(true); setError("");
+    try {
+      const res = await fetch(`${API}/api/bot/nanobanana/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: imagePrompt.trim(), engine: "fal" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setGeneratedImageUrl(data.imageUrl);
+    } catch (e: any) { setError(e.message); }
+    finally { setImageLoading(false); }
+  };
+
+  const handlePost = async () => {
+    if (!text.trim()) return;
+    setPostLoading(true); setError(""); setPostedId(null);
+    try {
+      const res = await fetch(`${API}/api/bot/erotic-story/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text.trim(), imageUrl: generatedImageUrl || undefined }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPostedId(data.tweetId);
+    } catch (e: any) { setError(e.message); }
+    finally { setPostLoading(false); }
+  };
+
+  const copyText = () => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  const hasDraft = text.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader icon="🔞" title="猥談スタジオ" sub="実体験風テキスト＋Pony V6生成画像" color="text-rose-400" />
+
+      {/* Step 1: テキスト生成 */}
+      <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 1 — 猥談テキスト生成</p>
+          {hasDraft && (
+            <button onClick={fetchDraft} disabled={draftLoading}
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded-lg bg-zinc-800 border border-white/5">
+              🔀 シャッフル
+            </button>
+          )}
+        </div>
+
+        {!hasDraft ? (
+          <button onClick={fetchDraft} disabled={draftLoading}
+            className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:brightness-110">
+            {draftLoading ? "生成中..." : "🔞 猥談テキストを生成"}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              rows={7}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[12px] text-white leading-relaxed placeholder-zinc-600 focus:border-rose-500/50 focus:outline-none resize-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={copyText}
+                className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors">
+                {copied ? "✅ コピー済" : "📋 コピー"}
+              </button>
+              <button onClick={fetchDraft} disabled={draftLoading}
+                className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
+                {draftLoading ? "..." : "🔀 別のを生成"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Step 2: 画像生成 */}
+      {hasDraft && (
+        <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 2 — Pony V6 画像生成</p>
+
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-zinc-600">画像プロンプト（編集可）</p>
+            <textarea
+              value={imagePrompt}
+              onChange={e => setImagePrompt(e.target.value)}
+              rows={3}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[11px] text-zinc-300 leading-relaxed placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none font-mono"
+            />
+          </div>
+
+          <button onClick={generateImage} disabled={imageLoading || !imagePrompt.trim()}
+            className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:brightness-110">
+            {imageLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Pony V6 生成中...
+              </span>
+            ) : "🎨 Pony V6で画像生成"}
+          </button>
+
+          {generatedImageUrl && (
+            <div className="space-y-2">
+              <img
+                src={generatedImageUrl}
+                alt="generated"
+                className="w-full rounded-xl border border-white/10 object-cover"
+              />
+              <div className="flex gap-2">
+                <button onClick={generateImage} disabled={imageLoading}
+                  className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
+                  🔄 再生成
+                </button>
+                <a href={generatedImageUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors text-center">
+                  🔗 原寸表示
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 3: 投稿 */}
+      {hasDraft && (
+        <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 3 — 投稿</p>
+
+          <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+            {generatedImageUrl
+              ? <span className="text-emerald-400">✅ 画像あり — テキスト＋画像で投稿</span>
+              : <span className="text-zinc-500">⚠ 画像なし — テキストのみで投稿</span>
+            }
+          </div>
+
+          {postedId ? (
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-center space-y-2">
+              <p className="text-[13px] text-emerald-400 font-bold">✅ 投稿完了！</p>
+              <a
+                href={`https://twitter.com/ero_senpai1/status/${postedId}`}
+                target="_blank" rel="noopener noreferrer"
+                className="text-[11px] text-blue-400 underline block"
+              >
+                ツイートを確認する →
+              </a>
+            </div>
+          ) : (
+            <button onClick={handlePost} disabled={postLoading || !text.trim()}
+              className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:brightness-110">
+              {postLoading ? "投稿中..." : "🐦 今すぐ投稿する"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">
+          {error}
+        </div>
+      )}
+
+      <InfoCard icon="📌" text="スケジューラでは 25% の確率でこの形式が自動選択されます。手動でテスト投稿する際はここから実行できます。" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 24,
+  "monitorIntervalHours": 23,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -12,41 +12,41 @@
   },
   "cycleStats": {
     "lastNewPatterns": 40,
-    "avgNewPatterns": 12.000000000000146,
-    "totalCycles": 446
+    "avgNewPatterns": 20.4000000000001,
+    "totalCycles": 447
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 24h）は最適か？",
-      "status": "confirmed",
-      "finding": "446サイクル実績 / 平均新規パターン 12.0件/サイクル",
-      "adjustment": null,
-      "testedAt": "2026-04-28T07:53:22.682Z"
+      "status": "adjusted",
+      "finding": "447サイクル実績 / 平均新規パターン 20.4件/サイクル",
+      "adjustment": "監視間隔を 24h → 23h に短縮（平均新規パターン 20.4件/サイクル）",
+      "testedAt": "2026-04-28T08:02:01.084Z"
     },
     {
       "id": "type-weights",
       "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
       "status": "confirmed",
-      "finding": "エンゲージメント順: manual(11.1) > celebrity(1.5) > meeting-post(0.5)",
+      "finding": "エンゲージメント順: manual(15.6) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-28T07:53:22.683Z"
+      "testedAt": "2026-04-28T08:02:01.085Z"
     },
     {
       "id": "dynamic-templates",
       "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
-      "status": "rejected",
-      "finding": "直近 54件の平均スコア 5.7 vs 以前 15.6 (-63.4%)",
+      "status": "confirmed",
+      "finding": "直近 38件の平均スコア 28.4 vs 以前 0.6 (+5033.3%)",
       "adjustment": null,
-      "testedAt": "2026-04-28T07:53:22.683Z"
+      "testedAt": "2026-04-28T08:02:01.085Z"
     },
     {
       "id": "posting-hours",
       "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
       "status": "confirmed",
-      "finding": "最高スロット: 0時 (avg 159.2) / 最低スロット: 15時 (avg 0.0)",
+      "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 20時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-28T07:53:22.683Z"
+      "testedAt": "2026-04-28T08:02:01.085Z"
     },
     {
       "id": "content-5types",
@@ -90,6 +90,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-28T08:02:01.086Z",
+      "cycle": 447,
+      "decisions": [
+        "監視間隔を 24h → 23h に短縮（平均新規パターン 20.4件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-28T07:53:22.684Z",
       "cycle": 446,
@@ -432,17 +439,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-18T03:05:35.944Z",
-      "cycle": 397,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-28T07:53:22.683Z",
-  "version": 451,
+  "lastEvaluatedAt": "2026-04-28T08:02:01.085Z",
+  "version": 452,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

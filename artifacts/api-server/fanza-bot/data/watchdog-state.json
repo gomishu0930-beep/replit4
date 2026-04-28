@@ -1,47 +1,12 @@
 {
-  "lastCheckAt": "2026-04-28T07:51:10.941Z",
-  "lastIssueAt": "2026-04-28T07:51:10.941Z",
+  "lastCheckAt": "2026-04-28T07:59:47.104Z",
+  "lastIssueAt": "2026-04-28T07:59:47.104Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 174,
+  "issueCount": 175,
   "recoveryCount": 44,
-  "consecutiveFailures": 1,
+  "consecutiveFailures": 2,
   "recentEvents": [
-    {
-      "at": "2026-04-21T05:28:17.742Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-21T07:03:28.423Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-21T07:03:28.523Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 128.7h 無投稿"
-    },
-    {
-      "at": "2026-04-21T07:03:28.523Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-21T08:27:14.925Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-21T08:27:14.925Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 130.1h 無投稿"
-    },
-    {
-      "at": "2026-04-21T08:27:14.925Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
     {
       "at": "2026-04-21T13:29:40.458Z",
       "level": "info",
@@ -256,6 +221,41 @@
       "at": "2026-04-28T07:51:14.356Z",
       "level": "error",
       "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 1回)"
+    },
+    {
+      "at": "2026-04-28T07:59:47.104Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-28T07:59:47.104Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 25.5h 無投稿"
+    },
+    {
+      "at": "2026-04-28T07:59:47.104Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-28T07:59:47.828Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-28T07:59:47.828Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-28T07:59:47.828Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-28T07:59:50.584Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 2回)"
     }
   ]
 }

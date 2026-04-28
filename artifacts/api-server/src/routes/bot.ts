@@ -8,7 +8,7 @@ import { getStrategySummary } from '../bot/strategy.js';
 import { getCampaignCacheInfo, discoverCampaignIds, fetchItems, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getSampleImages } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
 import { getSafetyStatus, validatePost, recordPostEvent, updateFollowerCount } from '../bot/safety-engine.js';
-import { generateTweetText } from '../bot/ai.js';
+import { generateTweetText, generateEroticStoryTweet } from '../bot/ai.js';
 import { resolveShortUrl } from '../bot/rebrandly.js';
 import { researchBuzzForItem } from '../bot/grok.js';
 
@@ -307,6 +307,27 @@ router.post('/bot/image/generate-until-pass', async (req, res) => {
   try {
     const result = await generateUntilPass(prompt.trim(), maxAttempts, minScore);
     res.json({ ok: true, ...result });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/bot/erotic-story/draft', (_req, res) => {
+  const draft = generateEroticStoryTweet();
+  res.json({ ok: true, text: draft.text, imagePrompt: draft.imagePrompt });
+});
+
+router.post('/bot/erotic-story/post', requireAdminToken, async (req, res) => {
+  const { text, imageUrl } = req.body ?? {};
+  if (!text?.trim()) { res.status(400).json({ error: 'text は必須です' }); return; }
+  try {
+    let mediaIds: string[] = [];
+    if (imageUrl?.trim()) {
+      mediaIds = await uploadImages([imageUrl.trim()]);
+    }
+    const tweetId = await postTweet(text.trim(), mediaIds);
+    recordPostEvent(false);
+    res.json({ ok: true, tweetId });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
