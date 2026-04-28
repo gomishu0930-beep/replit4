@@ -62,3 +62,29 @@ Example:
 - Do not commit `.env`
 - Do not commit backup files
 - Use `.env.example` as the template
+
+## Setup
+- Node.js: 24
+- Package manager: pnpm
+- Install: `pnpm install`
+
+## Common Commands
+
+### API server
+- `pnpm run dev:api`
+- `pnpm run build:api`
+- `pnpm run start:api`
+
+### Mockup sandbox
+- `pnpm run dev:mockup`
+- `pnpm run build:mockup`
+- `pnpm run preview:mockup`
+
+### Bot dashboard
+- `pnpm run dev:dashboard`
+- `pnpm run build:dashboard`
+- `pnpm run serve:dashboard`
+
+```md id="8n1d3k"
+## AI作業について
+AIコーディング支援ツールを使う場合は、まず `AI_SETUP.md` を確認してください。

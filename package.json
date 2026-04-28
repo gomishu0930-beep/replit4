@@ -6,7 +6,16 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "dev:api": "pnpm --filter @workspace/api-server run dev",
+    "build:api": "pnpm --filter @workspace/api-server run build",
+    "start:api": "pnpm --filter @workspace/api-server run start",
+    "dev:mockup": "pnpm --filter @workspace/mockup-sandbox run dev",
+    "build:mockup": "pnpm --filter @workspace/mockup-sandbox run build",
+    "preview:mockup": "pnpm --filter @workspace/mockup-sandbox run preview",
+    "dev:dashboard": "pnpm --filter @workspace/bot-dashboard run dev",
+    "build:dashboard": "pnpm --filter @workspace/bot-dashboard run build",
+    "serve:dashboard": "pnpm --filter @workspace/bot-dashboard run serve"
   },
   "private": true,
   "devDependencies": {

@@ -141,17 +141,18 @@ function handleNanobananaError(e: any) {
   }
 }
 
-// ─── fal.ai SDXL + Pony V6スタイル（プライマリモデル） ──────────────────────
+// ─── fal.ai Pony V6（本物・プライマリモデル） ──────────────────────────────
 //
-// Pony V6はfal.aiで直接ロード不可のため、SDXL base + Pony V6互換プロンプト
-// （score_9系タグ、4-Block構造）でPony V6同等の品質を実現。
-// 将来的にLoRA追加で更に品質向上可能（fal-ai/lora エンドポイント対応）。
+// Pony Diffusion V6 XL（AstraliteHeart公式リポジトリ）を fal-ai/lora 経由で
+// 直接ロード。score_9系タグ、4-Block構造でX上70%シェアの最強NSFWモデル。
+
+const PONY_V6_URL = 'https://huggingface.co/AstraliteHeart/pony-diffusion-v6/resolve/main/v6.safetensors';
 
 async function generateWithFalPony(prompt: string): Promise<string> {
   const apiKey = getFalKey();
   if (!apiKey) throw new Error('FAL_KEY が設定されていません');
 
-  console.log(`  🐴 [fal.ai] SDXL (Pony V6スタイル) 画像生成開始...`);
+  console.log(`  🐴 [fal.ai] Pony V6 画像生成開始...`);
 
   const negativeStart = prompt.indexOf('Negative:');
   let mainPrompt = prompt;
@@ -160,6 +161,10 @@ async function generateWithFalPony(prompt: string): Promise<string> {
     mainPrompt = prompt.slice(0, negativeStart).trim();
     const userNeg = prompt.slice(negativeStart + 'Negative:'.length).trim();
     if (userNeg) negativePrompt = userNeg;
+  }
+
+  if (!mainPrompt.includes('score_9')) {
+    mainPrompt = `score_9, score_8_up, score_7_up, source_photo, ${mainPrompt}`;
   }
 
   const startTime = Date.now();
@@ -172,10 +177,10 @@ async function generateWithFalPony(prompt: string): Promise<string> {
     body: JSON.stringify({
       prompt: mainPrompt,
       negative_prompt: negativePrompt,
-      model_name: 'stabilityai/stable-diffusion-xl-base-1.0',
+      model_name: PONY_V6_URL,
       image_size: { width: 768, height: 1024 },
       num_inference_steps: 30,
-      guidance_scale: 7.0,
+      guidance_scale: 6.5,
       num_images: 1,
       enable_safety_checker: false,
       scheduler: 'DPM++ 2M SDE Karras',
