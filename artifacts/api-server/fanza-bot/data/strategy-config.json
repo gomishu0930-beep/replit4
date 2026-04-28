@@ -1,5 +1,5 @@
 {
-  "monitorIntervalHours": 19,
+  "monitorIntervalHours": 17,
   "typeWeights": {
     "amateur": 1.2,
     "buzz": 2,
@@ -12,17 +12,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 40,
-    "avgNewPatterns": 35.294040000000024,
-    "totalCycles": 451
+    "avgNewPatterns": 37.69407960000001,
+    "totalCycles": 453
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
-      "question": "外部情報の収集間隔（現在 20h）は最適か？",
+      "question": "外部情報の収集間隔（現在 18h）は最適か？",
       "status": "adjusted",
-      "finding": "451サイクル実績 / 平均新規パターン 35.3件/サイクル",
-      "adjustment": "監視間隔を 20h → 19h に短縮（平均新規パターン 35.3件/サイクル）",
-      "testedAt": "2026-04-28T08:52:14.304Z"
+      "finding": "453サイクル実績 / 平均新規パターン 37.7件/サイクル",
+      "adjustment": "監視間隔を 18h → 17h に短縮（平均新規パターン 37.7件/サイクル）",
+      "testedAt": "2026-04-28T09:27:22.005Z"
     },
     {
       "id": "type-weights",
@@ -30,7 +30,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: manual(14.2) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-28T08:52:14.305Z"
+      "testedAt": "2026-04-28T09:27:22.005Z"
     },
     {
       "id": "dynamic-templates",
@@ -38,7 +38,7 @@
       "status": "confirmed",
       "finding": "直近 42件の平均スコア 25.7 vs 以前 0.6 (+4475.4%)",
       "adjustment": null,
-      "testedAt": "2026-04-28T08:52:14.305Z"
+      "testedAt": "2026-04-28T09:27:22.403Z"
     },
     {
       "id": "posting-hours",
@@ -46,7 +46,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 20時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-28T08:52:14.305Z"
+      "testedAt": "2026-04-28T09:27:22.404Z"
     },
     {
       "id": "content-5types",
@@ -90,6 +90,20 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-28T09:27:22.404Z",
+      "cycle": 453,
+      "decisions": [
+        "監視間隔を 18h → 17h に短縮（平均新規パターン 37.7件/サイクル）"
+      ]
+    },
+    {
+      "at": "2026-04-28T09:02:32.290Z",
+      "cycle": 452,
+      "decisions": [
+        "監視間隔を 19h → 18h に短縮（平均新規パターン 36.7件/サイクル）"
+      ]
+    },
     {
       "at": "2026-04-28T08:52:14.305Z",
       "cycle": 451,
@@ -425,24 +439,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-18T10:54:13.287Z",
-      "cycle": 403,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
-    },
-    {
-      "at": "2026-04-18T09:07:49.719Z",
-      "cycle": 402,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-28T08:52:14.305Z",
-  "version": 456,
+  "lastEvaluatedAt": "2026-04-28T09:27:22.404Z",
+  "version": 458,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

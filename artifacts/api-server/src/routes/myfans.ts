@@ -342,8 +342,17 @@ router.post('/myfans/approve', async (req: Request, res: Response) => {
     affiliateUrl: item.affiliate_url,
     itemTitle: `MyFans: ${item.creator_name}`,
     imageUrl: item.media_files.find(m => m.url)?.url,
+    provider: 'myfans',
+    sourceUrl: item.source_url,
+    mediaFiles: item.media_files.map(m => ({
+      filename: m.filename,
+      url: m.url,
+      type: m.type,
+    })),
   });
 
+  // MyFansItem は approved のまま維持（queue_id でキューとリンク）
+  // ステータスは approved → 投稿後にキュー側で posted になったら手動で posted に更新
   const updated = updateMyfansItem(id, {
     status: 'approved',
     queue_id: queueItem.id,

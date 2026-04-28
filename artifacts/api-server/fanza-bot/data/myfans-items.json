@@ -6,7 +6,7 @@
       "source_url": "https://myfans.jp/test",
       "affiliate_url": "https://myfans.jp/af/test123",
       "original_text": "今日も元気にやってます！",
-      "generated_caption": "テストちゃんのコンテンツ、マジで面白い😄毎日更新してくれるから飽きないし、ファンになっちゃった✨気になったら絶対チェックしてみて👇 https://myfans.jp/af/test123",
+      "generated_caption": "夜更かし組さんお疲れさま〜😴テストちゃんのコンテンツで、今日も癒されてます✨気になったらチェック👉https://myfans.jp/af/test123",
       "media_files": [
         {
           "filename": "thumb.jpg",
@@ -14,11 +14,12 @@
           "type": "thumbnail"
         }
       ],
-      "status": "reviewed",
+      "status": "approved",
       "safety_notes": [],
       "id": "92792b73-6ed0-4c4c-b4f5-00100ac82b96",
       "created_at": "2026-04-28T08:44:11.880Z",
-      "updated_at": "2026-04-28T08:47:08.433Z"
+      "updated_at": "2026-04-28T09:34:32.437Z",
+      "queue_id": "af2776b5-99cb-4735-83ba-f37f1e279057"
     }
   ],
   "fetch_jobs": [

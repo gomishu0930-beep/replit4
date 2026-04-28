@@ -521,12 +521,24 @@ function Dashboard() {
                 )}
                 {queueData.items.filter((i: any) => i.status === "pending").slice(0, 3).map((item: any) => (
                   <div key={item.id} className="rounded-xl bg-black/30 border border-white/5 p-3 space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium">待機</span>
-                      <span className="text-[9px] text-zinc-500">{item.type}</span>
+                      {item.provider === "myfans" || item.type === "myfans" ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-400 font-medium">💗 MyFans</span>
+                      ) : item.type === "fanza" ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-medium">🔞 FANZA</span>
+                      ) : (
+                        <span className="text-[9px] text-zinc-500">{item.type}</span>
+                      )}
+                      {item.itemTitle && (
+                        <span className="text-[9px] text-zinc-400 truncate max-w-[120px]">{item.itemTitle}</span>
+                      )}
                       <span className="text-[9px] text-zinc-600 ml-auto">{fmtDate(item.createdAt)}</span>
                     </div>
                     <p className="text-[10px] text-zinc-300 line-clamp-2">{item.text}</p>
+                    {item.affiliateUrl && (
+                      <p className="text-[9px] text-blue-400 truncate">{item.affiliateUrl}</p>
+                    )}
                     <div className="flex gap-1.5">
                       <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/approve`, { method: "POST" }); refetchQueue(); }}
                         className="flex-1 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">

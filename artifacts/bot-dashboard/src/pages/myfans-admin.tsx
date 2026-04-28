@@ -68,6 +68,7 @@ export default function MyfansAdmin() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
   const [captionStyle, setCaptionStyle] = useState("friend");
   const [ingestJson, setIngestJson] = useState("");
   const [showIngestPanel, setShowIngestPanel] = useState(false);
@@ -163,6 +164,7 @@ export default function MyfansAdmin() {
   const approveItem = useCallback(
     async (id: string) => {
       setApprovingId(id);
+      setItemErrors((prev) => ({ ...prev, [id]: "" }));
       try {
         const r = await fetch(`${API}/api/myfans/approve`, {
           method: "POST",
@@ -171,11 +173,16 @@ export default function MyfansAdmin() {
         });
         const data = await r.json();
         if (data.ok) {
-          toast({ title: "✅ 投稿キューへ追加", description: "承認・キューイン完了" });
+          toast({ title: "✅ 投稿キューへ追加", description: `queue_id: ${data.queue_item?.id?.slice(0, 8)}…` });
           qc.invalidateQueries({ queryKey: ["myfans-items"] });
         } else {
-          toast({ title: "承認失敗", description: data.error, variant: "destructive" });
+          const msg = data.error ?? "不明なエラー";
+          setItemErrors((prev) => ({ ...prev, [id]: msg }));
+          toast({ title: "承認失敗", description: msg, variant: "destructive" });
         }
+      } catch (e: any) {
+        const msg = e?.message ?? "ネットワークエラー";
+        setItemErrors((prev) => ({ ...prev, [id]: msg }));
       } finally {
         setApprovingId(null);
       }
@@ -386,7 +393,12 @@ export default function MyfansAdmin() {
           {items.map((item) => {
             const isExpanded = expandedId === item.id;
             const hasCaption = !!item.generated_caption;
-            const canApprove = item.status === "reviewed" && hasCaption && !!item.affiliate_url;
+            // reviewed or draft(caption済み) → 承認可能。approved/posted/rejected は再承認不可
+            const canApprove =
+              (item.status === "reviewed" || item.status === "draft") &&
+              hasCaption &&
+              !!item.affiliate_url;
+            const itemError = itemErrors[item.id] ?? "";
 
             return (
               <div
@@ -503,6 +515,24 @@ export default function MyfansAdmin() {
                       </div>
                     )}
 
+                    {/* キュー連携ステータス */}
+                    {item.status === "approved" && item.queue_id && (
+                      <div className="rounded-lg bg-green-900/20 border border-green-800/40 px-3 py-2 text-[11px] space-y-0.5">
+                        <p className="text-green-300 font-medium">✅ 投稿キュー追加済み</p>
+                        <p className="text-zinc-500">
+                          queue_id: <span className="font-mono text-zinc-400">{item.queue_id.slice(0, 8)}…</span>
+                          　ステータスは <strong>approved</strong> で維持（X投稿後に posted へ更新）
+                        </p>
+                      </div>
+                    )}
+
+                    {/* インラインエラー表示 */}
+                    {itemError && (
+                      <div className="rounded-lg bg-red-900/20 border border-red-800/40 px-3 py-2 text-[11px] text-red-300">
+                        ❌ {itemError}
+                      </div>
+                    )}
+
                     {/* アクションボタン群 */}
                     <div className="flex gap-2 flex-wrap pt-1">
                       {/* 投稿文生成 */}
@@ -520,7 +550,7 @@ export default function MyfansAdmin() {
                         </button>
                       )}
 
-                      {/* 承認→キュー */}
+                      {/* 承認→キュー（reviewed/draft のみ） */}
                       {canApprove && (
                         <button
                           onClick={() => approveItem(item.id)}
@@ -528,6 +558,17 @@ export default function MyfansAdmin() {
                           className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-green-900/40 text-green-300 border border-green-800/40 hover:bg-green-900/60 disabled:opacity-50 transition-all"
                         >
                           {approvingId === item.id ? "⏳ 処理中..." : "✅ 承認・キュー追加"}
+                        </button>
+                      )}
+
+                      {/* 承認済みで再キューが必要な場合 */}
+                      {item.status === "approved" && hasCaption && !!item.affiliate_url && (
+                        <button
+                          onClick={() => approveItem(item.id)}
+                          disabled={approvingId === item.id}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-zinc-700 text-zinc-300 border border-white/10 hover:bg-zinc-600 disabled:opacity-50 transition-all"
+                        >
+                          {approvingId === item.id ? "⏳ 処理中..." : "🔁 再キュー追加"}
                         </button>
                       )}
 

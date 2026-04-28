@@ -26,6 +26,9 @@ export interface QueueItem {
   imageUrl?: string;
   affiliateUrl?: string;
   itemTitle?: string;
+  provider?: string;
+  sourceUrl?: string;
+  mediaFiles?: Array<{ filename: string; url?: string; type: string }>;
   status: QueueItemStatus;
   filterResult?: { safe: boolean; reason?: string };
   tweetId?: string;
