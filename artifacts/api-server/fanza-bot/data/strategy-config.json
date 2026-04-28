@@ -11,42 +11,42 @@
     "meeting-post": 0.44
   },
   "cycleStats": {
-    "lastNewPatterns": 0,
-    "avgNewPatterns": 2.0703815022274803e-13,
-    "totalCycles": 445
+    "lastNewPatterns": 40,
+    "avgNewPatterns": 12.000000000000146,
+    "totalCycles": 446
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 24h）は最適か？",
       "status": "confirmed",
-      "finding": "445サイクル実績 / 平均新規パターン 0.0件/サイクル",
+      "finding": "446サイクル実績 / 平均新規パターン 12.0件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-22T08:06:07.614Z"
+      "testedAt": "2026-04-28T07:53:22.682Z"
     },
     {
       "id": "type-weights",
       "question": "どのコンテンツ種別が最もエンゲージメントを稼ぐか？",
       "status": "confirmed",
-      "finding": "エンゲージメント順: manual(18.5) > celebrity(1.5) > meeting-post(0.5)",
+      "finding": "エンゲージメント順: manual(11.1) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-22T08:06:07.614Z"
+      "testedAt": "2026-04-28T07:53:22.683Z"
     },
     {
       "id": "dynamic-templates",
       "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
-      "status": "confirmed",
-      "finding": "直近 33件の平均スコア 32.7 vs 以前 0.5 (+6054.7%)",
+      "status": "rejected",
+      "finding": "直近 54件の平均スコア 5.7 vs 以前 15.6 (-63.4%)",
       "adjustment": null,
-      "testedAt": "2026-04-22T08:06:07.813Z"
+      "testedAt": "2026-04-28T07:53:22.683Z"
     },
     {
       "id": "posting-hours",
       "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
       "status": "confirmed",
-      "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 9時 (avg 0.5)",
+      "finding": "最高スロット: 0時 (avg 159.2) / 最低スロット: 15時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-22T08:06:07.813Z"
+      "testedAt": "2026-04-28T07:53:22.683Z"
     },
     {
       "id": "content-5types",
@@ -90,6 +90,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-28T07:53:22.684Z",
+      "cycle": 446,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-22T08:06:07.814Z",
       "cycle": 445,
@@ -432,17 +439,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-18T02:46:28.262Z",
-      "cycle": 396,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-22T08:06:07.814Z",
-  "version": 450,
+  "lastEvaluatedAt": "2026-04-28T07:53:22.683Z",
+  "version": 451,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

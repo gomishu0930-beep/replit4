@@ -95,6 +95,69 @@ const GLOBAL_REACH_TAG_SETS: string[] = [
   '#Feelings #Japanese #LateNightThoughts',
 ];
 
+// ─── 猥談投稿テンプレート（生成画像付き）────────────────────────────────────
+// 実体験風・場面描写・夜話形式。Pony V6生成画像と組み合わせる。
+// imagePrompt は buildPonyV6Prompt() に渡す英語プロンプトのヒント。
+
+const EROTIC_STORY_TEMPLATES: Array<{ text: string; imagePrompt: string }> = [
+  {
+    text: '🔞昨夜の出来事、聞いてもらっていいですか\n\n残業で2人きりになった瞬間\n彼女から急に「ずっと気になってた」って\n\n気づいたら引き留める腕が震えてた\n\n続きが知りたい人は❤️',
+    imagePrompt: 'office lady, white dress shirt, late night office, window reflections, dim light, leaning close, blushing',
+  },
+  {
+    text: '🔞これ、リアルな話なんですが\n\n銭湯帰りの彼女が\n「まだ火照ってる」って言いながら\n浴衣の帯をほどいてきた\n\n頭の中が真っ白になった瞬間のこと\n今でも覚えてる',
+    imagePrompt: 'japanese woman, yukata slipping off shoulder, steamy room, soft lighting, wet hair, flushed cheeks',
+  },
+  {
+    text: '🔞正直に言います\n\n隣の席のOLさんが\nこちらを見て微笑むたびに\nどうにかなりそうになる\n\n昨日のランチ、2人きりで行った\nその後のことは……深夜になったら話します',
+    imagePrompt: 'office lady, pencil skirt, lunch break, close conversation, subtle smile, leaning forward, soft bokeh',
+  },
+  {
+    text: '🔞夜中に送られてきたLINE\n\n「今、何してる？」\n\nって彼女から来た瞬間\n心臓が跳ねた\n\n返信した内容と\nその後何があったか\nコメントで教えてほしいって言ったら怒りますか？',
+    imagePrompt: 'young woman lying on bed, phone screen glow, night room, loose t-shirt, hair down, playful expression',
+  },
+  {
+    text: '🔞こういう経験した人いますか\n\n友達の彼女と2人で飲む約束をして\nそこで初めて気づいた\n\n「この子、俺のことが好きだ」\n\n気まずくなる前の\nあの沈黙、最高だった',
+    imagePrompt: 'woman sitting across table, izakaya bar, dim warm lighting, wine glass, meaningful eye contact, leaning on hand',
+  },
+  {
+    text: '🔞これ共感する人いますか\n\n温泉旅行、部屋に戻ってきたら\n浴衣姿の彼女が\nベッドに横になって待ってた\n\n「一緒に入ればよかったのに」って\n笑いながら言うから\n理性が飛んだ',
+    imagePrompt: 'japanese woman, hotel room, white yukata, lying on bed, looking over shoulder, warm lighting, soft smile',
+  },
+  {
+    text: '🔞深夜に話します\n\n同僚の女の子に急に言われた\n「私のこと、どう思ってるの」\n\n廊下で2人きりの時\n距離が縮まるのを感じた\n\n続き読みたい人は❤️',
+    imagePrompt: 'two people standing close in corridor, late night, office hallway, looking up with expectation, indoor lighting',
+  },
+  {
+    text: '🔞ちょっと恥ずかしい話\n\n初めてのドライブデートで\n「寒い」って言ったら\n向こうから手をつないできた\n\nそのまま指を絡ませてきた時の\nドキドキを今でも思い出す',
+    imagePrompt: 'night drive, car interior, woman passenger reaching for hand, dashboard glow, city lights blur, intimate',
+  },
+  {
+    text: '🔞正直これはやばかった\n\n出張先のホテルで\n偶然同じ部屋番号を割り当てられて\n\nフロントのミスだとわかったのは\n翌朝のこと\n\nその夜何があったか\nわかりますよね？',
+    imagePrompt: 'hotel corridor, woman standing in doorway, surprised expression, luggage, evening light, slight smile',
+  },
+  {
+    text: '🔞これ夢じゃなくてリアルな話\n\n終電なくした彼女を泊めた夜\n\n「シャワー借りていい？」\nって言いながら\n着替えを持ってきてなかった\n\nその後の展開、わかる人いますか？',
+    imagePrompt: 'woman wrapped in towel, bathroom door ajar, steam, shy expression, reaching out, apartment room',
+  },
+  {
+    text: '🔞これ言っていいのかわからないけど\n\n職場の先輩女性に\n「最近、あなたのことばかり考えてる」\nって言われて固まった\n\n2人で残業してた時\n彼女から距離を縮めてきた',
+    imagePrompt: 'mature office woman, late night office, leaning over desk, confident expression, close proximity, window backdrop',
+  },
+  {
+    text: '🔞夏の話なんですが\n\n彼女がプールから上がってきた瞬間\n水が滴る体をタオルで拭いてあげてたら\n\n「ちゃんと全部拭いて」って\nこっちを見て言ってきた\n\nわかるよね、この空気感',
+    imagePrompt: 'woman emerging from pool, wet swimsuit, slicked back hair, handing towel, summer day, close up smile',
+  },
+];
+
+/** 猥談投稿を生成する。テキストと画像プロンプトのセットを返す */
+export function generateEroticStoryTweet(): { text: string; imagePrompt: string } {
+  const item = EROTIC_STORY_TEMPLATES[Math.floor(Math.random() * EROTIC_STORY_TEMPLATES.length)];
+  return { text: item.text, imagePrompt: item.imagePrompt };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /** インプ狙い投稿を生成する
  * @param globalReach true のとき英語タグ付きバリアントB（W2以降のA/Bテスト用）
  * @returns { text, variant } variant は 'A'（日本語のみ）or 'B'（英語タグ付き）

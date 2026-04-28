@@ -2,7 +2,8 @@ import cron from 'node-cron';
 
 import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
-import { generateTweetText, generateEngagementReply, generateImpressionTweet, buildManualPostFeedback } from './ai.js';
+import { generateTweetText, generateEngagementReply, generateImpressionTweet, generateEroticStoryTweet, buildManualPostFeedback } from './ai.js';
+import { generateImage } from './imageGen.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
@@ -38,11 +39,12 @@ function randomSleep(minSec: number, maxSec: number) {
   return sleep(ms);
 }
 
-type ContentSlotType = 'engagement' | 'fanza' | 'myfans';
+type ContentSlotType = 'engagement' | 'erotic-story' | 'fanza' | 'myfans';
 
 function pickSlotType(): ContentSlotType {
   const rand = Math.random() * 100;
-  if (rand < 70) return 'engagement';
+  if (rand < 40) return 'engagement';
+  if (rand < 65) return 'erotic-story';
   if (rand < 90) return 'fanza';
   return 'myfans';
 }
@@ -142,6 +144,31 @@ async function postMyFansSlot(label: string) {
   console.log(`  ✅ [${label}] MyFans投稿完了 (${tweetId})`);
 }
 
+async function postEroticStorySlot(label: string) {
+  const validation = validatePost(false);
+  if (!validation.allowed) {
+    console.log(`  [${label}] 安全制限: ${validation.errors.join(', ')}`);
+    return;
+  }
+
+  const { text, imagePrompt } = generateEroticStoryTweet();
+  console.log(`  🖼️ [${label}] 猥談画像プロンプト: ${imagePrompt.slice(0, 80)}...`);
+
+  let mediaIds: string[] = [];
+  try {
+    const imageUrl = await generateImage(imagePrompt, { model: 'pony-v6' });
+    mediaIds = await uploadImages([imageUrl]);
+    console.log(`  ✅ [${label}] 画像生成・アップロード完了`);
+  } catch (e: any) {
+    console.warn(`  ⚠ [${label}] 画像生成失敗、テキストのみ投稿: ${e.message}`);
+  }
+
+  const tweetId = await postTweet(text, mediaIds);
+  recordPost({ tweetId, replyId: '', text, type: 'engagement', imagePrompt });
+  recordPostEvent(false);
+  console.log(`  ✅ [${label}] 猥談投稿完了 (${tweetId})`);
+}
+
 export async function triggerEmergencyPost(): Promise<void> {
   const items = await getRandomItems(1);
   if (items.length === 0) throw new Error('緊急投稿: アイテム取得失敗');
@@ -171,6 +198,9 @@ async function runScheduledSlot(label: string) {
     switch (slotType) {
       case 'engagement':
         await postEngagementSlot(label);
+        break;
+      case 'erotic-story':
+        await postEroticStorySlot(label);
         break;
       case 'fanza': {
         const items = await getRandomItems(1);
@@ -422,7 +452,7 @@ export function startScheduler() {
   console.log(`║  👥 フォロワー: ${String(safety.followerCount).padEnd(29)}║`);
   console.log('║  📅 投稿スロット:                              ║');
   console.log('║    10:30 / 17:00 / 20:00 JST                  ║');
-  console.log('║  📈 比率: 70%エンゲージ / 20%FANZA / 10%MyFans ║');
+  console.log('║  📈 比率: 40%エンゲージ/25%猥談画像/25%FANZA/10%MyFans ║');
   console.log('╚═══════════════════════════════════════════════╝');
   console.log('');
 }
