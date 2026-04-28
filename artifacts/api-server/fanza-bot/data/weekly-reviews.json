@@ -1,0 +1,68 @@
+{
+  "reviews": [
+    {
+      "id": "2026-W18",
+      "generatedAt": "2026-04-28T08:40:07.910Z",
+      "periodStart": "2026-04-21T08:40:07.910Z",
+      "periodEnd": "2026-04-28T08:40:07.910Z",
+      "stats": {
+        "total": 0,
+        "posted": 0,
+        "dryRun": 0,
+        "failed": 0,
+        "avgImpressions": 0,
+        "avgLikes": 0,
+        "topCategory": "none",
+        "topTemplateCategory": "none"
+      },
+      "review": {
+        "winningPatterns": [
+          "データ不足のため分析不可"
+        ],
+        "losingPatterns": [
+          "データ不足のため分析不可"
+        ],
+        "improvements": [
+          "まず投稿を蓄積してください"
+        ],
+        "dangerousExpressions": [],
+        "increaseCategories": [],
+        "decreaseCategories": [],
+        "summary": "今週は分析対象の投稿がありませんでした。"
+      },
+      "rawResponse": ""
+    },
+    {
+      "id": "2026-W18",
+      "generatedAt": "2026-04-28T08:40:04.098Z",
+      "periodStart": "2026-04-21T08:40:04.098Z",
+      "periodEnd": "2026-04-28T08:40:04.098Z",
+      "stats": {
+        "total": 0,
+        "posted": 0,
+        "dryRun": 0,
+        "failed": 0,
+        "avgImpressions": 0,
+        "avgLikes": 0,
+        "topCategory": "none",
+        "topTemplateCategory": "none"
+      },
+      "review": {
+        "winningPatterns": [
+          "データ不足のため分析不可"
+        ],
+        "losingPatterns": [
+          "データ不足のため分析不可"
+        ],
+        "improvements": [
+          "まず投稿を蓄積してください"
+        ],
+        "dangerousExpressions": [],
+        "increaseCategories": [],
+        "decreaseCategories": [],
+        "summary": "今週は分析対象の投稿がありませんでした。"
+      },
+      "rawResponse": ""
+    }
+  ]
+}
