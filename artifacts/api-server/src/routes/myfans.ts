@@ -54,7 +54,10 @@ const upload = multer({
   },
 });
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+});
 
 // ─── 認証ミドルウェア ──────────────────────────────────────────────────────────
 

@@ -8,7 +8,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readJson, writeJson } from './cloudStore.js';
 import { getAnalytics, getAnalyticsStats } from './post-analytics.js';
 
-const client = new Anthropic();
+const client = new Anthropic({
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+});
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 

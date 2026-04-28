@@ -95,6 +95,30 @@ artifacts/bot-dashboard/src/
 3. **スタジオ**: FANZA検索→投稿文生成→画像生成 (Nanobanana2, 参照画像img2img対応) + 採点 (GPT-4o Vision, 橋本環奈100点基準)
 4. **データ**: 投稿履歴・IP/EV推移グラフ・リスクスコア推移・クリック計測 (Rebrandly)・月額コスト
 
+## MyFans 管理システム (新実装)
+
+- **URL**: `/admin/myfans`
+- **ストレージ**: `myfans-items.json` (GCS/ローカル二重保存)
+- **AIキャプション生成**: Replit AI Integrations (Anthropic Claude haiku-4-5) — 自前APIキー不要
+- **セキュリティ**: `MYFANS_INGEST_SECRET` で取り込みAPI保護
+
+### 運用フロー
+1. `取得ジョブ作成` → Computer Use へのJSON指示書を生成
+2. Computer Use → `POST /api/myfans/ingest` でJSON+メディア取り込み
+3. Dashboard で `✨投稿文生成` (4文体: 友達口調/販促/夜向け/レビュー)
+4. 安全フィルター自動チェック → `✅承認・キュー追加` → 既存投稿キューへ
+5. ステータス: draft → reviewed → approved → posted
+
+### API Endpoints (MyFans)
+- `POST /api/myfans/fetch-job` — 取得ジョブ作成 (Authorization: Bearer)
+- `POST /api/myfans/ingest` — JSON+メディア取り込み (multipart/form-data)
+- `GET  /api/myfans/items` — 一覧 (?status=draft|reviewed|approved|rejected|posted)
+- `POST /api/myfans/items/:id/generate-caption` — AI投稿文生成 ({style: friend|promo|night|review})
+- `PATCH /api/myfans/items/:id/status` — ステータス更新
+- `POST /api/myfans/approve` — 承認→投稿キュー追加
+- `DELETE /api/myfans/items/:id` — 削除
+- `GET  /api/myfans/media/:filename` — アップロード済みメディア配信
+
 ## API Endpoints
 
 ### Safety Engine
