@@ -1,82 +1,12 @@
 {
-  "lastCheckAt": "2026-04-29T04:48:32.993Z",
-  "lastIssueAt": "2026-04-29T04:48:32.993Z",
+  "lastCheckAt": "2026-04-29T05:07:05.256Z",
+  "lastIssueAt": "2026-04-29T05:07:05.256Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 197,
+  "issueCount": 199,
   "recoveryCount": 44,
-  "consecutiveFailures": 24,
+  "consecutiveFailures": 26,
   "recentEvents": [
-    {
-      "at": "2026-04-28T13:44:13.833Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 17回)"
-    },
-    {
-      "at": "2026-04-29T03:03:27.965Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-29T03:03:27.966Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 44.6h 無投稿"
-    },
-    {
-      "at": "2026-04-29T03:03:27.966Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-29T03:03:32.966Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-29T03:03:32.966Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-29T03:03:32.966Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
-    {
-      "at": "2026-04-29T03:03:40.066Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 18回)"
-    },
-    {
-      "at": "2026-04-29T03:23:24.197Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-29T03:23:24.197Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 44.9h 無投稿"
-    },
-    {
-      "at": "2026-04-29T03:23:24.197Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-29T03:23:26.198Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-29T03:23:26.198Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
-    {
-      "at": "2026-04-29T03:23:26.198Z",
-      "level": "recovery",
-      "detail": "API正常確認 → 緊急投稿で回復を試みます"
-    },
     {
       "at": "2026-04-29T03:23:31.898Z",
       "level": "error",
@@ -256,6 +186,76 @@
       "at": "2026-04-29T04:48:36.374Z",
       "level": "error",
       "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 24回)"
+    },
+    {
+      "at": "2026-04-29T04:57:17.004Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-29T04:57:17.004Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 46.5h 無投稿"
+    },
+    {
+      "at": "2026-04-29T04:57:17.004Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-29T04:57:22.103Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-29T04:57:22.104Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-29T04:57:22.104Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-29T04:57:28.103Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 25回)"
+    },
+    {
+      "at": "2026-04-29T05:07:05.256Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-29T05:07:05.256Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 46.6h 無投稿"
+    },
+    {
+      "at": "2026-04-29T05:07:05.256Z",
+      "level": "info",
+      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
+    },
+    {
+      "at": "2026-04-29T05:07:05.965Z",
+      "level": "info",
+      "detail": "FANZA API 正常"
+    },
+    {
+      "at": "2026-04-29T05:07:05.965Z",
+      "level": "info",
+      "detail": "Twitter API 正常"
+    },
+    {
+      "at": "2026-04-29T05:07:05.965Z",
+      "level": "recovery",
+      "detail": "API正常確認 → 緊急投稿で回復を試みます"
+    },
+    {
+      "at": "2026-04-29T05:07:08.128Z",
+      "level": "error",
+      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 26回)"
     }
   ]
 }
