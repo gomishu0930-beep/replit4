@@ -12,17 +12,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 39,
-    "avgNewPatterns": 39.67765816543666,
-    "totalCycles": 466
+    "avgNewPatterns": 39.47436071580566,
+    "totalCycles": 467
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
       "status": "confirmed",
-      "finding": "466サイクル実績 / 平均新規パターン 39.7件/サイクル",
+      "finding": "467サイクル実績 / 平均新規パターン 39.5件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-29T04:59:32.704Z"
+      "testedAt": "2026-04-29T05:09:17.079Z"
     },
     {
       "id": "type-weights",
@@ -30,7 +30,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: manual(14.2) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-29T04:59:32.705Z"
+      "testedAt": "2026-04-29T05:09:17.080Z"
     },
     {
       "id": "dynamic-templates",
@@ -38,7 +38,7 @@
       "status": "confirmed",
       "finding": "直近 42件の平均スコア 25.7 vs 以前 0.6 (+4475.4%)",
       "adjustment": null,
-      "testedAt": "2026-04-29T04:59:33.102Z"
+      "testedAt": "2026-04-29T05:09:17.080Z"
     },
     {
       "id": "posting-hours",
@@ -46,7 +46,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 20時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-29T04:59:33.103Z"
+      "testedAt": "2026-04-29T05:09:17.080Z"
     },
     {
       "id": "content-5types",
@@ -90,6 +90,13 @@
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-04-29T05:09:17.080Z",
+      "cycle": 467,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-29T04:59:33.103Z",
       "cycle": 466,
@@ -432,17 +439,10 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-19T13:32:45.014Z",
-      "cycle": 417,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-29T04:59:33.103Z",
-  "version": 471,
+  "lastEvaluatedAt": "2026-04-29T05:09:17.080Z",
+  "version": 472,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
