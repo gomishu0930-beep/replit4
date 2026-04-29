@@ -40,6 +40,11 @@ export interface QueueItem {
 }
 
 let queue: QueueItem[] = [];
+let queueNotifier: ((item: QueueItem) => void) | null = null;
+
+export function setQueueNotifier(fn: (item: QueueItem) => void): void {
+  queueNotifier = fn;
+}
 
 function save(): void {
   try {
@@ -85,6 +90,9 @@ export function enqueuePost(draft: Omit<QueueItem, 'id' | 'status' | 'createdAt'
   if (queue.length > 200) queue = queue.slice(-200);
   save();
   console.log(`  📬 [Queue] キュー追加: id=${item.id} type=${item.type} autoPost=${isAutoPostEnabled()} dryRun=${isDryRun()}`);
+  if (queueNotifier) {
+    try { queueNotifier(item); } catch { /* ignore */ }
+  }
   return item;
 }
 

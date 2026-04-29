@@ -7,7 +7,8 @@ import { initTasks } from "./bot/tasks";
 import { loadPauseState } from "./bot/twitter";
 import { loadSafetyState } from "./bot/safety-engine";
 import { loadRunConfig } from "./bot/run-config";
-import { loadQueue } from "./bot/post-queue";
+import { loadQueue, setQueueNotifier } from "./bot/post-queue";
+import { initDiscordBot, notifyQueue } from "./bot/discord-bot";
 
 const rawPort = process.env["PORT"];
 
@@ -39,6 +40,8 @@ const server = app.listen(port, async (err) => {
   loadRunConfig();
   loadQueue();
   startScheduler();
+  setQueueNotifier(notifyQueue);
+  await initDiscordBot();
 });
 
 function gracefulShutdown(signal: string) {
