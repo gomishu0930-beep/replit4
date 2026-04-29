@@ -12,17 +12,17 @@
   },
   "cycleStats": {
     "lastNewPatterns": 39,
-    "avgNewPatterns": 39.47436071580566,
-    "totalCycles": 467
+    "avgNewPatterns": 39.332052501063956,
+    "totalCycles": 468
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
       "status": "confirmed",
-      "finding": "467サイクル実績 / 平均新規パターン 39.5件/サイクル",
+      "finding": "468サイクル実績 / 平均新規パターン 39.3件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-29T05:09:17.079Z"
+      "testedAt": "2026-04-29T05:32:13.194Z"
     },
     {
       "id": "type-weights",
@@ -30,7 +30,7 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: manual(14.2) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-29T05:09:17.080Z"
+      "testedAt": "2026-04-29T05:32:13.194Z"
     },
     {
       "id": "dynamic-templates",
@@ -38,7 +38,7 @@
       "status": "confirmed",
       "finding": "直近 42件の平均スコア 25.7 vs 以前 0.6 (+4475.4%)",
       "adjustment": null,
-      "testedAt": "2026-04-29T05:09:17.080Z"
+      "testedAt": "2026-04-29T05:32:13.195Z"
     },
     {
       "id": "posting-hours",
@@ -46,7 +46,7 @@
       "status": "confirmed",
       "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 20時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-29T05:09:17.080Z"
+      "testedAt": "2026-04-29T05:32:13.195Z"
     },
     {
       "id": "content-5types",
@@ -91,7 +91,14 @@
   ],
   "decisionLog": [
     {
-      "at": "2026-04-29T05:09:17.080Z",
+      "at": "2026-04-29T05:32:13.195Z",
+      "cycle": 468,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-29T05:13:27.419Z",
       "cycle": 467,
       "decisions": [
         "評価完了 / 変更なし"
@@ -432,21 +439,28 @@
       "decisions": [
         "評価完了 / 変更なし"
       ]
-    },
-    {
-      "at": "2026-04-20T03:05:53.768Z",
-      "cycle": 418,
-      "decisions": [
-        "評価完了 / 変更なし"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-29T05:09:17.080Z",
-  "version": 472,
+  "lastEvaluatedAt": "2026-04-29T05:32:13.195Z",
+  "version": 473,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,
     "decidedAt": null,
     "decidedBy": null
-  }
+  },
+  "schedulerPolicy": {
+    "dailyTotalTarget": 5,
+    "dailyAffiliateTarget": 3,
+    "dailyNonAffiliateTarget": 2,
+    "autoTuneEnabled": true,
+    "minDailyTotal": 3,
+    "maxDailyTotal": 8,
+    "minAffiliateRatio": 0.4,
+    "maxAffiliateRatio": 0.7
+  },
+  "adultTeaseMode": true,
+  "adultTeaseRatio": 0.6,
+  "adultTeaseImageMode": true,
+  "adultTeaseStrictSafety": true
 }

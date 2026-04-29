@@ -1,0 +1,23 @@
+{
+  "attempts": [
+    {
+      "attemptId": "attempt-1777440608403",
+      "status": "not_retryable",
+      "postType": "affiliate",
+      "fanzaMode": "emergency",
+      "contentId": "mdte00031",
+      "title": "いつでも中出しさせてくれる僕だけの女子●生アイドル 神坂朋子",
+      "originalAffiliateUrl": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dmdte00031&af_id=bigshu0930-990&ch=api",
+      "imageUrls": [],
+      "retryCount": 0,
+      "retryHistory": [],
+      "createdAt": "2026-04-29T05:30:08.403Z",
+      "updatedAt": "2026-04-29T05:30:08.404Z",
+      "errorStage": "safety",
+      "errorMessage": "アフィリ比率が30%を超えます（現在100.0%）",
+      "nextAction": "skip_due_to_compliance",
+      "failureFingerprint": "safety:mdte00031:アフィリ比率が30%を超えます（現在100.0%）",
+      "isCritical": true
+    }
+  ]
+}
