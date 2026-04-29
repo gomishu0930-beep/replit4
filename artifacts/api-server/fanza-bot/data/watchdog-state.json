@@ -1,42 +1,12 @@
 {
-  "lastCheckAt": "2026-04-29T05:30:04.649Z",
-  "lastIssueAt": "2026-04-29T05:30:04.649Z",
+  "lastCheckAt": "2026-04-29T06:30:08.554Z",
+  "lastIssueAt": "2026-04-29T06:30:08.554Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 201,
+  "issueCount": 203,
   "recoveryCount": 44,
   "consecutiveFailures": 28,
   "recentEvents": [
-    {
-      "at": "2026-04-29T04:25:45.750Z",
-      "level": "error",
-      "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 21回)"
-    },
-    {
-      "at": "2026-04-29T04:33:13.114Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-04-29T04:33:13.114Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 46.1h 無投稿"
-    },
-    {
-      "at": "2026-04-29T04:33:13.114Z",
-      "level": "info",
-      "detail": "診断開始: FANZA API / Twitter API をテスト中..."
-    },
-    {
-      "at": "2026-04-29T04:33:13.818Z",
-      "level": "info",
-      "detail": "FANZA API 正常"
-    },
-    {
-      "at": "2026-04-29T04:33:13.818Z",
-      "level": "info",
-      "detail": "Twitter API 正常"
-    },
     {
       "at": "2026-04-29T04:33:13.818Z",
       "level": "recovery",
@@ -256,6 +226,36 @@
       "at": "2026-04-29T05:30:08.405Z",
       "level": "error",
       "detail": "緊急投稿失敗: 緊急投稿: 安全制限により投稿不可 (連続失敗: 28回)"
+    },
+    {
+      "at": "2026-04-29T06:00:08.551Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-29T06:00:08.551Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 47.5h 無投稿"
+    },
+    {
+      "at": "2026-04-29T06:00:08.551Z",
+      "level": "info",
+      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
+    },
+    {
+      "at": "2026-04-29T06:30:08.554Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-29T06:30:08.554Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 48h 無投稿"
+    },
+    {
+      "at": "2026-04-29T06:30:08.554Z",
+      "level": "info",
+      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
     }
   ]
 }

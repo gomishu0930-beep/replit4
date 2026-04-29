@@ -3,7 +3,7 @@
   "pausedReason": "critical-failures:1",
   "pausedUntil": null,
   "lastResumeAt": null,
-  "lastPauseAt": "2026-04-29T05:45:00.032Z",
+  "lastPauseAt": "2026-04-29T06:30:00.030Z",
   "resumeRequestedBy": null,
   "readinessLastCheckedAt": null
 }
