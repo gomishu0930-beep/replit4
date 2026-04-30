@@ -518,6 +518,10 @@ export function startScheduler() {
   // 20:00 JST — プライムタイム投稿③
   cron.schedule('0 20 * * *', () => runScheduledSlot('20:00 スロット③'), { timezone: 'Asia/Tokyo' });
 
+  // 02:00 JST — 深夜インプ投稿④ [Grok分析: 深夜2-4時 インプ+50%]
+  // 感情爆発型・日常ｗｗ型テンプレートを優先。🔞タグなし、凍結リスク低
+  cron.schedule('0 2 * * *', () => runScheduledSlot('02:00 深夜スロット④'), { timezone: 'Asia/Tokyo' });
+
   // 火・木 20:00 JST — AI会議→投稿サイクル
   cron.schedule('0 20 * * 2,4', async () => {
     const safety = getSafetyStatus();
