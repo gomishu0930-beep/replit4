@@ -93,6 +93,35 @@ export function getAllAnalytics(): PostAnalyticsRecord[] {
   );
 }
 
+// ─── カテゴリ別パフォーマンス集計 ────────────────────────────────────────────
+
+export function getPerformanceByCategory(days = 7): Record<string, {
+  count: number;
+  avgImpressions: number;
+  avgLikes: number;
+  avgReposts: number;
+  totalClicks: number;
+}> {
+  const records = getAnalytics(days).filter(r => r.result === 'posted');
+  const byCategory: Record<string, PostAnalyticsRecord[]> = {};
+  for (const r of records) {
+    if (!byCategory[r.category]) byCategory[r.category] = [];
+    byCategory[r.category].push(r);
+  }
+  const result: Record<string, { count: number; avgImpressions: number; avgLikes: number; avgReposts: number; totalClicks: number }> = {};
+  for (const [cat, recs] of Object.entries(byCategory)) {
+    const n = recs.length;
+    result[cat] = {
+      count: n,
+      avgImpressions: n > 0 ? Math.round(recs.reduce((s, r) => s + r.impressions, 0) / n) : 0,
+      avgLikes:       n > 0 ? Math.round(recs.reduce((s, r) => s + r.likes, 0) / n) : 0,
+      avgReposts:     n > 0 ? Math.round(recs.reduce((s, r) => s + r.reposts, 0) / n) : 0,
+      totalClicks:    recs.reduce((s, r) => s + r.clicks, 0),
+    };
+  }
+  return result;
+}
+
 export function getAnalyticsStats(days = 7): {
   total: number;
   posted: number;

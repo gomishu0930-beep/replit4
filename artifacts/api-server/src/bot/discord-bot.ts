@@ -20,6 +20,8 @@ import {
 } from './post-queue.js';
 import { getRunConfig, updateRunConfig } from './run-config.js';
 import { getMyfansItems } from './myfans-store.js';
+import { manualGenerateAndQueue } from './scheduler.js';
+import { getPerformanceByCategory, getAnalyticsStats } from './post-analytics.js';
 
 const TOKEN      = process.env.DISCORD_BOT_TOKEN ?? '';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID ?? '';
@@ -118,11 +120,52 @@ const AGENT_TOOLS: Anthropic.Tool[] = [
       },
     },
   },
+  {
+    name: 'generate_and_queue',
+    description: '指定タイプのコンテンツを生成してキューに追加する（手動投稿用）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['engagement', 'fanza', 'erotic-story', 'myfans'],
+          description: 'コンテンツタイプ',
+        },
+      },
+      required: ['type'],
+    },
+  },
+  {
+    name: 'analyze_performance',
+    description: '過去N日間の投稿パフォーマンスをカテゴリ別に分析する',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: {
+          type: 'number',
+          description: '分析期間（日数）。省略時は7日',
+        },
+      },
+    },
+  },
+  {
+    name: 'apply_insights',
+    description: '投稿分析結果をもとにカテゴリ比率（categoryWeights）を最適化して反映する',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: {
+          type: 'number',
+          description: '分析期間（日数）。省略時は7日',
+        },
+      },
+    },
+  },
 ];
 
 // ─── ツール実行 ───────────────────────────────────────────────────────────────
 
-function executeTool(name: string, input: Record<string, any>): string {
+async function executeTool(name: string, input: Record<string, any>): Promise<string> {
   try {
     switch (name) {
 
@@ -197,6 +240,82 @@ function executeTool(name: string, input: Record<string, any>): string {
           queue_id: i.queue_id?.slice(0, 8),
           updatedAt: i.updated_at,
         })), null, 2);
+      }
+
+      case 'generate_and_queue': {
+        const genType = input.type as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+        const result = await manualGenerateAndQueue(genType);
+        return JSON.stringify({
+          success: true,
+          queueId: result.queueId.slice(0, 8),
+          fullQueueId: result.queueId,
+          type: result.type,
+          itemTitle: result.itemTitle ?? '(なし)',
+          textPreview: result.text.slice(0, 120),
+          message: `キューに追加しました（id=${result.queueId.slice(0, 8)}）。/approve または「承認して投稿」ボタンで投稿できます。`,
+        }, null, 2);
+      }
+
+      case 'analyze_performance': {
+        const analysisDays = Number(input.days ?? 7);
+        const stats = getAnalyticsStats(analysisDays);
+        const byCategory = getPerformanceByCategory(analysisDays);
+        return JSON.stringify({
+          period: `${analysisDays}日間`,
+          summary: {
+            total: stats.total,
+            posted: stats.posted,
+            dryRun: stats.dryRun,
+            failed: stats.failed,
+            avgImpressions: stats.avgImpressions,
+            avgLikes: stats.avgLikes,
+            topCategory: stats.topCategory,
+          },
+          byCategory,
+          recommendation: Object.entries(byCategory).length === 0
+            ? 'まだ投稿データが十分ありません。投稿を増やしてからご確認ください。'
+            : `最も多い投稿タイプ: ${stats.topCategory}、平均インプ: ${stats.avgImpressions}`,
+        }, null, 2);
+      }
+
+      case 'apply_insights': {
+        const insightDays = Number(input.days ?? 7);
+        const byCategory = getPerformanceByCategory(insightDays);
+        const cats = Object.entries(byCategory);
+        if (cats.length === 0) {
+          return '投稿データが不足しているため、比率調整をスキップしました。';
+        }
+        // インプ数でスコアリングし、比率を調整（合計100%に正規化）
+        const scores: Record<string, number> = {
+          engagement: byCategory['engagement']?.avgImpressions ?? 50,
+          fanza: byCategory['fanza']?.avgImpressions ?? 30,
+          'erotic-story': byCategory['erotic-story']?.avgImpressions ?? 20,
+          myfans: byCategory['myfans']?.avgImpressions ?? 10,
+        };
+        const total = Object.values(scores).reduce((s, v) => s + v, 0) || 1;
+        const base = Math.max(5, 100 / Object.keys(scores).length);
+        const weights = {
+          engagement: Math.round(Math.max(base, (scores['engagement'] / total) * 100)),
+          eroticStory: Math.round(Math.max(base, (scores['erotic-story'] / total) * 100)),
+          fanza: Math.round(Math.max(base, (scores['fanza'] / total) * 100)),
+          myfans: Math.round(Math.max(base, (scores['myfans'] / total) * 100)),
+        };
+        // 合計100に正規化
+        const wTotal = Object.values(weights).reduce((s, v) => s + v, 0);
+        const scale = 100 / wTotal;
+        const normalized = {
+          engagement: Math.round(weights.engagement * scale),
+          eroticStory: Math.round(weights.eroticStory * scale),
+          fanza: Math.round(weights.fanza * scale),
+          myfans: 100 - Math.round(weights.engagement * scale) - Math.round(weights.eroticStory * scale) - Math.round(weights.fanza * scale),
+        };
+        updateRunConfig({ categoryWeights: normalized });
+        return JSON.stringify({
+          success: true,
+          newWeights: normalized,
+          message: `カテゴリ比率を更新しました（${insightDays}日間の実績ベース）`,
+          detail: `エンゲージ${normalized.engagement}% / 猥談${normalized.eroticStory}% / FANZA${normalized.fanza}% / MyFans${normalized.myfans}%`,
+        }, null, 2);
       }
 
       default:
@@ -414,11 +533,23 @@ watchdog.ts:
   /pause    → 緊急停止（自動投稿OFF）
   /resume   → 再開（自動投稿ON）
   /clear    → このチャンネルの会話履歴をリセット
+  /post [type]  → コンテンツを今すぐ生成してキューに追加
+                   type: engagement / fanza / erotic-story / myfans
+                   → 生成プレビュー + 「✅承認」「🔄再生成」「❌却下」ボタン付き
+  /analyze [days] → 投稿パフォーマンスをカテゴリ別分析
+                    days: 7 / 14 / 30（デフォルト7日）
+                    → インプ・いいね・RT・クリックの実績 + 「⚡生成設定に反映」ボタン
 
 @メンション（このAIエージェント）:
   自由な日本語で話しかけると何でも対応します。
   例: 「キュー見せて」「af2776b5承認して」「今月の状況は？」
-  「DRY_RUN解除して」「MyFans draftstatus確認して」など
+  「DRY_RUN解除して」「MyFans draftstatus確認して」
+  「fanzaを1件生成してキューに入れて」「7日間の分析して比率に反映して」など
+
+利用可能なツール（@メンション時）:
+  generate_and_queue(type)  → 投稿を生成してキューに積む（手動生成）
+  analyze_performance(days) → 投稿パフォーマンスを分析
+  apply_insights(days)      → 分析結果をカテゴリ比率に反映
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ APIエンドポイント（主要）
@@ -494,7 +625,7 @@ async function handleAgentMessage(channelId: string, userMessage: string): Promi
         const toolResults: Anthropic.ToolResultBlockParam[] = [];
         for (const block of assistantContent) {
           if (block.type === 'tool_use') {
-            const result = executeTool(block.name, block.input as Record<string, any>);
+            const result = await executeTool(block.name, block.input as Record<string, any>);
             toolResults.push({
               type: 'tool_result',
               tool_use_id: block.id,
@@ -560,6 +691,32 @@ const commands = [
   new SlashCommandBuilder()
     .setName('clear')
     .setDescription('このチャンネルの会話履歴をリセット'),
+  new SlashCommandBuilder()
+    .setName('post')
+    .setDescription('コンテンツを生成してキューに追加（承認ボタン付き）')
+    .addStringOption(o =>
+      o.setName('type')
+        .setDescription('コンテンツタイプ')
+        .setRequired(true)
+        .addChoices(
+          { name: '💬 エンゲージ（共感・インプ稼ぎ）', value: 'engagement' },
+          { name: '🔞 FANZA（アフィリエイト）', value: 'fanza' },
+          { name: '📖 猥談（エロ短編）', value: 'erotic-story' },
+          { name: '💗 MyFans', value: 'myfans' },
+        ),
+    ),
+  new SlashCommandBuilder()
+    .setName('analyze')
+    .setDescription('投稿パフォーマンスをカテゴリ別に分析して表示')
+    .addIntegerOption(o =>
+      o.setName('days')
+        .setDescription('分析期間（日数）')
+        .addChoices(
+          { name: '7日間', value: 7 },
+          { name: '14日間', value: 14 },
+          { name: '30日間', value: 30 },
+        ),
+    ),
 ].map(c => c.toJSON());
 
 // ─── ヘルパー ─────────────────────────────────────────────────────────────────
@@ -722,6 +879,85 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       break;
     }
 
+    case 'post': {
+      const postType = i.options.getString('type', true) as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+      await i.editReply({ content: `⏳ ${typeEmoji(postType)} **${postType}** を生成中...` });
+      try {
+        const result = await manualGenerateAndQueue(postType);
+        const embed = new EmbedBuilder()
+          .setColor(postType === 'fanza' ? 0xff8c00 : postType === 'myfans' ? 0xff6b9d : 0x5865f2)
+          .setTitle(`${typeEmoji(postType)} 生成完了 — ${result.itemTitle ?? postType}`)
+          .setDescription(result.text.slice(0, 1000) + (result.text.length > 1000 ? '…' : ''))
+          .addFields(
+            { name: 'タイプ', value: postType, inline: true },
+            { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
+            ...(result.affiliateUrl ? [{ name: 'URL', value: result.affiliateUrl.slice(0, 100) }] : []),
+          )
+          .setFooter({ text: '承認すると次のスロットで自動投稿されます' })
+          .setTimestamp();
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`push:${result.queueId}`)
+            .setLabel('✅ 承認して投稿待ちへ')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`regen:${postType}`)
+            .setLabel('🔄 再生成')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`reject:${result.queueId}`)
+            .setLabel('❌ 却下')
+            .setStyle(ButtonStyle.Danger),
+        );
+
+        await i.editReply({ content: '', embeds: [embed], components: [row] });
+      } catch (e: any) {
+        await i.editReply(`❌ 生成失敗: ${e.message}`);
+      }
+      break;
+    }
+
+    case 'analyze': {
+      const days = i.options.getInteger('days') ?? 7;
+      const stats = getAnalyticsStats(days);
+      const byCategory = getPerformanceByCategory(days);
+
+      const catFields = Object.entries(byCategory).map(([cat, data]) => ({
+        name: `${typeEmoji(cat)} ${cat}`,
+        value: `件数: ${data.count}件\nインプ平均: ${data.avgImpressions.toLocaleString()}\nいいね平均: ${data.avgLikes}\nRT平均: ${data.avgReposts}\nクリック合計: ${data.totalClicks}`,
+        inline: true,
+      }));
+
+      const embed = new EmbedBuilder()
+        .setColor(0x57f287)
+        .setTitle(`📊 投稿パフォーマンス分析 — 過去${days}日間`)
+        .addFields(
+          { name: '総投稿数', value: String(stats.total), inline: true },
+          { name: '実投稿', value: String(stats.posted), inline: true },
+          { name: 'DRY_RUN', value: String(stats.dryRun), inline: true },
+          { name: '平均インプ', value: stats.avgImpressions.toLocaleString(), inline: true },
+          { name: '平均いいね', value: String(stats.avgLikes), inline: true },
+          { name: 'TOP カテゴリ', value: stats.topCategory, inline: true },
+          ...catFields,
+        )
+        .setFooter({ text: '「⚡ 生成に反映」で分析結果をカテゴリ比率に適用します' })
+        .setTimestamp();
+
+      const applyRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`apply_insights:${days}`)
+          .setLabel('⚡ 生成設定に反映')
+          .setStyle(ButtonStyle.Primary),
+      );
+
+      await i.editReply({
+        embeds: [embed],
+        components: catFields.length > 0 ? [applyRow] : [],
+      });
+      break;
+    }
+
     default:
       await i.editReply('⚠ 不明なコマンドです。');
   }
@@ -730,21 +966,112 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
 // ─── ボタンハンドラー ─────────────────────────────────────────────────────────
 
 async function handleButton(i: ButtonInteraction): Promise<void> {
-  const [action, itemId] = i.customId.split(':');
-  if (!itemId) return;
+  // customId は "action:payload" 形式（payloadにコロンが含まれる場合あり）
+  const colonIdx = i.customId.indexOf(':');
+  const action = colonIdx >= 0 ? i.customId.slice(0, colonIdx) : i.customId;
+  const payload = colonIdx >= 0 ? i.customId.slice(colonIdx + 1) : '';
+
   await i.deferUpdate();
+
+  // ── 既存: キュー承認 / 却下 ──
   if (action === 'approve') {
-    const result = approveQueueItem(itemId);
+    const result = approveQueueItem(payload);
     await i.editReply({
       content: result
-        ? `✅ **@${i.user.username}** が承認しました — \`${shortId(itemId)}\``
+        ? `✅ **@${i.user.username}** が承認しました — \`${shortId(payload)}\``
         : '❌ 承認失敗（既に処理済み？）',
       embeds: [], components: [],
     });
+
   } else if (action === 'reject') {
-    rejectQueueItem(itemId);
+    rejectQueueItem(payload);
     await i.editReply({
-      content: `🚫 **@${i.user.username}** が却下しました — \`${shortId(itemId)}\``,
+      content: `🚫 **@${i.user.username}** が却下しました — \`${shortId(payload)}\``,
+      embeds: [], components: [],
+    });
+
+  // ── /post から: 承認ボタン ──
+  } else if (action === 'push') {
+    const result = approveQueueItem(payload);
+    await i.editReply({
+      content: result
+        ? `✅ **@${i.user.username}** が承認 → 投稿待ちキューへ追加 \`${shortId(payload)}\`\n次のスロットで自動投稿されます。`
+        : '❌ 承認失敗（既に処理済みまたは期限切れ）',
+      embeds: [], components: [],
+    });
+
+  // ── /post から: 再生成ボタン ──
+  } else if (action === 'regen') {
+    const regenType = payload as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+    try {
+      const result = await manualGenerateAndQueue(regenType);
+      const embed = new EmbedBuilder()
+        .setColor(regenType === 'fanza' ? 0xff8c00 : regenType === 'myfans' ? 0xff6b9d : 0x5865f2)
+        .setTitle(`${typeEmoji(regenType)} 再生成完了 — ${result.itemTitle ?? regenType}`)
+        .setDescription(result.text.slice(0, 1000) + (result.text.length > 1000 ? '…' : ''))
+        .addFields(
+          { name: 'タイプ', value: regenType, inline: true },
+          { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
+        )
+        .setFooter({ text: '承認すると次のスロットで自動投稿されます' })
+        .setTimestamp();
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`push:${result.queueId}`)
+          .setLabel('✅ 承認して投稿待ちへ')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`regen:${regenType}`)
+          .setLabel('🔄 もう一度再生成')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`reject:${result.queueId}`)
+          .setLabel('❌ 却下')
+          .setStyle(ButtonStyle.Danger),
+      );
+
+      await i.editReply({ content: '', embeds: [embed], components: [row] });
+    } catch (e: any) {
+      await i.editReply({ content: `❌ 再生成失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── /analyze から: 生成設定に反映ボタン ──
+  } else if (action === 'apply_insights') {
+    const insightDays = parseInt(payload, 10) || 7;
+    const byCategory = getPerformanceByCategory(insightDays);
+    const cats = Object.entries(byCategory);
+    if (cats.length === 0) {
+      await i.editReply({
+        content: '⚠ 投稿データが不足しているため比率調整をスキップしました。',
+        embeds: [], components: [],
+      });
+      return;
+    }
+    const scores: Record<string, number> = {
+      engagement:    byCategory['engagement']?.avgImpressions    ?? 50,
+      fanza:         byCategory['fanza']?.avgImpressions         ?? 30,
+      'erotic-story': byCategory['erotic-story']?.avgImpressions ?? 20,
+      myfans:        byCategory['myfans']?.avgImpressions        ?? 10,
+    };
+    const scoreTotal = Object.values(scores).reduce((s, v) => s + v, 0) || 1;
+    const base = 5;
+    const raw = {
+      engagement:  Math.max(base, Math.round((scores['engagement']    / scoreTotal) * 100)),
+      eroticStory: Math.max(base, Math.round((scores['erotic-story']  / scoreTotal) * 100)),
+      fanza:       Math.max(base, Math.round((scores['fanza']         / scoreTotal) * 100)),
+      myfans:      Math.max(base, Math.round((scores['myfans']        / scoreTotal) * 100)),
+    };
+    const rawTotal = raw.engagement + raw.eroticStory + raw.fanza + raw.myfans;
+    const normalized = {
+      engagement:  Math.round(raw.engagement  / rawTotal * 100),
+      eroticStory: Math.round(raw.eroticStory / rawTotal * 100),
+      fanza:       Math.round(raw.fanza       / rawTotal * 100),
+      myfans:      100 - Math.round(raw.engagement / rawTotal * 100) - Math.round(raw.eroticStory / rawTotal * 100) - Math.round(raw.fanza / rawTotal * 100),
+    };
+    updateRunConfig({ categoryWeights: normalized });
+    await i.editReply({
+      content: `⚡ **生成設定を更新しました** （${insightDays}日間の実績ベース）\n\n💬 エンゲージ **${normalized.engagement}%** / 📖 猥談 **${normalized.eroticStory}%** / 🔞 FANZA **${normalized.fanza}%** / 💗 MyFans **${normalized.myfans}%**`,
       embeds: [], components: [],
     });
   }

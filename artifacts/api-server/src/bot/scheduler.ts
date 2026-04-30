@@ -389,6 +389,56 @@ export async function triggerEmergencyPost(): Promise<void> {
   if (result === null) throw new Error('緊急投稿: 安全制限により投稿不可');
 }
 
+// ─── 手動生成 → キュー追加（Discordコマンド用） ──────────────────────────────
+//  type: 'engagement' | 'fanza' | 'erotic-story' | 'myfans'
+//  生成してキューに積む（auto_post/dry_run には従わない＝pending固定）
+
+export async function manualGenerateAndQueue(type: ContentSlotType): Promise<{
+  queueId: string;
+  text: string;
+  type: string;
+  affiliateUrl?: string;
+  itemTitle?: string;
+}> {
+  let text = '';
+  let affiliateUrl: string | undefined;
+  let itemTitle: string | undefined;
+
+  if (type === 'engagement') {
+    const res = generateImpressionTweet(Math.random() < 0.3);
+    text = res.text;
+  } else if (type === 'erotic-story') {
+    const res = generateEroticStoryTweet();
+    text = res.text;
+  } else if (type === 'fanza') {
+    const items = await getRandomItems(1);
+    if (!items.length) throw new Error('FANZAアイテム取得失敗');
+    const item = items[0];
+    const tmpl = pickFanzaTemplate(item, 'videoa');
+    text = tmpl.text;
+    affiliateUrl = item.affiliateURL;
+    itemTitle = item.title;
+  } else {
+    // myfans
+    const mfTemplates = [
+      '💕 MyFansで限定コンテンツ配信中！\n無料で覗けるから気軽にチェックしてね✨\n#MyFans #限定コンテンツ',
+      '🔥 MyFansならではの特別コンテンツ！\nフォローだけでも見れるものがたくさん📱\n#MyFans',
+    ];
+    text = mfTemplates[Math.floor(Math.random() * mfTemplates.length)];
+  }
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  const queueItem = enqueuePost({
+    type,
+    text,
+    itemTitle,
+    affiliateUrl,
+    filterResult,
+  });
+
+  return { queueId: queueItem.id, text, type, affiliateUrl, itemTitle };
+}
+
 async function runScheduledSlot(label: string) {
   if (isPosting) {
     console.log(`  [${label}] 前の投稿処理が進行中 → スキップ`);

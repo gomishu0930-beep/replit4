@@ -1,27 +1,12 @@
 {
-  "lastCheckAt": "2026-04-30T06:01:43.438Z",
-  "lastIssueAt": "2026-04-30T06:01:43.438Z",
+  "lastCheckAt": "2026-04-30T06:07:52.849Z",
+  "lastIssueAt": "2026-04-30T06:07:52.849Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 228,
+  "issueCount": 229,
   "recoveryCount": 44,
   "consecutiveFailures": 28,
   "recentEvents": [
-    {
-      "at": "2026-04-29T14:43:31.801Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 56.2h 無投稿"
-    },
-    {
-      "at": "2026-04-29T14:43:31.901Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-04-29T15:38:45.860Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
     {
       "at": "2026-04-29T15:38:45.860Z",
       "level": "warn",
@@ -254,6 +239,21 @@
     },
     {
       "at": "2026-04-30T06:01:43.439Z",
+      "level": "info",
+      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
+    },
+    {
+      "at": "2026-04-30T06:07:52.849Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-04-30T06:07:52.850Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 71.6h 無投稿"
+    },
+    {
+      "at": "2026-04-30T06:07:52.850Z",
       "level": "info",
       "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
     }
