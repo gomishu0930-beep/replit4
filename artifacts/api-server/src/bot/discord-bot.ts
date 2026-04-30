@@ -15,6 +15,7 @@ import {
   type ButtonInteraction, Events,
 } from 'discord.js';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import {
   getQueue, getQueueStats, approveQueueItem, rejectQueueItem, type QueueItem,
 } from './post-queue.js';
@@ -33,6 +34,78 @@ import {
 const TOKEN      = process.env.DISCORD_BOT_TOKEN ?? '';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID ?? '';
 const GUILD_ID   = process.env.DISCORD_GUILD_ID ?? '';
+
+// ── GPT-5.4 クライアント（タイムライン分析用）─────────────────────────────
+const gptClient = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey:  process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? 'dummy',
+});
+
+async function analyzeTimelineWithGPT(
+  username: string,
+  tweets: Array<{
+    text: string;
+    impression_count: number;
+    like_count: number;
+    retweet_count: number;
+    reply_count: number;
+    createdAt: string;
+  }>,
+): Promise<string> {
+  const sorted = [...tweets].sort((a, b) => b.impression_count - a.impression_count);
+  const top10  = sorted.slice(0, 10);
+  const worst5 = sorted.slice(-5);
+
+  const tweetData = top10.map((t, i) => (
+    `[TOP${i + 1}] インプ${t.impression_count} いいね${t.like_count} RT${t.retweet_count}\n${t.text}`
+  )).join('\n\n');
+
+  const worstData = worst5.map((t, i) => (
+    `[低${i + 1}] インプ${t.impression_count} いいね${t.like_count} RT${t.retweet_count}\n${t.text}`
+  )).join('\n\n');
+
+  const hourDist: Record<number, { count: number; totalImp: number }> = {};
+  for (const t of tweets) {
+    const jst = (new Date(t.createdAt).getUTCHours() + 9) % 24;
+    if (!hourDist[jst]) hourDist[jst] = { count: 0, totalImp: 0 };
+    hourDist[jst].count++;
+    hourDist[jst].totalImp += t.impression_count;
+  }
+  const hourSummary = Object.entries(hourDist)
+    .sort((a, b) => b[1].totalImp / b[1].count - a[1].totalImp / a[1].count)
+    .slice(0, 5)
+    .map(([h, d]) => `${h}時台: 平均インプ${Math.round(d[1].totalImp / d[1].count)}（${d[1].count}件）`)
+    .join('\n');
+
+  const prompt = `あなたはX（Twitter）マーケティング専門家です。
+@${username} の直近${tweets.length}件の投稿データを分析し、日本語で詳細なレポートを作成してください。
+
+【高パフォーマンス投稿 TOP10】
+${tweetData}
+
+【低パフォーマンス投稿】
+${worstData}
+
+【時間帯別平均インプ（JST）】
+${hourSummary}
+
+以下の観点で分析してください：
+1. **バズパターン分析**: TOP投稿に共通する文体・構造・キーワード・絵文字
+2. **低パフォーマンスの原因**: 何が機能しなかったか
+3. **最適投稿時間帯**: データから読み取れるベスト時間
+4. **エンゲージ率の特徴**: いいね/RT/インプの比率から見えること
+5. **次の投稿への具体的提案**: 今すぐ実行できる改善策3つ
+
+簡潔・具体的に、箇条書きを多用して回答してください。`;
+
+  const res = await gptClient.chat.completions.create({
+    model: 'gpt-5.4',
+    messages: [{ role: 'user', content: prompt }],
+    max_completion_tokens: 1500,
+  });
+
+  return res.choices[0]?.message?.content?.trim() ?? '（分析結果なし）';
+}
 
 let client: Client | null = null;
 
@@ -373,6 +446,24 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
           );
         }
 
+        // GPT-5.4 詳細分析（常に実行）
+        let gptInsight = '';
+        try {
+          gptInsight = await analyzeTimelineWithGPT(uname, tweets);
+          if (doSave) {
+            saveInsight(
+              'own-post',
+              `GPT-5.4分析: @${uname}（${tweets.length}件）`,
+              gptInsight.slice(0, 500),
+              ['gpt-analysis', 'timeline', uname],
+              85,
+              `@${uname}`,
+            );
+          }
+        } catch (e: any) {
+          gptInsight = `（GPT分析失敗: ${e.message}）`;
+        }
+
         return JSON.stringify({
           username: `@${uname}`,
           fetched: tweets.length,
@@ -381,6 +472,7 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
           avgRetweets: Math.round(totalRT / tweets.length),
           top5,
           insightSaved: doSave,
+          gptAnalysis: gptInsight,
           summary: `@${uname} の直近${tweets.length}件: 平均インプ${avgImp} / 平均いいね${avgLike}\n${top5Summary}`,
         }, null, 2);
       }
@@ -1274,11 +1366,15 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`save_timeline_insight:${targetUser}:${fetchCount}`)
-          .setLabel('⚡ トップパターンをインサイト保存')
+          .setLabel('⚡ インサイット保存')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
+          .setCustomId(`gpt_analyze:${targetUser}:${fetchCount}`)
+          .setLabel('🤖 GPT-5.4 詳細分析')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
           .setCustomId(`smart_regen:engagement:false`)
-          .setLabel('🧠 このデータでスマート生成')
+          .setLabel('🧠 スマート生成')
           .setStyle(ButtonStyle.Success),
       );
 
@@ -1633,7 +1729,84 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
       await i.editReply({ content: `❌ 再生成失敗: ${e.message}`, embeds: [], components: [] });
     }
 
-  // ── /analyze-user から: タイムライン分析結果をインサイト保存 ──
+  // ── /analyze-user から: GPT-5.4 詳細分析ボタン ──
+  } else if (action === 'gpt_analyze') {
+    const [gaUser, gaCountStr] = payload.split(':');
+    const gaCount = parseInt(gaCountStr ?? '30', 10);
+    await i.editReply({ content: `⏳ @${gaUser} のタイムラインをGPT-5.4で分析中... (少々お待ちください)`, embeds: [], components: [] });
+    try {
+      const gaTweets = await fetchUserTimelineByUsername(gaUser, gaCount);
+      if (gaTweets.length === 0) {
+        await i.editReply({ content: '⚠ 投稿データが見つかりません。', embeds: [], components: [] });
+        return;
+      }
+      const gptAnalysis = await analyzeTimelineWithGPT(gaUser, gaTweets);
+
+      // 2000文字超はDiscordの制限に合わせて分割
+      const chunks: string[] = [];
+      let remaining = gptAnalysis;
+      while (remaining.length > 0) {
+        chunks.push(remaining.slice(0, 1800));
+        remaining = remaining.slice(1800);
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor(0x10a37f)
+        .setTitle(`🤖 GPT-5.4 タイムライン詳細分析 — @${gaUser}（${gaTweets.length}件）`)
+        .setDescription(chunks[0])
+        .setFooter({ text: chunks.length > 1 ? `※ 続きあり (${chunks.length}分割)` : 'Powered by GPT-5.4 via Replit AI Integrations' })
+        .setTimestamp();
+
+      const saveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`save_gpt_insight:${gaUser}`)
+          .setLabel('⚡ この分析をインサイット保存')
+          .setStyle(ButtonStyle.Primary),
+      );
+
+      await i.editReply({ content: '', embeds: [embed], components: [saveRow] });
+
+      // 分割分を追加送信
+      for (let idx = 1; idx < chunks.length; idx++) {
+        const addEmbed = new EmbedBuilder()
+          .setColor(0x10a37f)
+          .setTitle(`GPT分析 続き (${idx + 1}/${chunks.length})`)
+          .setDescription(chunks[idx]);
+        const ch = i.channel;
+        if (ch && 'send' in ch) await ch.send({ embeds: [addEmbed] });
+      }
+    } catch (e: any) {
+      await i.editReply({ content: `❌ GPT分析失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── GPT分析結果をインサイット保存 ──
+  } else if (action === 'save_gpt_insight') {
+    const siUser = payload;
+    await i.editReply({ content: `⏳ @${siUser} の分析結果を保存中...`, embeds: [], components: [] });
+    try {
+      const siTweets = await fetchUserTimelineByUsername(siUser, 30);
+      if (siTweets.length === 0) {
+        await i.editReply({ content: '⚠ 投稿データが見つかりません。', embeds: [], components: [] });
+        return;
+      }
+      const analysis = await analyzeTimelineWithGPT(siUser, siTweets);
+      const ins = saveInsight(
+        'own-post',
+        `GPT-5.4分析: @${siUser}（直近${siTweets.length}件）`,
+        analysis.slice(0, 500),
+        ['gpt-analysis', 'timeline', siUser],
+        85,
+        `@${siUser}`,
+      );
+      await i.editReply({
+        content: `✅ GPT分析結果をインサイット保存しました\n\n🧠「${ins.title}」\n次回の \`/post-smart\` から自動参照されます。`,
+        embeds: [], components: [],
+      });
+    } catch (e: any) {
+      await i.editReply({ content: `❌ 保存失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── /analyze-user から: タイムライン分析結果をインサイット保存 ──
   } else if (action === 'save_timeline_insight') {
     const [tlUser, tlCountStr] = payload.split(':');
     const tlCount = parseInt(tlCountStr ?? '30', 10);
