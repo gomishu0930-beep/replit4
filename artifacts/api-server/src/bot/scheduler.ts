@@ -1,16 +1,18 @@
 import cron from 'node-cron';
+import Anthropic from '@anthropic-ai/sdk';
 
-import { getRandomItems, getSampleImages, discoverCampaignIds } from './fanza.js';
+import { getRandomItems, getHighRatedItems, getSampleImages, discoverCampaignIds } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateImpressionTweet, generateEroticStoryTweet, buildManualPostFeedback } from './ai.js';
-import { generateImage } from './imageGen.js';
+import { generateImage, buildImagePrompt } from './imageGen.js';
 import { filterContent, filterImagePrompt } from './content-filter.js';
 import { isAutoPostEnabled, isDryRun, getRunConfig } from './run-config.js';
 import { enqueuePost, markPosted, markFailed } from './post-queue.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { pickFanzaTemplate } from './fanza-templates.js';
-import { recordAnalytics, loadAnalytics } from './post-analytics.js';
+import { recordAnalytics, loadAnalytics, getAnalytics } from './post-analytics.js';
+import { buildInsightContext, loadInsightMemory } from './insight-memory.js';
 import { runWeeklyReview, loadWeeklyReviews } from './weekly-review.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
@@ -439,6 +441,139 @@ export async function manualGenerateAndQueue(type: ContentSlotType): Promise<{
   return { queueId: queueItem.id, text, type, affiliateUrl, itemTitle };
 }
 
+// ─── スマート投稿生成（インサイト+トレンド+画像連携）────────────────────────
+//  分析記憶・外部トレンドパターン・自分の高インプ投稿を全部ContextにしてAI生成
+//  withImage=true の場合:
+//    fanza  → FANZAサンプル画像を添付
+//    engagement/erotic-story → FAL.ai で画像生成
+
+export async function manualGenerateSmartPost(
+  type: ContentSlotType,
+  withImage = false,
+): Promise<{
+  queueId: string;
+  text: string;
+  type: string;
+  affiliateUrl?: string;
+  itemTitle?: string;
+  imageUrl?: string;
+}> {
+  const anthropicClient = new Anthropic({
+    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+    apiKey:  process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  });
+
+  // ── Context 収集 ──────────────────────────────────────────────────────────
+
+  const insightCtx = buildInsightContext(8);
+
+  const topExternal = getExternalTopPatterns(5)
+    .map((p, i) => `外部TOP${i + 1}(スコア${p.score}): ${p.text.slice(0, 80)}`)
+    .join('\n');
+
+  const topOwn = getAnalytics(14)
+    .filter(r => r.result === 'posted' && r.impressions > 0)
+    .sort((a, b) => b.impressions - a.impressions)
+    .slice(0, 3)
+    .map((r, i) => `自分TOP${i + 1}(インプ${r.impressions}): ${r.text.slice(0, 80)}`)
+    .join('\n');
+
+  let fanzaItem: any = null;
+  let affiliateUrl: string | undefined;
+  let itemTitle: string | undefined;
+
+  if (type === 'fanza') {
+    const items = await getHighRatedItems(1).catch(() => []);
+    if (items.length > 0) {
+      fanzaItem = items[0];
+      affiliateUrl = fanzaItem.affiliateURL;
+      itemTitle = fanzaItem.title;
+    } else {
+      const fallback = await getRandomItems(1).catch(() => []);
+      if (fallback.length > 0) {
+        fanzaItem = fallback[0];
+        affiliateUrl = fanzaItem.affiliateURL;
+        itemTitle = fanzaItem.title;
+      }
+    }
+  }
+
+  // ── AI 生成プロンプト ────────────────────────────────────────────────────
+
+  const systemPrompt = `あなたはX（旧Twitter）の投稿最適化の専門家です。
+以下のインサイト・トレンドパターン・自アカウントの実績を参考に、バズる投稿テキストを1本生成してください。
+
+【蓄積インサイト】
+${insightCtx || '（まだデータなし）'}
+
+【外部トレンドTOP5】
+${topExternal || '（データなし）'}
+
+【自アカウント高インプ投稿TOP3】
+${topOwn || '（データなし）'}
+
+【生成ルール】
+- 140文字以内（日本語）
+- 感嘆符・絵文字を効果的に使用
+- 「→❤️」「→🔁」等のCTA必須
+- アフィリエイトリンクは「[URL]」プレースホルダーで
+- テキストのみ返す（説明文不要）`;
+
+  const userMsg = type === 'fanza' && fanzaItem
+    ? `作品タイプ: FANZA\n作品名: ${fanzaItem.title?.slice(0, 50)}\n女優: ${fanzaItem.actress ?? '不明'}\nレビュー: ${fanzaItem.review?.average ?? '-'}点/${fanzaItem.review?.count ?? 0}件\nアフィリエイトURL: ${affiliateUrl ?? '(なし)'}\nこの作品の紹介投稿を生成してください。`
+    : `投稿タイプ: ${type}\nインサイトとトレンドパターンを参考に最適化した投稿を生成してください。`;
+
+  let text = '';
+  try {
+    const resp = await anthropicClient.messages.create({
+      model: 'claude-haiku-4-5',
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }],
+      max_tokens: 300,
+    });
+    text = resp.content.filter(b => b.type === 'text').map(b => (b as any).text).join('').trim();
+    if (!text) throw new Error('AIが空のレスポンスを返した');
+  } catch (e: any) {
+    console.warn(`  ⚠ [SmartPost] AI生成失敗 → フォールバック: ${e.message}`);
+    const fallback = generateImpressionTweet(false);
+    text = fallback.text;
+  }
+
+  // ── 画像取得/生成 ────────────────────────────────────────────────────────
+
+  let imageUrl: string | undefined;
+  if (withImage) {
+    try {
+      if (type === 'fanza' && fanzaItem) {
+        const sampleImages = getSampleImages(fanzaItem);
+        imageUrl = sampleImages[0] ?? undefined;
+      } else {
+        const prompt = buildImagePrompt(text);
+        const filtered = filterImagePrompt(prompt);
+        if (filtered.safe) {
+          imageUrl = await generateImage(filtered.prompt ?? prompt, { engine: 'auto' });
+        }
+      }
+    } catch (e: any) {
+      console.warn(`  ⚠ [SmartPost] 画像取得/生成失敗: ${e.message}`);
+    }
+  }
+
+  // ── キュー登録 ────────────────────────────────────────────────────────────
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  const queueItem = enqueuePost({
+    type,
+    text,
+    itemTitle,
+    affiliateUrl,
+    imagePrompt: imageUrl ? undefined : undefined,
+    filterResult,
+  });
+
+  return { queueId: queueItem.id, text, type, affiliateUrl, itemTitle, imageUrl };
+}
+
 async function runScheduledSlot(label: string) {
   if (isPosting) {
     console.log(`  [${label}] 前の投稿処理が進行中 → スキップ`);
@@ -504,6 +639,10 @@ export function startScheduler() {
 
   loadAnalytics().catch((e: any) =>
     console.warn('  ⚠ アナリティクス読み込み失敗:', e.message),
+  );
+
+  loadInsightMemory().catch((e: any) =>
+    console.warn('  ⚠ インサイトメモリ読み込み失敗:', e.message),
   );
 
   loadWeeklyReviews().catch((e: any) =>

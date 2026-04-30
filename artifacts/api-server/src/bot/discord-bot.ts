@@ -20,8 +20,14 @@ import {
 } from './post-queue.js';
 import { getRunConfig, updateRunConfig } from './run-config.js';
 import { getMyfansItems } from './myfans-store.js';
-import { manualGenerateAndQueue } from './scheduler.js';
-import { getPerformanceByCategory, getAnalyticsStats } from './post-analytics.js';
+import { manualGenerateAndQueue, manualGenerateSmartPost } from './scheduler.js';
+import { getPerformanceByCategory, getAnalyticsStats, getAnalytics } from './post-analytics.js';
+import { getExternalTopPatterns, getTopPatterns } from './storage.js';
+import { refreshExternalPatterns } from './analytics.js';
+import {
+  saveInsight, getInsights, getInsightSummary, deleteInsight, buildInsightContext,
+  type InsightRecord,
+} from './insight-memory.js';
 
 const TOKEN      = process.env.DISCORD_BOT_TOKEN ?? '';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID ?? '';
@@ -118,6 +124,79 @@ const AGENT_TOOLS: Anthropic.Tool[] = [
           description: 'フィルタするステータス（省略時は全件）',
         },
       },
+    },
+  },
+  {
+    name: 'get_own_top_posts',
+    description: '自分の高パフォーマンス投稿TOP Nを取得する（インプ・いいね順）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: '対象期間（日数、デフォルト14）' },
+        n: { type: 'number', description: '取得件数（デフォルト5）' },
+      },
+    },
+  },
+  {
+    name: 'get_trending_posts',
+    description: '外部トレンド投稿TOP Nを取得する。refresh=trueで最新データに更新してから返す',
+    input_schema: {
+      type: 'object',
+      properties: {
+        n: { type: 'number', description: '取得件数（デフォルト10）' },
+        refresh: { type: 'boolean', description: 'trueで最新データ取得（数十秒かかる）' },
+      },
+    },
+  },
+  {
+    name: 'save_insight_memory',
+    description: '分析インサイトを記憶ストアに永続保存する。投稿生成時に自動参照される',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: {
+          type: 'string',
+          enum: ['own-post', 'trending', 'competitor', 'media', 'strategy'],
+          description: 'インサイトカテゴリ',
+        },
+        title: { type: 'string', description: '短いタイトル（20文字程度）' },
+        content: { type: 'string', description: '具体的な内容・学び（200文字程度）' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'タグ（例: ["感情爆発","CTAパターン"]）' },
+        score: { type: 'number', description: '重要度 0-100（デフォルト50）' },
+        source: { type: 'string', description: '参照元（アカウント名等）' },
+      },
+      required: ['category', 'title', 'content'],
+    },
+  },
+  {
+    name: 'get_insight_memory',
+    description: '記憶ストアのインサイトを取得する',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: {
+          type: 'string',
+          enum: ['own-post', 'trending', 'competitor', 'media', 'strategy'],
+          description: '絞り込むカテゴリ（省略時は全件）',
+        },
+        limit: { type: 'number', description: '取得件数（デフォルト10）' },
+      },
+    },
+  },
+  {
+    name: 'generate_smart_post',
+    description: '蓄積インサイト・トレンドパターン・自分の高インプ投稿を参考に最適化した投稿を生成する',
+    input_schema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['engagement', 'fanza', 'erotic-story', 'myfans'],
+          description: 'コンテンツタイプ',
+        },
+        with_image: { type: 'boolean', description: 'trueで画像付き（FANZA=サンプル画像/他=AI生成）' },
+      },
+      required: ['type'],
     },
   },
   {
@@ -240,6 +319,105 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
           queue_id: i.queue_id?.slice(0, 8),
           updatedAt: i.updated_at,
         })), null, 2);
+      }
+
+      case 'get_own_top_posts': {
+        const ownDays = Number(input.days ?? 14);
+        const ownN = Number(input.n ?? 5);
+        const records = getAnalytics(ownDays)
+          .filter(r => r.result === 'posted')
+          .sort((a, b) => b.impressions - a.impressions || b.likes - a.likes)
+          .slice(0, ownN);
+        if (records.length === 0) return `過去${ownDays}日間に本番投稿データがありません。DRY_RUNモードを解除してから投稿してください。`;
+        return JSON.stringify(records.map((r, i) => ({
+          rank: i + 1,
+          category: r.category,
+          impressions: r.impressions,
+          likes: r.likes,
+          reposts: r.reposts,
+          clicks: r.clicks,
+          postedAt: r.postedAt,
+          textPreview: r.text.slice(0, 100),
+        })), null, 2);
+      }
+
+      case 'get_trending_posts': {
+        const trendN = Number(input.n ?? 10);
+        const doRefresh = Boolean(input.refresh);
+        if (doRefresh) {
+          try {
+            await refreshExternalPatterns();
+          } catch (e: any) {
+            console.warn('[Discord Tool] trending refresh失敗:', e.message);
+          }
+        }
+        const patterns = getExternalTopPatterns(trendN);
+        if (patterns.length === 0) return 'トレンドデータがありません。refresh=trueで取得してください。';
+        return JSON.stringify(patterns.map((p, i) => ({
+          rank: i + 1,
+          score: p.score,
+          source: p.source,
+          impressions: p.impression_count,
+          likes: p.like_count,
+          retweets: p.retweet_count,
+          textPreview: p.text.slice(0, 120),
+          savedAt: p.savedAt,
+        })), null, 2);
+      }
+
+      case 'save_insight_memory': {
+        const ins = saveInsight(
+          input.category as InsightRecord['category'],
+          input.title,
+          input.content,
+          Array.isArray(input.tags) ? input.tags : [],
+          Number(input.score ?? 50),
+          input.source,
+        );
+        return JSON.stringify({
+          success: true,
+          id: ins.id,
+          message: `インサイトを保存しました（id=${ins.id.slice(0, 12)}）。次回の投稿生成時から自動反映されます。`,
+        });
+      }
+
+      case 'get_insight_memory': {
+        const cat = input.category as InsightRecord['category'] | undefined;
+        const lim = Number(input.limit ?? 10);
+        const items = getInsights(cat, lim);
+        const summary = getInsightSummary();
+        if (items.length === 0) return `インサイトが${cat ? `カテゴリ「${cat}」に` : ''}ありません。save_insight_memoryで追加してください。`;
+        return JSON.stringify({
+          total: summary.total,
+          byCategory: summary.byCategory,
+          lastUpdatedAt: summary.lastUpdatedAt,
+          items: items.map(i => ({
+            id: i.id.slice(0, 12),
+            category: i.category,
+            title: i.title,
+            content: i.content.slice(0, 100),
+            tags: i.tags,
+            score: i.score,
+            usedCount: i.usedCount,
+            savedAt: i.savedAt,
+          })),
+        }, null, 2);
+      }
+
+      case 'generate_smart_post': {
+        const smartType = input.type as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+        const withImage = Boolean(input.with_image);
+        const result = await manualGenerateSmartPost(smartType, withImage);
+        return JSON.stringify({
+          success: true,
+          queueId: result.queueId.slice(0, 8),
+          fullQueueId: result.queueId,
+          type: result.type,
+          itemTitle: result.itemTitle ?? '(なし)',
+          imageUrl: result.imageUrl ?? null,
+          textPreview: result.text.slice(0, 150),
+          message: `スマート生成完了（id=${result.queueId.slice(0, 8)}）。インサイト+トレンド参考済み。/approveで投稿。`,
+        }, null, 2);
       }
 
       case 'generate_and_queue': {
@@ -533,23 +711,28 @@ watchdog.ts:
   /pause    → 緊急停止（自動投稿OFF）
   /resume   → 再開（自動投稿ON）
   /clear    → このチャンネルの会話履歴をリセット
-  /post [type]  → コンテンツを今すぐ生成してキューに追加
-                   type: engagement / fanza / erotic-story / myfans
-                   → 生成プレビュー + 「✅承認」「🔄再生成」「❌却下」ボタン付き
-  /analyze [days] → 投稿パフォーマンスをカテゴリ別分析
-                    days: 7 / 14 / 30（デフォルト7日）
-                    → インプ・いいね・RT・クリックの実績 + 「⚡生成設定に反映」ボタン
+  /post [type]      → 通常生成してキューに追加
+  /post-smart [type] [with-image] → ★推奨★ インサイト+トレンド+実績参照のスマート生成
+  /analyze [days]   → カテゴリ別パフォーマンス分析 + 比率反映ボタン
+  /analyze-own [days] → 自分の投稿TOP・ワーストを詳細表示 + インサイト保存ボタン
+  /trending [refresh] → 外部トレンドTOP8表示 + インサイト保存・更新ボタン
+  /insight [action] [category] → インサイト記憶ストア管理（一覧/コンテキスト確認）
 
 @メンション（このAIエージェント）:
   自由な日本語で話しかけると何でも対応します。
   例: 「キュー見せて」「af2776b5承認して」「今月の状況は？」
-  「DRY_RUN解除して」「MyFans draftstatus確認して」
-  「fanzaを1件生成してキューに入れて」「7日間の分析して比率に反映して」など
+  「DRY_RUN解除して」「トレンドを取得して分析して」
+  「fanzaをインサイント使って生成して」「7日間の分析結果を保存して」など
 
 利用可能なツール（@メンション時）:
-  generate_and_queue(type)  → 投稿を生成してキューに積む（手動生成）
-  analyze_performance(days) → 投稿パフォーマンスを分析
-  apply_insights(days)      → 分析結果をカテゴリ比率に反映
+  get_own_top_posts(days, n)     → 自分の高インプ投稿TOP N取得
+  get_trending_posts(n, refresh)  → 外部トレンド投稿取得（refresh=trueで最新）
+  save_insight_memory(...)        → 分析インサイトを永続保存（投稿生成に自動反映）
+  get_insight_memory(category)    → 保存済みインサイト取得
+  generate_smart_post(type, with_image) → インサイト+トレンド参照のスマート生成
+  generate_and_queue(type)        → 通常生成してキューに積む
+  analyze_performance(days)       → 投稿パフォーマンス分析
+  apply_insights(days)            → 分析結果をカテゴリ比率に反映
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ APIエンドポイント（主要）
@@ -691,6 +874,57 @@ const commands = [
   new SlashCommandBuilder()
     .setName('clear')
     .setDescription('このチャンネルの会話履歴をリセット'),
+  new SlashCommandBuilder()
+    .setName('analyze-own')
+    .setDescription('自分の投稿パフォーマンスを詳細分析')
+    .addIntegerOption(o =>
+      o.setName('days').setDescription('分析期間').addChoices(
+        { name: '7日間', value: 7 },
+        { name: '14日間', value: 14 },
+        { name: '30日間', value: 30 },
+      ),
+    ),
+  new SlashCommandBuilder()
+    .setName('trending')
+    .setDescription('X上の伸びてる投稿を取得・分析')
+    .addBooleanOption(o =>
+      o.setName('refresh').setDescription('最新データに更新してから表示（30秒程度かかります）'),
+    ),
+  new SlashCommandBuilder()
+    .setName('insight')
+    .setDescription('記憶ストアのインサイト管理')
+    .addStringOption(o =>
+      o.setName('action').setDescription('操作').setRequired(true)
+        .addChoices(
+          { name: '一覧表示', value: 'list' },
+          { name: '生成に使われるコンテキスト確認', value: 'context' },
+        ),
+    )
+    .addStringOption(o =>
+      o.setName('category').setDescription('絞り込みカテゴリ')
+        .addChoices(
+          { name: '自分の投稿', value: 'own-post' },
+          { name: 'トレンド', value: 'trending' },
+          { name: '競合分析', value: 'competitor' },
+          { name: 'メディア', value: 'media' },
+          { name: '戦略', value: 'strategy' },
+        ),
+    ),
+  new SlashCommandBuilder()
+    .setName('post-smart')
+    .setDescription('📊 分析インサイト+トレンドを反映したスマート生成（推奨）')
+    .addStringOption(o =>
+      o.setName('type').setDescription('コンテンツタイプ').setRequired(true)
+        .addChoices(
+          { name: '💬 エンゲージ（インプ最大化）', value: 'engagement' },
+          { name: '🔞 FANZA（高評価作品アフィリ）', value: 'fanza' },
+          { name: '📖 猥談', value: 'erotic-story' },
+          { name: '💗 MyFans', value: 'myfans' },
+        ),
+    )
+    .addBooleanOption(o =>
+      o.setName('with-image').setDescription('画像付き（FANZA=サンプル画像 / 他=AI生成）'),
+    ),
   new SlashCommandBuilder()
     .setName('post')
     .setDescription('コンテンツを生成してキューに追加（承認ボタン付き）')
@@ -879,6 +1113,196 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       break;
     }
 
+    case 'analyze-own': {
+      const ownDays = i.options.getInteger('days') ?? 14;
+      const records = getAnalytics(ownDays)
+        .filter(r => r.result === 'posted')
+        .sort((a, b) => b.impressions - a.impressions || b.likes - a.likes);
+      const stats = getAnalyticsStats(ownDays);
+
+      if (records.length === 0) {
+        await i.editReply(`📭 過去${ownDays}日間に本番投稿がありません。DRY_RUNを解除して投稿してください。`);
+        return;
+      }
+
+      const top3 = records.slice(0, 3);
+
+      const topFields = top3.map((r, idx) => ({
+        name: `🏆 TOP${idx + 1} (インプ${r.impressions.toLocaleString()})`,
+        value: `${r.text.slice(0, 80)}…\nいいね${r.likes} RT${r.reposts} クリック${r.clicks}`,
+        inline: false,
+      }));
+
+      const catStats = getPerformanceByCategory(ownDays);
+      const catSummary = Object.entries(catStats)
+        .sort((a, b) => b[1].avgImpressions - a[1].avgImpressions)
+        .map(([cat, d]) => `${typeEmoji(cat)} ${cat}: ${d.count}件 / 平均インプ${d.avgImpressions}`)
+        .join('\n') || '（データなし）';
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865f2)
+        .setTitle(`📊 自分の投稿分析 — 過去${ownDays}日間`)
+        .addFields(
+          { name: '投稿数', value: `${records.length}件（うち本番${stats.posted}件）`, inline: true },
+          { name: '平均インプ', value: stats.avgImpressions.toLocaleString(), inline: true },
+          { name: '平均いいね', value: String(stats.avgLikes), inline: true },
+          { name: '📈 カテゴリ別実績', value: catSummary, inline: false },
+          ...topFields,
+        )
+        .setFooter({ text: '「⚡ インサイト保存」で記憶ストアに学習内容を記録できます' })
+        .setTimestamp();
+
+      const saveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`save_own_insight:${ownDays}`)
+          .setLabel('⚡ トップパターンをインサイト保存')
+          .setStyle(ButtonStyle.Primary),
+      );
+
+      await i.editReply({ embeds: [embed], components: [saveRow] });
+      break;
+    }
+
+    case 'trending': {
+      const doRefresh = i.options.getBoolean('refresh') ?? false;
+      if (doRefresh) {
+        await i.editReply({ content: '⏳ 最新トレンドデータを取得中... (30秒程度かかります)' });
+        try {
+          await refreshExternalPatterns();
+        } catch (e: any) {
+          console.error('[Discord] trending refresh失敗:', e.message);
+        }
+      }
+
+      const patterns = getExternalTopPatterns(8);
+      if (patterns.length === 0) {
+        await i.editReply('📭 トレンドデータがありません。`/trending refresh:true` で取得してください。');
+        return;
+      }
+
+      const lastRefresh = patterns[0]?.savedAt
+        ? new Date(patterns[0].savedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+        : '不明';
+
+      const patternFields = patterns.slice(0, 5).map((p, idx) => ({
+        name: `🔥 TOP${idx + 1} スコア${p.score} (${p.source})`,
+        value: `${p.text.slice(0, 100)}\n👍${p.like_count} 🔁${p.retweet_count} 👁${p.impression_count ?? '?'}`,
+        inline: false,
+      }));
+
+      const embed = new EmbedBuilder()
+        .setColor(0xf0a500)
+        .setTitle(`🔥 外部トレンド投稿 TOP8`)
+        .setDescription(`最終更新: ${lastRefresh} JST`)
+        .addFields(...patternFields)
+        .setFooter({ text: '「📝 インサイト保存」でこのパターンの学びを記録' })
+        .setTimestamp();
+
+      const trendRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId('save_trend_insight:all')
+          .setLabel('📝 トップパターンをインサイト保存')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('trend_refresh:1')
+          .setLabel('🔄 最新データに更新')
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      await i.editReply({ content: '', embeds: [embed], components: [trendRow] });
+      break;
+    }
+
+    case 'insight': {
+      const action = i.options.getString('action', true);
+      const cat = i.options.getString('category') as InsightRecord['category'] | null;
+      const summary = getInsightSummary();
+
+      if (action === 'context') {
+        const ctx = buildInsightContext(10);
+        const embed = new EmbedBuilder()
+          .setColor(0x57f287)
+          .setTitle('🧠 生成コンテキスト（現在の投稿AIが参照するインサイト）')
+          .setDescription(ctx.slice(0, 3000) || '（インサイトなし。/analyze-own や /trending で分析後、ボタンで保存してください）')
+          .setTimestamp();
+        await i.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const items = getInsights(cat ?? undefined, 10);
+      if (items.length === 0) {
+        await i.editReply(`🗃 インサイトが${cat ? `「${cat}」カテゴリに` : ''}ありません。\n\`/analyze-own\` や \`/trending\` で分析後、「インサイト保存」ボタンを押してください。`);
+        return;
+      }
+
+      const fields = items.slice(0, 8).map(ins => ({
+        name: `[${ins.category}] ${ins.title} (重要度${ins.score})`,
+        value: `${ins.content.slice(0, 120)}\nタグ: ${ins.tags.join(', ') || 'なし'} | 使用${ins.usedCount}回`,
+        inline: false,
+      }));
+
+      const embed = new EmbedBuilder()
+        .setColor(0x57f287)
+        .setTitle(`🧠 インサイト記憶ストア`)
+        .addFields(
+          { name: '保存数', value: `${summary.total}件`, inline: true },
+          { name: '最終更新', value: summary.lastUpdatedAt ? new Date(summary.lastUpdatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : 'なし', inline: true },
+          { name: 'カテゴリ別', value: Object.entries(summary.byCategory).map(([k, v]) => `${k}:${v}`).join(' / ') || 'なし', inline: false },
+          ...fields,
+        )
+        .setTimestamp();
+
+      await i.editReply({ embeds: [embed] });
+      break;
+    }
+
+    case 'post-smart': {
+      const smartType = i.options.getString('type', true) as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+      const withImage = i.options.getBoolean('with-image') ?? false;
+
+      await i.editReply({ content: `⏳ ${typeEmoji(smartType)} **スマート生成中...** インサイト+トレンド+実績データを参照しています` });
+
+      try {
+        const result = await manualGenerateSmartPost(smartType, withImage);
+        const insightCount = getInsightSummary().total;
+        const trendCount = getExternalTopPatterns(1).length;
+
+        const embed = new EmbedBuilder()
+          .setColor(0x57f287)
+          .setTitle(`🧠✨ スマート生成完了 — ${result.itemTitle ?? smartType}`)
+          .setDescription(result.text.slice(0, 1000) + (result.text.length > 1000 ? '…' : ''))
+          .addFields(
+            { name: 'タイプ', value: smartType, inline: true },
+            { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
+            { name: '参照データ', value: `インサイト${insightCount}件 / トレンド${trendCount > 0 ? 'あり' : 'なし'}`, inline: true },
+            ...(result.affiliateUrl ? [{ name: 'URL', value: result.affiliateUrl.slice(0, 100) }] : []),
+            ...(result.imageUrl ? [{ name: '画像', value: result.imageUrl.slice(0, 100) }] : []),
+          )
+          .setFooter({ text: '通常の/postより高品質な生成（インサイト・実績参照済）' })
+          .setTimestamp();
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`push:${result.queueId}`)
+            .setLabel('✅ 承認して投稿待ちへ')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`smart_regen:${smartType}:${withImage}`)
+            .setLabel('🔄 再スマート生成')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`reject:${result.queueId}`)
+            .setLabel('❌ 却下')
+            .setStyle(ButtonStyle.Danger),
+        );
+
+        await i.editReply({ content: '', embeds: [embed], components: [row] });
+      } catch (e: any) {
+        await i.editReply(`❌ スマート生成失敗: ${e.message}`);
+      }
+      break;
+    }
+
     case 'post': {
       const postType = i.options.getString('type', true) as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
       await i.editReply({ content: `⏳ ${typeEmoji(postType)} **${postType}** を生成中...` });
@@ -1031,6 +1455,96 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
           .setStyle(ButtonStyle.Danger),
       );
 
+      await i.editReply({ content: '', embeds: [embed], components: [row] });
+    } catch (e: any) {
+      await i.editReply({ content: `❌ 再生成失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── /analyze-own から: 自分のトップパターンをインサイト保存 ──
+  } else if (action === 'save_own_insight') {
+    const saveDays = parseInt(payload, 10) || 14;
+    const records = getAnalytics(saveDays)
+      .filter(r => r.result === 'posted' && r.impressions > 0)
+      .sort((a, b) => b.impressions - a.impressions)
+      .slice(0, 3);
+    if (records.length === 0) {
+      await i.editReply({ content: '⚠ 本番投稿データが不足しています。', embeds: [], components: [] });
+      return;
+    }
+    const topText = records.map((r, idx) => `TOP${idx + 1}(インプ${r.impressions}): ${r.text.slice(0, 80)}`).join('\n');
+    const ins = saveInsight(
+      'own-post',
+      `自分のTOP投稿パターン（${saveDays}日間）`,
+      topText,
+      ['top-post', 'high-impression'],
+      70,
+      '@ero_senpai1',
+    );
+    await i.editReply({
+      content: `✅ **@${i.user.username}** がインサイトを保存しました\n\n🧠 「${ins.title}」を記憶ストアに追加。次回の \`/post-smart\` から自動参照されます。`,
+      embeds: [], components: [],
+    });
+
+  // ── /trending から: トップパターンをインサイト保存 ──
+  } else if (action === 'save_trend_insight') {
+    const patterns = getExternalTopPatterns(5);
+    if (patterns.length === 0) {
+      await i.editReply({ content: '⚠ トレンドデータがありません。', embeds: [], components: [] });
+      return;
+    }
+    const summary = patterns
+      .slice(0, 3)
+      .map((p, idx) => `TOP${idx + 1}(スコア${p.score}): ${p.text.slice(0, 80)}`)
+      .join('\n');
+    const ins = saveInsight(
+      'trending',
+      `Xトレンドパターン（スコア${patterns[0].score}〜${patterns[patterns.length - 1].score}）`,
+      summary,
+      ['trending', 'high-score', patterns[0].source],
+      75,
+      patterns[0].source,
+    );
+    await i.editReply({
+      content: `✅ **@${i.user.username}** がトレンドインサイトを保存\n\n🧠 「${ins.title}」を記憶ストアに追加。次回の \`/post-smart\` から自動参照されます。`,
+      embeds: [], components: [],
+    });
+
+  // ── /trending から: 最新データ更新ボタン ──
+  } else if (action === 'trend_refresh') {
+    await i.editReply({ content: '⏳ 最新トレンドデータを取得中...', embeds: [], components: [] });
+    try {
+      await refreshExternalPatterns();
+      const fresh = getExternalTopPatterns(3);
+      await i.editReply({
+        content: `✅ トレンドデータ更新完了 (${fresh.length}件取得)\nTOP1: スコア${fresh[0]?.score ?? '?'} - ${fresh[0]?.text?.slice(0, 60) ?? ''}`,
+        embeds: [], components: [],
+      });
+    } catch (e: any) {
+      await i.editReply({ content: `❌ 更新失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── /post-smart から: 再スマート生成ボタン ──
+  } else if (action === 'smart_regen') {
+    const parts = payload.split(':');
+    const regenType = parts[0] as 'engagement' | 'fanza' | 'erotic-story' | 'myfans';
+    const withImg = parts[1] === 'true';
+    await i.editReply({ content: `⏳ ${typeEmoji(regenType)} 再スマート生成中...`, embeds: [], components: [] });
+    try {
+      const result = await manualGenerateSmartPost(regenType, withImg);
+      const embed = new EmbedBuilder()
+        .setColor(0x57f287)
+        .setTitle(`🧠✨ 再スマート生成完了 — ${result.itemTitle ?? regenType}`)
+        .setDescription(result.text.slice(0, 1000) + (result.text.length > 1000 ? '…' : ''))
+        .addFields(
+          { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
+          ...(result.imageUrl ? [{ name: '画像', value: result.imageUrl.slice(0, 80) }] : []),
+        )
+        .setTimestamp();
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`push:${result.queueId}`).setLabel('✅ 承認').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId(`smart_regen:${regenType}:${withImg}`).setLabel('🔄 再生成').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`reject:${result.queueId}`).setLabel('❌ 却下').setStyle(ButtonStyle.Danger),
+      );
       await i.editReply({ content: '', embeds: [embed], components: [row] });
     } catch (e: any) {
       await i.editReply({ content: `❌ 再生成失敗: ${e.message}`, embeds: [], components: [] });
