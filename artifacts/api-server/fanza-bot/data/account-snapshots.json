@@ -54,6 +54,13 @@
       "username": "ero_senpai1",
       "note": "手動記録",
       "recordedAt": "2026-04-28T07:52:33.609Z"
+    },
+    {
+      "followersCount": 171,
+      "followingCount": 481,
+      "tweetCount": 381,
+      "note": "日次自動記録",
+      "recordedAt": "2026-04-30T00:00:02.183Z"
     }
   ]
 }

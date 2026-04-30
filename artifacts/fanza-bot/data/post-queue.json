@@ -6,9 +6,9 @@
     "itemTitle": "MyFans: テストちゃん",
     "imageUrl": "https://picsum.photos/200",
     "id": "d89c44b2-fc32-4f24-8626-d914f82a530a",
-    "status": "pending",
+    "status": "rejected",
     "createdAt": "2026-04-28T09:09:03.092Z",
-    "updatedAt": "2026-04-28T09:09:03.092Z"
+    "updatedAt": "2026-04-30T02:24:27.927Z"
   },
   {
     "type": "myfans",
@@ -26,9 +26,9 @@
       }
     ],
     "id": "af2776b5-99cb-4735-83ba-f37f1e279057",
-    "status": "pending",
+    "status": "rejected",
     "createdAt": "2026-04-28T09:34:32.436Z",
-    "updatedAt": "2026-04-28T09:34:32.436Z"
+    "updatedAt": "2026-04-30T02:24:27.927Z"
   },
   {
     "type": "myfans",
@@ -46,8 +46,8 @@
       }
     ],
     "id": "2b9c0752-b0a6-4bf2-8bf2-a1e9a51cbd94",
-    "status": "pending",
+    "status": "rejected",
     "createdAt": "2026-04-28T09:44:33.633Z",
-    "updatedAt": "2026-04-28T09:44:33.633Z"
+    "updatedAt": "2026-04-30T02:24:27.927Z"
   }
 ]
