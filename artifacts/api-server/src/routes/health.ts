@@ -4,8 +4,16 @@ import { getSafetyStatus } from "../bot/safety-engine.js";
 import { getRunConfig } from "../bot/run-config.js";
 import { getQueueStats } from "../bot/post-queue.js";
 import { isBotPaused, getPausedReason } from "../bot/twitter.js";
+import { checkReadiness } from "../bot/readiness.js";
 
 const router: IRouter = Router();
+
+const buildSystemStatus = () => ({
+  ok: true,
+  status: "ok",
+  service: "api-server",
+  timestamp: new Date().toISOString(),
+});
 
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
@@ -40,6 +48,19 @@ router.get("/health", (_req, res) => {
     },
     queue: queueStats,
   });
+});
+
+router.get("/system/health", (_req, res) => {
+  res.json(buildSystemStatus());
+});
+
+router.get("/system/status", (_req, res) => {
+  res.json(buildSystemStatus());
+});
+
+router.get("/system/readiness", async (_req, res) => {
+  const readiness = await checkReadiness();
+  res.json({ ...buildSystemStatus(), ready: readiness.ok, readiness });
 });
 
 export default router;
