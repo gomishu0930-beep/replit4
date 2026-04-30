@@ -73,7 +73,33 @@ function createFfmpegTools(runCommand = defaultRunCommand) {
     return { command: "ffmpeg", args };
   }
 
+  async function createVideoClip({ inputPath, outputPath, startSec, durationSec }) {
+    const args = [
+      "-y",
+      "-ss",
+      String(startSec),
+      "-i",
+      inputPath,
+      "-t",
+      String(durationSec),
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      outputPath,
+    ];
+    await runCommand("ffmpeg", args);
+    return { command: "ffmpeg", args };
+  }
+
   return {
+    createVideoClip,
     ensureFfmpegAvailable,
     probeVideoMetadata,
     runCleanUiFfmpeg,

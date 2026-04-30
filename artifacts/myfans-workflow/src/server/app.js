@@ -1,3 +1,7 @@
+const https = require("node:https");
+const http = require("node:http");
+const fs = require("node:fs");
+const { mkdir } = require("node:fs/promises");
 const path = require("node:path");
 const express = require("express");
 const {
@@ -9,14 +13,47 @@ const { POST_DRAFT_PLATFORM, POST_DRAFT_STATUS } = require("../posts/post-drafts
 const { isClipUsableForDraft, isDraftPostReady } = require("../posts/post-material-rules");
 const { validateDraftText } = require("../posts/post-draft-validation");
 const { createReplitClaudeClient } = require("../post-generation/replitClaudeClient");
-const { validateAffiliateUrl, validateSourceUrl } = require("../myfans/validation");
-const { cleanVideoUi, registerLocalVideoAsset } = require("../videos/video-service");
+const { validateAffiliateUrl, validateSourceUrl, isValidHttpUrl } = require("../myfans/validation");
+const { cleanVideoUi, registerLocalVideoAsset, createVideoService } = require("../videos/video-service");
+const { createFfmpegTools } = require("../videos/ffmpeg-utils");
 const {
   CLEAN_VIDEOS_RELATIVE_DIR,
+  CLIPS_DIR,
   CLIPS_RELATIVE_DIR,
+  RAW_VIDEOS_DIR,
   RAW_VIDEOS_RELATIVE_DIR,
   THUMBNAILS_RELATIVE_DIR,
 } = require("../videos/video-paths");
+
+function downloadFileFromUrl(url, destPath) {
+  return new Promise((resolve, reject) => {
+    const proto = url.startsWith("https://") ? https : http;
+    const file = fs.createWriteStream(destPath);
+    proto.get(url, (response) => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        file.close();
+        fs.unlink(destPath, () => {});
+        resolve(downloadFileFromUrl(response.headers.location, destPath));
+        return;
+      }
+      if (response.statusCode !== 200) {
+        file.close();
+        fs.unlink(destPath, () => {});
+        reject(new Error(`Failed to download video: HTTP ${response.statusCode}`));
+        return;
+      }
+      response.pipe(file);
+      file.on("finish", () => file.close(resolve));
+      file.on("error", (err) => {
+        fs.unlink(destPath, () => {});
+        reject(err);
+      });
+    }).on("error", (err) => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
+  });
+}
 
 const DEFAULT_GENERATOR_URL = "https://www.affiliate.myfans.jp/affiliates/url";
 
@@ -383,6 +420,24 @@ function createApp(options = {}) {
           }
         : null,
     });
+  });
+
+  app.post("/api/myfans/affiliate/jobs/direct", async (req, res) => {
+    const sourceCheck = validateSourceUrl(req.body?.sourceUrl);
+    if (!sourceCheck.ok) {
+      return res.status(400).json({ error: sourceCheck.message });
+    }
+    const affiliateCheck = validateAffiliateUrl(req.body?.affiliateUrl);
+    if (!affiliateCheck.ok) {
+      return res.status(400).json({ error: affiliateCheck.message });
+    }
+    const created = await store.enqueue({
+      sourceUrl: sourceCheck.value,
+      status: JOB_STATUS.QUEUED,
+      acquisitionMethod: "direct_input",
+    });
+    const done = await store.markManualDone({ id: created.id, affiliateUrl: affiliateCheck.value });
+    return res.status(201).json({ job: toApiJob(done) });
   });
 
   app.get("/api/myfans/affiliate/jobs/ready", async (_req, res) => {
@@ -849,6 +904,89 @@ function createApp(options = {}) {
         uiMasks,
       });
       return res.json({ asset: toApiVideoAsset(asset) });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/videos/assets/register-from-url", async (req, res) => {
+    const videoUrl = (req.body?.videoUrl || "").trim();
+    if (!videoUrl) {
+      return res.status(400).json({ error: "videoUrl is required." });
+    }
+    if (!isValidHttpUrl(videoUrl)) {
+      return res.status(400).json({ error: "videoUrl must be a valid http/https URL." });
+    }
+    const rightsConfirmed = parseRightsConfirmed(req.body?.rightsConfirmed);
+    if (rightsConfirmed !== true) {
+      return res.status(400).json({ error: "rightsConfirmed must be true. Rights-cleared material only." });
+    }
+    try {
+      await mkdir(RAW_VIDEOS_DIR, { recursive: true });
+      const ext = videoUrl.split("?")[0].match(/\.[a-zA-Z0-9]+$/) ? videoUrl.split("?")[0].match(/\.[a-zA-Z0-9]+$/)[0] : ".mp4";
+      const safeName = `url-${Date.now()}${ext}`;
+      const destPath = path.join(RAW_VIDEOS_DIR, safeName);
+      await downloadFileFromUrl(videoUrl, destPath);
+      const asset = await videoOps.registerLocalVideoAsset({
+        store: videoStore,
+        filePath: destPath,
+        rightsConfirmed: true,
+      });
+      return res.status(201).json({ asset: toApiVideoAsset(asset) });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/videos/assets/:id/auto-clip", async (req, res) => {
+    const asset = await videoStore.getById(req.params.id);
+    if (!asset) {
+      return res.status(404).json({ error: "Video asset not found." });
+    }
+    if (!asset.durationSec) {
+      return res.status(400).json({ error: "Video duration is not available. Ensure the asset is analyzed." });
+    }
+
+    const clipDurationSec = Number(req.body?.clipDurationSec ?? 15);
+    const maxClips = Math.min(Number(req.body?.maxClips ?? 6), 12);
+    if (!Number.isFinite(clipDurationSec) || clipDurationSec < 3) {
+      return res.status(400).json({ error: "clipDurationSec must be >= 3." });
+    }
+
+    const sourceFilePath = asset.cleanedFilePath || asset.filePath;
+    const inputPath = path.resolve(sourceFilePath);
+
+    try {
+      const ffmpegTools = createFfmpegTools();
+      await ffmpegTools.ensureFfmpegAvailable();
+      await mkdir(CLIPS_DIR, { recursive: true });
+
+      const totalDuration = Number(asset.durationSec);
+      const numClips = Math.min(maxClips, Math.floor(totalDuration / clipDurationSec));
+      if (numClips < 1) {
+        return res.status(400).json({ error: "Video is too short to clip." });
+      }
+
+      const createdClips = [];
+      for (let i = 0; i < numClips; i++) {
+        const startSec = i * clipDurationSec;
+        const clipName = `${asset.id}-clip${i + 1}-${Date.now()}.mp4`;
+        const relativeClipPath = `${CLIPS_RELATIVE_DIR}/${clipName}`;
+        const outputPath = path.resolve(relativeClipPath);
+
+        await ffmpegTools.createVideoClip({ inputPath, outputPath, startSec, durationSec: clipDurationSec });
+
+        const clip = await clipStore.createClip({
+          filePath: relativeClipPath,
+          outputPath: relativeClipPath,
+          sourceType: asset.cleanedFilePath ? "clean" : "raw",
+          sourceVideoAssetId: asset.id,
+          status: "generated",
+        });
+        createdClips.push(toApiClip(clip));
+      }
+
+      return res.json({ clips: createdClips });
     } catch (error) {
       return res.status(error.statusCode || 500).json({ error: error.message });
     }

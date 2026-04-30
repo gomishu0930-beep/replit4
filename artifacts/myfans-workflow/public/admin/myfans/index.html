@@ -3,157 +3,273 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyFans Admin</title>
+    <title>MyFans 投稿作成</title>
     <style>
       :root {
-        --bg: #f6f8fc;
-        --card: #ffffff;
-        --text: #182030;
-        --muted: #5c6370;
-        --accent: #0f6bff;
+        --bg: #f4f7ff;
+        --card: #fff;
+        --text: #18263c;
+        --muted: #5f6f87;
+        --accent: #1a64ff;
+        --green: #0d8f5d;
+        --red: #c0392b;
+        --border: #d5e0f5;
+        --step-inactive: #e8edf8;
       }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
-        background: linear-gradient(180deg, #eef4ff, var(--bg));
+        background: linear-gradient(180deg, #eaf2ff, var(--bg));
         color: var(--text);
+        font-size: 15px;
       }
-      .wrap {
-        max-width: 900px;
-        margin: 24px auto;
-        padding: 16px;
+      .wrap { max-width: 820px; margin: 0 auto; padding: 16px; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      .subtitle { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+
+      /* Step header */
+      .steps { display: flex; gap: 8px; margin-bottom: 20px; }
+      .step-badge {
+        flex: 1; padding: 10px 8px; border-radius: 10px;
+        background: var(--step-inactive); color: var(--muted);
+        text-align: center; font-size: 13px; font-weight: 600;
+        border: 2px solid transparent; transition: all .2s;
       }
+      .step-badge.active { background: #e0ebff; color: var(--accent); border-color: var(--accent); }
+      .step-badge.done { background: #e0f5ec; color: var(--green); border-color: var(--green); }
+
+      /* Cards */
       .card {
-        background: var(--card);
-        border-radius: 16px;
-        padding: 16px;
-        box-shadow: 0 6px 20px rgba(0, 30, 80, 0.08);
-        margin-bottom: 16px;
+        background: var(--card); border-radius: 14px;
+        padding: 18px; margin-bottom: 14px;
+        box-shadow: 0 6px 20px rgba(15,44,97,.08);
       }
-      h1, h2 {
-        margin: 0 0 12px;
+      .card h2 { margin: 0 0 14px; font-size: 16px; }
+      .card.disabled { opacity: .4; pointer-events: none; }
+
+      /* Form controls */
+      input, textarea, select {
+        width: 100%; padding: 10px 12px;
+        border: 1.5px solid var(--border); border-radius: 9px;
+        font-size: 15px; outline: none;
+        transition: border-color .15s;
       }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-      }
-      .stat {
-        border: 1px solid #d9e3ff;
-        border-radius: 10px;
-        padding: 10px;
-      }
-      input, button {
-        font-size: 16px;
-      }
-      input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 10px;
-        border: 1px solid #cad5ef;
-        border-radius: 10px;
-      }
+      input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+      textarea { min-height: 90px; resize: vertical; }
+      label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+      .field { margin-bottom: 12px; }
+
+      /* Buttons */
       button {
-        border: 0;
-        border-radius: 10px;
-        padding: 10px 14px;
-        background: var(--accent);
-        color: #fff;
-        cursor: pointer;
+        border: 0; border-radius: 9px; padding: 10px 16px;
+        font-size: 14px; font-weight: 600; cursor: pointer;
+        transition: opacity .15s;
       }
-      .row {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
+      button:hover { opacity: .85; }
+      button:disabled { opacity: .45; cursor: not-allowed; }
+      .btn-primary { background: var(--accent); color: #fff; }
+      .btn-green { background: var(--green); color: #fff; }
+      .btn-gray { background: #e4eaf7; color: var(--text); }
+      .btn-danger { background: var(--red); color: #fff; }
+      .btn-sm { padding: 6px 12px; font-size: 13px; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin-top: 10px; }
+
+      /* Slider */
+      .slider-row {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 10px; margin-bottom: 10px;
       }
-      .muted {
-        color: var(--muted);
+      .slider-field label { margin-bottom: 2px; }
+      .slider-field input[type=range] {
+        width: 100%; padding: 0; border: 0; cursor: pointer; height: 24px;
       }
-      .msg {
-        margin-top: 8px;
-        min-height: 1.2em;
+      .slider-val { font-size: 13px; color: var(--accent); font-weight: 700; }
+
+      /* Video */
+      video { width: 100%; max-height: 260px; border-radius: 10px; background: #000; margin-top: 10px; }
+      .video-meta { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+      /* Clips */
+      .clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+      .clip-card {
+        border: 2px solid var(--border); border-radius: 10px; padding: 8px;
+        cursor: pointer; transition: border-color .15s;
       }
-      .job-list {
-        display: grid;
-        gap: 10px;
+      .clip-card:hover { border-color: var(--accent); }
+      .clip-card.selected { border-color: var(--green); background: #f0fdf8; }
+      .clip-card video { max-height: 120px; margin-top: 0; }
+      .clip-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-align: center; }
+
+      /* Draft */
+      .draft-card {
+        border: 1.5px solid var(--border); border-radius: 10px;
+        padding: 12px; margin-bottom: 10px;
       }
-      .job-item {
-        border: 1px solid #d9e3ff;
-        border-radius: 10px;
-        padding: 10px;
-      }
-      .badge {
-        display: inline-block;
-        font-size: 12px;
-        background: #ecf2ff;
-        border-radius: 999px;
-        padding: 3px 8px;
-        margin-right: 6px;
-      }
-      .excluded {
-        border-color: #ffd9cc;
-        background: #fff7f4;
-      }
-      .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f3f6ff;
-        border-radius: 8px;
-        padding: 8px;
-        display: block;
-        word-break: break-all;
+      .draft-text { white-space: pre-wrap; background: #f4f7ff; border-radius: 8px; padding: 10px; font-size: 14px; }
+
+      /* Messages */
+      .msg { font-size: 13px; margin-top: 6px; min-height: 1.2em; }
+      .msg.ok { color: var(--green); }
+      .msg.err { color: var(--red); }
+      .mono { font-family: ui-monospace, monospace; font-size: 12px; background: #f3f6ff; border-radius: 6px; padding: 6px 8px; word-break: break-all; }
+
+      /* History */
+      .history-list { display: grid; gap: 8px; }
+      .history-item { border: 1px solid var(--border); border-radius: 9px; padding: 10px; }
+      .badge { display: inline-block; font-size: 11px; background: #e8edf8; border-radius: 99px; padding: 2px 8px; margin-right: 4px; }
+      .badge.green { background: #e0f5ec; color: var(--green); }
+
+      /* Progress bar */
+      .progress { height: 4px; border-radius: 2px; background: #e0ebff; margin-top: 8px; }
+      .progress-inner { height: 100%; border-radius: 2px; background: var(--accent); transition: width .4s; }
+
+      @media (max-width: 500px) {
+        .slider-row { grid-template-columns: 1fr; }
+        .clip-grid { grid-template-columns: repeat(2, 1fr); }
       }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>MyFans 管理 (PC)</h1>
+      <h1>MyFans 投稿作成</h1>
+      <p class="subtitle">URLを入力 → 動画クリップ → 投稿文生成 をひとつの画面で完結</p>
 
-      <section class="card">
-        <h2>キュー登録</h2>
-        <input id="sourceUrl" placeholder="https://myfans.jp/..." />
-        <div class="row" style="margin-top: 8px">
-          <button id="enqueueBtn">キューに追加</button>
+      <div class="steps">
+        <div class="step-badge active" id="stepBadge1">① URL入力</div>
+        <div class="step-badge" id="stepBadge2">② 動画素材</div>
+        <div class="step-badge" id="stepBadge3">③ 投稿文生成</div>
+      </div>
+
+      <!-- ① URL入力 -->
+      <div class="card" id="step1Card">
+        <h2>① MyFans URL &amp; アフィリエイトURL</h2>
+        <div class="field">
+          <label>MyFans クリエイターURL</label>
+          <input id="sourceUrl" placeholder="https://myfans.jp/..." />
         </div>
-        <p id="enqueueMsg" class="msg muted"></p>
-      </section>
-
-      <section class="card">
-        <h2>スマホ取得ページ</h2>
-        <p class="muted">スマホで下記URLを開いて1件ずつ処理してください。</p>
-        <span id="mobileUrl" class="mono"></span>
-        <div class="row" style="margin-top: 8px">
-          <button id="copyMobileUrlBtn">URLをコピー</button>
-          <a href="/admin/myfans/mobile">/admin/myfans/mobile を開く</a>
-          <a href="/admin/videos">動画素材管理へ</a>
-          <a href="/admin/posts/drafts">投稿下書き管理へ</a>
-          <a href="/admin/myfans/post-review">投稿用レビューへ</a>
+        <div class="field">
+          <label>アフィリエイトURL</label>
+          <input id="affiliateUrl" placeholder="https://myfans.jp/...?ref=..." />
         </div>
-      </section>
-
-      <section class="card">
-        <h2>件数</h2>
-        <div class="grid">
-          <div class="stat">pending_manual: <strong id="pendingManualCount">0</strong></div>
-          <div class="stat">done_manual: <strong id="doneManualCount">0</strong></div>
-          <div class="stat">unsupported_url: <strong id="unsupportedUrlCount">0</strong></div>
-          <div class="stat">affiliate_disabled: <strong id="affiliateDisabledCount">0</strong></div>
+        <div class="row">
+          <button class="btn-primary" id="createJobBtn">ジョブ作成 →</button>
         </div>
-      </section>
+        <p class="msg" id="step1Msg"></p>
+      </div>
 
-      <section class="card">
-        <h2>affiliateUrl保存済みjob一覧</h2>
-        <div id="readyJobs" class="job-list muted">読み込み中...</div>
-      </section>
+      <!-- ② 動画素材 -->
+      <div class="card disabled" id="step2Card">
+        <h2>② 動画素材・クリップ生成</h2>
 
-      <section class="card">
-        <h2>投稿対象外job一覧</h2>
-        <div id="excludedJobs" class="job-list muted">読み込み中...</div>
-      </section>
+        <div class="field">
+          <label>動画URL（直リンク mp4/mov）または ファイルパス</label>
+          <div class="row" style="margin-top:0">
+            <input id="videoInput" placeholder="https://... または /path/to/video.mp4" style="flex:1" />
+            <button class="btn-primary btn-sm" id="registerVideoBtn" style="flex-shrink:0">動画を登録</button>
+          </div>
+          <p class="msg" id="videoMsg"></p>
+        </div>
 
-      <section class="card">
-        <h2>投稿文生成待ちjob一覧</h2>
-        <div id="waitingJobs" class="job-list muted">読み込み中...</div>
-      </section>
+        <div id="videoPreviewSection" style="display:none">
+          <video id="videoPlayer" controls></video>
+          <p class="video-meta" id="videoMeta"></p>
+
+          <div style="margin-top:14px">
+            <label style="font-size:14px;font-weight:700;color:var(--text)">UI除去（クロップ px）</label>
+            <div class="slider-row" style="margin-top:8px">
+              <div class="slider-field">
+                <label>上 <span class="slider-val" id="valTop">0</span>px</label>
+                <input type="range" id="cropTop" min="0" max="300" value="0" />
+              </div>
+              <div class="slider-field">
+                <label>下 <span class="slider-val" id="valBottom">0</span>px</label>
+                <input type="range" id="cropBottom" min="0" max="300" value="0" />
+              </div>
+              <div class="slider-field">
+                <label>左 <span class="slider-val" id="valLeft">0</span>px</label>
+                <input type="range" id="cropLeft" min="0" max="200" value="0" />
+              </div>
+              <div class="slider-field">
+                <label>右 <span class="slider-val" id="valRight">0</span>px</label>
+                <input type="range" id="cropRight" min="0" max="200" value="0" />
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn-gray btn-sm" id="applyUiBtn">UI除去を適用</button>
+              <span class="msg" id="uiMsg"></span>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <label style="font-size:14px;font-weight:700;color:var(--text)">自動クリップ生成</label>
+            <div class="row" style="margin-top:6px">
+              <label style="margin:0;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px">
+                1クリップ
+                <input id="clipDuration" type="number" min="3" max="60" value="15" style="width:64px" />
+                秒
+              </label>
+              <label style="margin:0;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px">
+                最大
+                <input id="maxClips" type="number" min="1" max="12" value="6" style="width:52px" />
+                クリップ
+              </label>
+              <button class="btn-green btn-sm" id="autoClipBtn">✂️ 自動クリップ生成</button>
+            </div>
+            <div class="progress" id="clipProgress" style="display:none"><div class="progress-inner" id="clipProgressBar" style="width:0%"></div></div>
+            <p class="msg" id="clipMsg"></p>
+          </div>
+
+          <div id="clipSection" style="display:none;margin-top:12px">
+            <label style="font-size:14px;font-weight:700;color:var(--text)">クリップ一覧（クリックで選択）</label>
+            <div class="clip-grid" id="clipGrid"></div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+          <button class="btn-primary" id="toStep3Btn" disabled>投稿文生成へ →</button>
+          <button class="btn-gray btn-sm" id="skipVideoBtn">動画なしで続ける</button>
+        </div>
+      </div>
+
+      <!-- ③ 投稿文生成 -->
+      <div class="card disabled" id="step3Card">
+        <h2>③ 投稿文生成</h2>
+        <div class="field">
+          <label>トーン</label>
+          <select id="tone">
+            <option value="casual">😊 カジュアル（友達口調）</option>
+            <option value="promo">📢 プロモーション（訴求型）</option>
+            <option value="night">🌙 夜向け（ムード重視）</option>
+            <option value="review">⭐ レビュー（感想型）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>バリエーション数</label>
+          <select id="variantCount">
+            <option value="1">1件</option>
+            <option value="3" selected>3件</option>
+            <option value="5">5件</option>
+          </select>
+        </div>
+        <div class="row">
+          <button class="btn-green" id="generateBtn">✨ 投稿文を生成</button>
+        </div>
+        <p class="msg" id="generateMsg"></p>
+
+        <div id="draftsSection" style="display:none;margin-top:14px">
+          <label style="font-size:14px;font-weight:700;color:var(--text)">生成された投稿文</label>
+          <div id="draftsList" class="history-list" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- ジョブ履歴 -->
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--muted);padding:8px 0">▼ 過去のジョブ一覧</summary>
+        <div class="card" style="margin-top:8px">
+          <div id="historyList" class="history-list"><p class="msg">読み込み中...</p></div>
+        </div>
+      </details>
     </div>
 
     <script src="/admin/myfans/pc.js"></script>
