@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video Assets</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+        background: #f4f8fb;
+        color: #1b2430;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 20px auto;
+        padding: 14px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 22px rgba(0, 26, 77, 0.08);
+        margin-bottom: 12px;
+      }
+      input, button {
+        font-size: 16px;
+      }
+      input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #cedaf0;
+      }
+      button {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 0;
+        background: #0e6cff;
+        color: #fff;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .assets {
+        display: grid;
+        gap: 10px;
+      }
+      .asset-item {
+        border: 1px solid #dbe5f5;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+      }
+      .muted {
+        color: #637083;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>動画素材管理</h1>
+      <p class="muted">権利確認済み素材のみ登録してください。raw画面録画は投稿素材として使いません。</p>
+
+      <section class="card">
+        <h2>ローカル動画登録</h2>
+        <input id="filePath" type="text" placeholder="/absolute/path/to/video.mp4" />
+        <div class="row" style="margin-top: 8px">
+          <label><input id="rightsConfirmed" type="checkbox" /> rightsConfirmed (権利確認済み)</label>
+          <button id="registerBtn">登録</button>
+        </div>
+        <p id="msg" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>動画一覧</h2>
+        <div id="assets" class="assets muted">読み込み中...</div>
+      </section>
+    </div>
+    <script src="/admin/videos/app.js"></script>
+  </body>
+</html>

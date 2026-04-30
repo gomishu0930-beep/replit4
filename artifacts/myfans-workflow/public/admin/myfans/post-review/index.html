@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFans Post Review</title>
+    <style>
+      :root {
+        --bg: #f4f7ff;
+        --card: #ffffff;
+        --text: #18263c;
+        --muted: #5f6f87;
+        --ok: #147443;
+        --warn: #a15f00;
+        --bad: #9c1c1c;
+        --accent: #1a64ff;
+      }
+      body {
+        margin: 0;
+        font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #eaf2ff, var(--bg));
+      }
+      .wrap {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 12px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 8px 24px rgba(15, 44, 97, 0.08);
+      }
+      .notice {
+        border: 1px solid #ffd9a8;
+        background: #fff8ed;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 8px;
+      }
+      select, button, input {
+        font-size: 15px;
+      }
+      select, input {
+        border: 1px solid #c8d6f0;
+        border-radius: 10px;
+        padding: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+      .outline {
+        background: #edf3ff;
+        color: #0f3f99;
+      }
+      .danger {
+        background: #be2c2c;
+      }
+      .success {
+        background: #1f8a49;
+      }
+      .draft-list {
+        display: grid;
+        gap: 10px;
+      }
+      .draft-item {
+        border: 1px solid #d7e3f8;
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        word-break: break-all;
+      }
+      textarea {
+        width: 100%;
+        min-height: 96px;
+        border: 1px solid #c8d6f0;
+        border-radius: 10px;
+        padding: 8px;
+        box-sizing: border-box;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 12px;
+        color: #fff;
+      }
+      .ok {
+        background: var(--ok);
+      }
+      .warn {
+        background: var(--warn);
+      }
+      .bad {
+        background: var(--bad);
+      }
+      video {
+        width: 100%;
+        max-height: 280px;
+        border-radius: 10px;
+        background: #000;
+      }
+      a {
+        color: #1349bc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>投稿用レビュー</h1>
+      <p class="muted">X API自動投稿は行いません。人間が最終確認して手動投稿してください。</p>
+
+      <section class="card notice">
+        <strong>安全確認</strong>
+        <ul>
+          <li>投稿前に内容を確認してください</li>
+          <li>#PR表記を消さないでください</li>
+          <li>affiliateUrlが含まれていることを確認してください</li>
+          <li>センシティブな動画は投稿先アカウント設定を確認してください</li>
+          <li>権利のある動画だけ投稿してください</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>フィルター</h2>
+        <div class="filters">
+          <label>
+            status
+            <select id="statusFilter">
+              <option value="approved" selected>approved</option>
+              <option value="draft">draft</option>
+              <option value="rejected">rejected</option>
+              <option value="posted">posted</option>
+              <option value="">all</option>
+            </select>
+          </label>
+          <label>
+            clip
+            <select id="clipFilter">
+              <option value="">all</option>
+              <option value="true">clipあり</option>
+              <option value="false">clipなし</option>
+            </select>
+          </label>
+          <label>
+            generated_by
+            <select id="generatedByFilter">
+              <option value="">all</option>
+              <option value="claude_replit">claude_replit</option>
+              <option value="template">template</option>
+              <option value="manual">manual</option>
+            </select>
+          </label>
+          <label>
+            limit
+            <input id="limitFilter" type="number" min="1" value="30" />
+          </label>
+        </div>
+        <div class="row" style="margin-top: 8px">
+          <button id="applyFilterBtn">再読み込み</button>
+          <a href="/admin/myfans">MyFans管理へ戻る</a>
+        </div>
+        <p id="msg" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>レビュー対象</h2>
+        <div id="drafts" class="draft-list muted">読み込み中...</div>
+      </section>
+    </div>
+
+    <script src="/admin/myfans/post-review/app.js"></script>
+  </body>
+</html>

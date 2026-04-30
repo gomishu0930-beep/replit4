@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Post Drafts</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+        background: #f6f9ff;
+        color: #162335;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 20px auto;
+        padding: 14px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 8px 20px rgba(0, 35, 90, 0.08);
+      }
+      .draft-list {
+        display: grid;
+        gap: 10px;
+      }
+      .draft-item {
+        border: 1px solid #d6e2f7;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button, select, input {
+        font-size: 15px;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: #136bff;
+        color: #fff;
+      }
+      video {
+        width: 100%;
+        max-height: 260px;
+        background: #000;
+        border-radius: 10px;
+        margin-top: 6px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        word-break: break-all;
+      }
+      .muted {
+        color: #607089;
+      }
+      textarea {
+        width: 100%;
+        min-height: 88px;
+        box-sizing: border-box;
+        border-radius: 10px;
+        border: 1px solid #cdd8ea;
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>投稿下書き管理</h1>
+      <p class="muted">下書きは人間確認後に手動投稿してください。X自動投稿はMVP対象外です。</p>
+
+      <section class="card">
+        <h2>下書き一覧</h2>
+        <div id="msg" class="muted"></div>
+        <div id="drafts" class="draft-list muted">読み込み中...</div>
+      </section>
+    </div>
+    <script src="/admin/posts/drafts/app.js"></script>
+  </body>
+</html>

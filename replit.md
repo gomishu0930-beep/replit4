@@ -51,6 +51,7 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 
 - `pnpm --filter @workspace/api-server run dev` — API server (bot scheduler)
 - `pnpm --filter @workspace/bot-dashboard run dev` — Dashboard UI
+- `pnpm --filter @workspace/myfans-workflow run dev` — MyFans Workflow Server (port 3100)
 
 ## Architecture
 
@@ -95,7 +96,32 @@ artifacts/bot-dashboard/src/
 3. **スタジオ**: FANZA検索→投稿文生成→画像生成 (Nanobanana2, 参照画像img2img対応) + 採点 (GPT-4o Vision, 橋本環奈100点基準)
 4. **データ**: 投稿履歴・IP/EV推移グラフ・リスクスコア推移・クリック計測 (Rebrandly)・月額コスト
 
-## MyFans 管理システム (新実装)
+## MyFans Workflow Server (artifacts/myfans-workflow)
+
+- **URL**: `/admin/myfans/` (管理UI) / `/api/myfans/affiliate/` (API)
+- **ポート**: 3100 (環境変数 PORT)
+- **ストレージ**: `.local/` 配下 JSON ファイル (ジョブ・ポストドラフト・動画アセット・クリップ)
+- **プロキシパス**: `/api/myfans/affiliate`, `/api/claude`, `/api/videos`, `/admin/myfans`, `/admin/posts/*`, `/admin/videos`, `/media/*`
+
+### myfans-workflow API エンドポイント
+- `POST /api/myfans/affiliate/jobs` — アフィリエイトジョブ追加 (sourceUrl)
+- `GET  /api/myfans/affiliate/jobs` — ジョブ一覧
+- `GET  /api/myfans/affiliate/jobs/ready` — 処理済みジョブ一覧
+- `GET  /api/myfans/affiliate/mobile/next` — 次の手動取得ジョブ
+- `POST /api/myfans/affiliate/mobile/result` — 取得結果登録 (affiliateUrl)
+- `POST /api/myfans/affiliate/mobile/skip` — ジョブスキップ
+- `GET  /api/myfans/affiliate/stats` — 統計情報
+- `POST /api/claude/generate-myfans-posts` — Claude投稿文生成
+- `POST /api/myfans/posts/drafts` — 投稿ドラフト作成
+- `GET  /api/myfans/posts/drafts` — ドラフト一覧
+- `PATCH /api/myfans/posts/drafts/:id/status` — ステータス更新
+- `POST /api/myfans/posts/drafts/:id/attach-clip` — クリップ添付
+- `POST /api/myfans/posts/drafts/:id/mark-manually-posted` — 手動投稿済みマーク
+- `POST /api/myfans/posts/generate-drafts` — ドラフト一括生成
+- `GET  /api/videos/clips` — クリップ一覧
+- `GET  /api/videos/assets` / `GET /api/videos/assets/:id` — 動画アセット
+
+## MyFans 管理システム (旧実装・api-server内)
 
 - **URL**: `/admin/myfans`
 - **ストレージ**: `myfans-items.json` (GCS/ローカル二重保存)

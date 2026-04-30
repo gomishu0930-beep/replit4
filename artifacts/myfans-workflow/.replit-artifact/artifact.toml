@@ -1,0 +1,15 @@
+kind = "api"
+previewPath = "/myfans-admin"
+title = "MyFans Workflow"
+version = "1.0.0"
+id = "myfans-workflow"
+
+[[services]]
+localPort = 3100
+name = "MyFans Workflow Server"
+paths = ["/api/myfans/affiliate", "/api/claude", "/api/videos", "/admin/myfans", "/admin/posts/drafts", "/admin/posts/create-with-clip", "/admin/videos", "/media/raw", "/media/clean", "/media/clips", "/media/thumbnails"]
+
+[services.development]
+run = "pnpm --filter @workspace/myfans-workflow run dev"
+
+[services.production]

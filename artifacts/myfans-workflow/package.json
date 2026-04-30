@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/myfans-workflow",
+  "version": "1.0.0",
+  "description": "MyFans affiliate post material workflow",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node src/server/index.js",
+    "start": "node src/server/index.js",
+    "myfans:login": "node src/myfans/login-myfans.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
+    "express": "^5.2.1",
+    "playwright": "^1.59.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

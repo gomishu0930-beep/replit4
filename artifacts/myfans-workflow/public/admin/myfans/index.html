@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFans Admin</title>
+    <style>
+      :root {
+        --bg: #f6f8fc;
+        --card: #ffffff;
+        --text: #182030;
+        --muted: #5c6370;
+        --accent: #0f6bff;
+      }
+      body {
+        margin: 0;
+        font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+        background: linear-gradient(180deg, #eef4ff, var(--bg));
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 16px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 6px 20px rgba(0, 30, 80, 0.08);
+        margin-bottom: 16px;
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .stat {
+        border: 1px solid #d9e3ff;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      input, button {
+        font-size: 16px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border: 1px solid #cad5ef;
+        border-radius: 10px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .msg {
+        margin-top: 8px;
+        min-height: 1.2em;
+      }
+      .job-list {
+        display: grid;
+        gap: 10px;
+      }
+      .job-item {
+        border: 1px solid #d9e3ff;
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        background: #ecf2ff;
+        border-radius: 999px;
+        padding: 3px 8px;
+        margin-right: 6px;
+      }
+      .excluded {
+        border-color: #ffd9cc;
+        background: #fff7f4;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #f3f6ff;
+        border-radius: 8px;
+        padding: 8px;
+        display: block;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>MyFans 管理 (PC)</h1>
+
+      <section class="card">
+        <h2>キュー登録</h2>
+        <input id="sourceUrl" placeholder="https://myfans.jp/..." />
+        <div class="row" style="margin-top: 8px">
+          <button id="enqueueBtn">キューに追加</button>
+        </div>
+        <p id="enqueueMsg" class="msg muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>スマホ取得ページ</h2>
+        <p class="muted">スマホで下記URLを開いて1件ずつ処理してください。</p>
+        <span id="mobileUrl" class="mono"></span>
+        <div class="row" style="margin-top: 8px">
+          <button id="copyMobileUrlBtn">URLをコピー</button>
+          <a href="/admin/myfans/mobile">/admin/myfans/mobile を開く</a>
+          <a href="/admin/videos">動画素材管理へ</a>
+          <a href="/admin/posts/drafts">投稿下書き管理へ</a>
+          <a href="/admin/myfans/post-review">投稿用レビューへ</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>件数</h2>
+        <div class="grid">
+          <div class="stat">pending_manual: <strong id="pendingManualCount">0</strong></div>
+          <div class="stat">done_manual: <strong id="doneManualCount">0</strong></div>
+          <div class="stat">unsupported_url: <strong id="unsupportedUrlCount">0</strong></div>
+          <div class="stat">affiliate_disabled: <strong id="affiliateDisabledCount">0</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>affiliateUrl保存済みjob一覧</h2>
+        <div id="readyJobs" class="job-list muted">読み込み中...</div>
+      </section>
+
+      <section class="card">
+        <h2>投稿対象外job一覧</h2>
+        <div id="excludedJobs" class="job-list muted">読み込み中...</div>
+      </section>
+
+      <section class="card">
+        <h2>投稿文生成待ちjob一覧</h2>
+        <div id="waitingJobs" class="job-list muted">読み込み中...</div>
+      </section>
+    </div>
+
+    <script src="/admin/myfans/pc.js"></script>
+  </body>
+</html>
