@@ -21,6 +21,7 @@ import {
 import { getRunConfig, updateRunConfig } from './run-config.js';
 import { getMyfansItems } from './myfans-store.js';
 import { manualGenerateAndQueue, manualGenerateSmartPost } from './scheduler.js';
+import { fetchUserTimelineByUsername } from './twitter.js';
 import { getPerformanceByCategory, getAnalyticsStats, getAnalytics } from './post-analytics.js';
 import { getExternalTopPatterns, getTopPatterns } from './storage.js';
 import { refreshExternalPatterns } from './analytics.js';
@@ -124,6 +125,19 @@ const AGENT_TOOLS: Anthropic.Tool[] = [
           description: 'フィルタするステータス（省略時は全件）',
         },
       },
+    },
+  },
+  {
+    name: 'analyze_user_timeline',
+    description: 'ユーザー名でXタイムラインを直接取得して投稿パフォーマンスを分析する（手動投稿含む全投稿対象）',
+    input_schema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', description: 'Xのユーザー名（@なし。例: fanza_poll_lab）' },
+        count: { type: 'number', description: '取得件数（デフォルト30、最大100）' },
+        save_insight: { type: 'boolean', description: 'trueでトップパターンをインサイトに自動保存' },
+      },
+      required: ['username'],
     },
   },
   {
@@ -319,6 +333,56 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
           queue_id: i.queue_id?.slice(0, 8),
           updatedAt: i.updated_at,
         })), null, 2);
+      }
+
+      case 'analyze_user_timeline': {
+        const uname = String(input.username).replace(/^@/, '');
+        const cnt = Math.min(Number(input.count ?? 30), 100);
+        const doSave = Boolean(input.save_insight);
+
+        let tweets: Awaited<ReturnType<typeof fetchUserTimelineByUsername>>;
+        try {
+          tweets = await fetchUserTimelineByUsername(uname, cnt);
+        } catch (e: any) {
+          return `❌ @${uname} のタイムライン取得失敗: ${e.message}`;
+        }
+
+        if (tweets.length === 0) return `@${uname} に投稿が見つかりません。`;
+
+        const sorted = [...tweets].sort((a, b) => b.impression_count - a.impression_count);
+        const top5 = sorted.slice(0, 5);
+
+        const totalImp  = tweets.reduce((s, t) => s + t.impression_count, 0);
+        const totalLike = tweets.reduce((s, t) => s + t.like_count, 0);
+        const totalRT   = tweets.reduce((s, t) => s + t.retweet_count, 0);
+        const avgImp    = Math.round(totalImp / tweets.length);
+        const avgLike   = Math.round(totalLike / tweets.length);
+
+        const top5Summary = top5.map((t, i) =>
+          `TOP${i + 1}(インプ${t.impression_count}/いいね${t.like_count}/RT${t.retweet_count}): ${t.text.slice(0, 80)}`,
+        ).join('\n');
+
+        if (doSave && top5.length > 0) {
+          saveInsight(
+            'own-post',
+            `@${uname} TOP投稿パターン（${cnt}件分析）`,
+            top5Summary,
+            ['top-post', 'timeline-analysis', uname],
+            72,
+            `@${uname}`,
+          );
+        }
+
+        return JSON.stringify({
+          username: `@${uname}`,
+          fetched: tweets.length,
+          avgImpressions: avgImp,
+          avgLikes: avgLike,
+          avgRetweets: Math.round(totalRT / tweets.length),
+          top5,
+          insightSaved: doSave,
+          summary: `@${uname} の直近${tweets.length}件: 平均インプ${avgImp} / 平均いいね${avgLike}\n${top5Summary}`,
+        }, null, 2);
       }
 
       case 'get_own_top_posts': {
@@ -711,6 +775,7 @@ watchdog.ts:
   /pause    → 緊急停止（自動投稿OFF）
   /resume   → 再開（自動投稿ON）
   /clear    → このチャンネルの会話履歴をリセット
+  /analyze-user [username] [count] [save-insight] → ★手動投稿分析★ ユーザー名でXを直接検索して全投稿分析
   /post [type]      → 通常生成してキューに追加
   /post-smart [type] [with-image] → ★推奨★ インサイト+トレンド+実績参照のスマート生成
   /analyze [days]   → カテゴリ別パフォーマンス分析 + 比率反映ボタン
@@ -725,6 +790,7 @@ watchdog.ts:
   「fanzaをインサイント使って生成して」「7日間の分析結果を保存して」など
 
 利用可能なツール（@メンション時）:
+  analyze_user_timeline(username, count, save_insight) → ユーザー名で直接タイムライン取得・分析
   get_own_top_posts(days, n)     → 自分の高インプ投稿TOP N取得
   get_trending_posts(n, refresh)  → 外部トレンド投稿取得（refresh=trueで最新）
   save_insight_memory(...)        → 分析インサイトを永続保存（投稿生成に自動反映）
@@ -874,6 +940,18 @@ const commands = [
   new SlashCommandBuilder()
     .setName('clear')
     .setDescription('このチャンネルの会話履歴をリセット'),
+  new SlashCommandBuilder()
+    .setName('analyze-user')
+    .setDescription('🔍 ユーザー名でXを直接検索して全投稿（手動含む）を分析')
+    .addStringOption(o =>
+      o.setName('username').setDescription('Xユーザー名（@なし）').setRequired(true),
+    )
+    .addIntegerOption(o =>
+      o.setName('count').setDescription('取得件数（デフォルト30、最大100）'),
+    )
+    .addBooleanOption(o =>
+      o.setName('save-insight').setDescription('trueでトップパターンをインサイトに保存'),
+    ),
   new SlashCommandBuilder()
     .setName('analyze-own')
     .setDescription('自分の投稿パフォーマンスを詳細分析')
@@ -1110,6 +1188,101 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
     case 'clear': {
       conversationHistory.delete(i.channelId);
       await i.editReply('🗑 会話履歴をリセットしました。');
+      break;
+    }
+
+    case 'analyze-user': {
+      const targetUser = i.options.getString('username', true).replace(/^@/, '');
+      const fetchCount = Math.min(i.options.getInteger('count') ?? 30, 100);
+      const doSaveInsight = i.options.getBoolean('save-insight') ?? false;
+
+      await i.editReply({ content: `⏳ @${targetUser} のタイムラインを取得中... (${fetchCount}件)` });
+
+      let tweets: Awaited<ReturnType<typeof fetchUserTimelineByUsername>>;
+      try {
+        tweets = await fetchUserTimelineByUsername(targetUser, fetchCount);
+      } catch (e: any) {
+        await i.editReply(`❌ @${targetUser} の取得失敗: ${e.message}`);
+        return;
+      }
+
+      if (tweets.length === 0) {
+        await i.editReply(`📭 @${targetUser} に投稿が見つかりませんでした。`);
+        return;
+      }
+
+      const sorted = [...tweets].sort((a, b) => b.impression_count - a.impression_count);
+      const top5   = sorted.slice(0, 5);
+
+      const totalImp  = tweets.reduce((s, t) => s + t.impression_count, 0);
+      const totalLike = tweets.reduce((s, t) => s + t.like_count, 0);
+      const totalRT   = tweets.reduce((s, t) => s + t.retweet_count, 0);
+      const avgImp    = Math.round(totalImp  / tweets.length);
+      const avgLike   = Math.round(totalLike / tweets.length);
+      const avgRT     = Math.round(totalRT   / tweets.length);
+
+      const topFields = top5.map((t, idx) => ({
+        name: `🏆 TOP${idx + 1} — インプ${t.impression_count.toLocaleString()} / いいね${t.like_count} / RT${t.retweet_count}`,
+        value: t.text.slice(0, 200) + (t.text.length > 200 ? '…' : ''),
+        inline: false,
+      }));
+
+      // 時間帯分布
+      const hourDist: Record<number, number> = {};
+      for (const t of tweets) {
+        const h = new Date(t.createdAt).getUTCHours() + 9; // JST
+        const jst = h >= 24 ? h - 24 : h;
+        hourDist[jst] = (hourDist[jst] ?? 0) + 1;
+      }
+      const topHour = Object.entries(hourDist).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+
+      // エンゲージ率（いいね+RT / インプ）
+      const engRate = totalImp > 0
+        ? ((totalLike + totalRT) / totalImp * 100).toFixed(2)
+        : '0';
+
+      const embed = new EmbedBuilder()
+        .setColor(0xe91e8c)
+        .setTitle(`🔍 @${targetUser} タイムライン分析 — ${tweets.length}件`)
+        .addFields(
+          { name: '平均インプレッション', value: avgImp.toLocaleString(), inline: true },
+          { name: '平均いいね',           value: String(avgLike),         inline: true },
+          { name: '平均RT',               value: String(avgRT),           inline: true },
+          { name: 'エンゲージ率',         value: `${engRate}%`,           inline: true },
+          { name: '最多投稿時間帯 (JST)', value: topHour ? `${topHour[0]}時台 (${topHour[1]}件)` : '不明', inline: true },
+          { name: '\u200b',               value: '\u200b',                inline: true },
+          ...topFields,
+        )
+        .setFooter({ text: doSaveInsight ? '✅ トップパターンをインサイトに保存済み' : '💡 「インサイット保存」でAI生成に反映できます' })
+        .setTimestamp();
+
+      // インサイット保存
+      if (doSaveInsight && top5.length > 0) {
+        const topSummary = top5.map((t, idx) =>
+          `TOP${idx + 1}(インプ${t.impression_count}/いいね${t.like_count}): ${t.text.slice(0, 70)}`,
+        ).join('\n');
+        saveInsight(
+          'own-post',
+          `@${targetUser} TOP投稿パターン（直近${tweets.length}件）`,
+          topSummary,
+          ['timeline-analysis', targetUser, 'manual-post'],
+          75,
+          `@${targetUser}`,
+        );
+      }
+
+      const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`save_timeline_insight:${targetUser}:${fetchCount}`)
+          .setLabel('⚡ トップパターンをインサイト保存')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`smart_regen:engagement:false`)
+          .setLabel('🧠 このデータでスマート生成')
+          .setStyle(ButtonStyle.Success),
+      );
+
+      await i.editReply({ content: '', embeds: [embed], components: [actionRow] });
       break;
     }
 
@@ -1458,6 +1631,37 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
       await i.editReply({ content: '', embeds: [embed], components: [row] });
     } catch (e: any) {
       await i.editReply({ content: `❌ 再生成失敗: ${e.message}`, embeds: [], components: [] });
+    }
+
+  // ── /analyze-user から: タイムライン分析結果をインサイト保存 ──
+  } else if (action === 'save_timeline_insight') {
+    const [tlUser, tlCountStr] = payload.split(':');
+    const tlCount = parseInt(tlCountStr ?? '30', 10);
+    await i.editReply({ content: `⏳ @${tlUser} のタイムラインを再取得してインサイット保存中...`, embeds: [], components: [] });
+    try {
+      const tlTweets = await fetchUserTimelineByUsername(tlUser, tlCount);
+      const tlSorted = [...tlTweets].sort((a, b) => b.impression_count - a.impression_count).slice(0, 5);
+      if (tlSorted.length === 0) {
+        await i.editReply({ content: '⚠ 投稿データが不足しています。', embeds: [], components: [] });
+        return;
+      }
+      const tlSummary = tlSorted.map((t, idx) =>
+        `TOP${idx + 1}(インプ${t.impression_count}/いいね${t.like_count}/RT${t.retweet_count}): ${t.text.slice(0, 70)}`,
+      ).join('\n');
+      const ins = saveInsight(
+        'own-post',
+        `@${tlUser} TOP投稿パターン（直近${tlTweets.length}件）`,
+        tlSummary,
+        ['timeline-analysis', tlUser, 'manual-post'],
+        75,
+        `@${tlUser}`,
+      );
+      await i.editReply({
+        content: `✅ インサイット保存完了\n\n🧠 「${ins.title}」を記憶ストアに追加しました。\n次回の \`/post-smart\` で自動参照されます。`,
+        embeds: [], components: [],
+      });
+    } catch (e: any) {
+      await i.editReply({ content: `❌ 取得失敗: ${e.message}`, embeds: [], components: [] });
     }
 
   // ── /analyze-own から: 自分のトップパターンをインサイト保存 ──
