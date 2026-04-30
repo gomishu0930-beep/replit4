@@ -184,7 +184,13 @@ export async function getTweetById(tweetId: string): Promise<{
       id: res.data.id,
       text: res.data.text,
       createdAt: (res.data as any).created_at ?? new Date().toISOString(),
-      metrics: res.data.public_metrics ?? null,
+      metrics: res.data.public_metrics ? {
+        like_count: res.data.public_metrics.like_count ?? 0,
+        retweet_count: res.data.public_metrics.retweet_count ?? 0,
+        reply_count: res.data.public_metrics.reply_count ?? 0,
+        impression_count: res.data.public_metrics.impression_count ?? 0,
+        bookmark_count: res.data.public_metrics.bookmark_count ?? 0,
+      } : null,
     };
   } catch (e: any) {
     console.error(`  ⚠ ツイート取得失敗 (${tweetId}): ${e.message}`);

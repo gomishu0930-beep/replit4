@@ -39,6 +39,10 @@ fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
 const router: IRouter = Router();
 
+function paramValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, MEDIA_DIR),
@@ -106,7 +110,7 @@ router.patch('/myfans/fetch-jobs/:id/status', requireIngestSecret, async (req: R
     res.status(400).json({ ok: false, error: '不正なステータス' });
     return;
   }
-  updateFetchJobStatus(req.params.id, status);
+  updateFetchJobStatus(paramValue(req.params.id), status);
   res.json({ ok: true });
 });
 
@@ -201,7 +205,7 @@ router.get('/myfans/items', async (req: Request, res: Response) => {
 
 router.get('/myfans/items/:id', async (req: Request, res: Response) => {
   await ensureInit();
-  const item = getMyfansItem(req.params.id);
+  const item = getMyfansItem(paramValue(req.params.id));
   if (!item) {
     res.status(404).json({ ok: false, error: '見つかりません' });
     return;
@@ -213,7 +217,7 @@ router.get('/myfans/items/:id', async (req: Request, res: Response) => {
 
 router.post('/myfans/items/:id/generate-caption', async (req: Request, res: Response) => {
   await ensureInit();
-  const item = getMyfansItem(req.params.id);
+  const item = getMyfansItem(paramValue(req.params.id));
   if (!item) {
     res.status(404).json({ ok: false, error: '見つかりません' });
     return;
@@ -298,13 +302,14 @@ router.patch('/myfans/items/:id/status', async (req: Request, res: Response) => 
     return;
   }
 
-  const item = getMyfansItem(req.params.id);
+  const id = paramValue(req.params.id);
+  const item = getMyfansItem(id);
   if (!item) {
     res.status(404).json({ ok: false, error: '見つかりません' });
     return;
   }
 
-  const updated = updateMyfansItem(req.params.id, { status });
+  const updated = updateMyfansItem(id, { status });
   res.json({ ok: true, item: updated });
 });
 
@@ -365,14 +370,14 @@ router.post('/myfans/approve', async (req: Request, res: Response) => {
 
 router.delete('/myfans/items/:id', async (req: Request, res: Response) => {
   await ensureInit();
-  const ok = deleteMyfansItem(req.params.id);
+  const ok = deleteMyfansItem(paramValue(req.params.id));
   res.json({ ok });
 });
 
 // ─── GET /myfans/media/:filename ─────────────────────────────────────────────
 
 router.get('/myfans/media/:filename', (req: Request, res: Response) => {
-  const safe = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
+  const safe = paramValue(req.params.filename).replace(/[^a-zA-Z0-9._-]/g, '');
   const filePath = path.join(MEDIA_DIR, safe);
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: '見つかりません' });

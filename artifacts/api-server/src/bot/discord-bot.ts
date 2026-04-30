@@ -17,8 +17,9 @@ import {
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import {
-  getQueue, getQueueStats, approveQueueItem, rejectQueueItem, type QueueItem,
+  getQueue, getQueueStats, rejectQueueItem, type QueueItem,
 } from './post-queue.js';
+import { approveAndPostQueueItem } from './queue-publisher.js';
 import { getRunConfig, updateRunConfig } from './run-config.js';
 import { getMyfansItems } from './myfans-store.js';
 import { manualGenerateAndQueue, manualGenerateSmartPost } from './scheduler.js';
@@ -372,9 +373,11 @@ async function executeTool(name: string, input: Record<string, any>): Promise<st
         const all = getQueue();
         const item = all.find(q => q.id === input.id || q.id.startsWith(input.id));
         if (!item) return `エラー: ID "${input.id}" が見つかりません`;
-        const result = approveQueueItem(item.id);
-        if (!result) return `エラー: 承認失敗（status=${item.status}）`;
-        return `承認成功: id=${item.id.slice(0, 8)} type=${item.type}`;
+        const result = await approveAndPostQueueItem(item.id);
+        if (!result.ok) return `エラー: 承認失敗 — ${result.error ?? 'unknown'}`;
+        return result.skipped
+          ? `承認済み: id=${item.id.slice(0, 8)} type=${item.type}（次のスロットで投稿）`
+          : `投稿完了: id=${item.id.slice(0, 8)} tweetId=${result.tweetId}`;
       }
 
       case 'reject_item': {
@@ -1239,9 +1242,11 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       const all = getQueue();
       const item = all.find(q => q.id === input || q.id.startsWith(input));
       if (!item) { await i.editReply(`❌ ID \`${input}\` が見つかりません。`); return; }
-      const result = approveQueueItem(item.id);
-      if (!result) { await i.editReply('❌ 承認失敗。'); return; }
-      await i.editReply(`✅ 承認しました — \`${shortId(item.id)}\` (${item.type})`);
+      const result = await approveAndPostQueueItem(item.id);
+      if (!result.ok) { await i.editReply(`❌ 承認失敗: ${result.error ?? 'unknown'}`); return; }
+      await i.editReply(result.skipped
+        ? `✅ 承認しました — \`${shortId(item.id)}\` (${item.type}) — 次のスロットで投稿`
+        : `✅ 投稿完了 — \`${shortId(item.id)}\` tweetId: ${result.tweetId}`);
       break;
     }
 
@@ -1668,11 +1673,13 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
 
   // ── 既存: キュー承認 / 却下 ──
   if (action === 'approve') {
-    const result = approveQueueItem(payload);
+    const result = await approveAndPostQueueItem(payload);
     await i.editReply({
-      content: result
-        ? `✅ **@${i.user.username}** が承認しました — \`${shortId(payload)}\``
-        : '❌ 承認失敗（既に処理済み？）',
+      content: result.ok
+        ? (result.skipped
+          ? `✅ **@${i.user.username}** が承認 — \`${shortId(payload)}\` → 次スロットで投稿`
+          : `✅ **@${i.user.username}** が承認・投稿完了 — \`${shortId(payload)}\``)
+        : `❌ 承認失敗: ${result.error ?? 'unknown'}`,
       embeds: [], components: [],
     });
 
@@ -1685,11 +1692,13 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
 
   // ── /post から: 承認ボタン ──
   } else if (action === 'push') {
-    const result = approveQueueItem(payload);
+    const result = await approveAndPostQueueItem(payload);
     await i.editReply({
-      content: result
-        ? `✅ **@${i.user.username}** が承認 → 投稿待ちキューへ追加 \`${shortId(payload)}\`\n次のスロットで自動投稿されます。`
-        : '❌ 承認失敗（既に処理済みまたは期限切れ）',
+      content: result.ok
+        ? (result.skipped
+          ? `✅ **@${i.user.username}** が承認 → 投稿待ちキューへ追加 \`${shortId(payload)}\`\n5分以内に自動投稿されます。`
+          : `✅ **@${i.user.username}** が承認・即時投稿完了 \`${shortId(payload)}\``)
+        : `❌ 承認失敗: ${result.error ?? '既に処理済みまたは期限切れ'}`,
       embeds: [], components: [],
     });
 

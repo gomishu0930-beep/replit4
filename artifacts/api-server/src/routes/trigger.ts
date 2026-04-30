@@ -2,15 +2,14 @@ import { Router } from 'express';
 import { getHighRatedItems, getSaleItems, getBuzzItems, getRandomItems, getAmateurItems, getKeywordItems, getItemById, getSampleImages } from '../bot/fanza.js';
 import { uploadImages, postTweet, replyToTweet, pauseBot, resumeBot, isBotPaused, getPausedReason } from '../bot/twitter.js';
 import { generateTweetText, generateEngagementReply } from '../bot/ai.js';
-import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, upsertRebrandlyLinks } from '../bot/storage.js';
-import { getMeetingById, getMeetings } from '../bot/meeting.js';
+import { recordPost, getTopPatterns, getExternalTopPatterns, getPostsAfter, getRebrandlyData, getAllPosts } from '../bot/storage.js';
+import { getDirectives } from '../bot/meeting.js';
 import { getIsPosting as getSchedulerIsPosting } from '../bot/scheduler.js';
-import { runMeetingAndPost, runAutonomousMeeting, runEmergencyMeeting } from '../bot/auto-meeting.js';
 import { refreshRecentMetrics, refreshExternalPatterns } from '../bot/analytics.js';
 import { diagnoseSheetsConnection, backfillAllData } from '../bot/sheets-writer.js';
-import { getAllPosts } from '../bot/storage.js';
 import { getStrategySummary } from '../bot/strategy.js';
 import { validatePost, recordPostEvent } from '../bot/safety-engine.js';
+import { resolveShortUrl, syncRebrandlyClicks } from '../bot/rebrandly.js';
 
 const router = Router();
 const TRIGGER_SECRET = process.env.TRIGGER_SECRET ?? 'fanza-bot-trigger';
@@ -25,7 +24,8 @@ async function postItem(item: any, type: string) {
   const imageUrls = getSampleImages(item);
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
-  const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${item.affiliateURL ?? ''}`);
+  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
+  const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
   recordPost({ tweetId, replyId, item, text, type, imagePrompt });
@@ -130,10 +130,8 @@ router.post('/trigger/keyword', auth, async (req, res) => {
   res.json(result);
 });
 
-router.post('/trigger/meeting-post', auth, (req, res) => {
-  const bypass = req.query.bypass === 'true' || req.body?.bypassDailyLimit === true;
-  res.status(202).json({ ok: true, message: 'AI会議→投稿を開始しました' });
-  runMeetingAndPost({ bypassDailyLimit: bypass }).catch(e => console.error(`[会議投稿] エラー: ${e.message}`));
+router.post('/trigger/meeting-post', auth, (_req, res) => {
+  res.status(410).json({ ok: false, error: 'auto-meeting は無効化されています' });
 });
 
 router.post('/trigger/metrics', auth, async (_req, res) => {
@@ -155,41 +153,23 @@ router.post('/trigger/external-patterns', auth, async (_req, res) => {
   }
 });
 
-let isEmergencyMeetingRunning = false;
 router.post('/trigger/emergency-meeting', auth, async (_req, res) => {
-  if (isEmergencyMeetingRunning) { res.status(429).json({ error: '実行中' }); return; }
-  isEmergencyMeetingRunning = true;
-  res.json({ ok: true, message: '緊急会議開始' });
-  runEmergencyMeeting().catch(e => console.error('緊急会議エラー:', e.message)).finally(() => { isEmergencyMeetingRunning = false; });
+  res.status(410).json({ ok: false, error: 'auto-meeting は無効化されています' });
 });
 
-let isStrategyMeetingRunning = false;
-router.post('/trigger/strategy-meeting', auth, (req, res) => {
-  if (isStrategyMeetingRunning) { res.status(429).json({ error: '実行中' }); return; }
-  isStrategyMeetingRunning = true;
-  const topic = req.body?.topic;
-  res.json({ ok: true, message: '戦略会議開始' });
-  runAutonomousMeeting(topic).catch(e => console.error('戦略会議エラー:', e.message)).finally(() => { isStrategyMeetingRunning = false; });
+router.post('/trigger/strategy-meeting', auth, (_req, res) => {
+  res.status(410).json({ ok: false, error: 'auto-meeting は無効化されています' });
 });
 
 router.post('/trigger/sync-rebrandly', auth, async (_req, res) => {
   try {
-    const REBRANDLY_API_KEY = process.env.REBRANDLY_API_KEY ?? '';
-    const resp = await fetch('https://api.rebrandly.com/v1/links?limit=50', { headers: { apikey: REBRANDLY_API_KEY } });
-    const links: any[] = await resp.json();
-    upsertRebrandlyLinks(links.map((l: any) => ({
-      slashtag: l.slashtag,
-      shortUrl: l.shortUrl ?? `rebrand.ly/${l.slashtag}`,
-      destination: l.destination,
-      clicks: l.clicks ?? 0,
-      createdAt: l.createdAt ?? new Date().toISOString(),
-    })));
+    const syncResult = await syncRebrandlyClicks();
     const posts = getPostsAfter(new Date(Date.now() - 30 * 86400000));
     const rbData = getRebrandlyData();
     const totalImp = posts.reduce((s: number, p: any) => s + (p.metrics?.impression_count ?? 0), 0);
     const totalClicks = rbData.links.reduce((s: number, l: any) => s + l.clicks, 0);
     const ctr = totalImp > 0 ? (totalClicks / totalImp * 100).toFixed(3) : '0.000';
-    res.json({ ok: true, totalLinks: links.length, totalClicks, ctr_pct: `${ctr}%` });
+    res.json({ ok: true, synced: syncResult?.synced ?? 0, totalLinks: rbData.links.length, totalClicks, ctr_pct: `${ctr}%` });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -198,7 +178,7 @@ router.post('/trigger/sync-rebrandly', auth, async (_req, res) => {
 router.post('/trigger/sheets-diagnose', auth, async (_req, res) => {
   try {
     const diag = await diagnoseSheetsConnection();
-    res.json({ ok: true, ...diag });
+    res.json(diag);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -206,7 +186,35 @@ router.post('/trigger/sheets-diagnose', auth, async (_req, res) => {
 
 router.post('/trigger/sheets-backfill', auth, async (_req, res) => {
   try {
-    const result = await backfillAllData();
+    const strategy = getStrategySummary();
+    const result = await backfillAllData({
+      posts: getAllPosts().map((p: any) => ({
+        tweetId: p.tweetId,
+        tweetText: p.text,
+        postedAt: p.postedAt,
+        type: p.type,
+        itemTitle: p.item?.title,
+        metrics: p.metrics,
+      })),
+      directives: getDirectives().map((d) => ({
+        id: d.id,
+        text: d.text,
+        category: d.category,
+        priority: d.priority,
+        status: d.status,
+        source: d.source,
+        createdAt: d.createdAt,
+        autoExecuted: (d.executionLog?.length ?? 0) > 0,
+      })),
+      hypotheses: (strategy.hypotheses ?? []).map((h: any) => ({
+        id: h.id,
+        question: h.question,
+        status: h.status,
+        finding: h.finding,
+        adjustment: h.adjustment,
+        testedAt: h.testedAt,
+      })),
+    });
     res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

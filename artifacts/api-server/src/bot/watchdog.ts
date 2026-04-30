@@ -13,6 +13,8 @@ import { uploadImages, postTweet, replyToTweet, isBotPaused } from './twitter.js
 import { generateTweetText, generateEngagementReply } from './ai.js';
 import { recordPost, getStats, getTopPatterns, getExternalTopPatterns } from './storage.js';
 import { readJson, writeJson } from './cloudStore.js';
+import { resolveShortUrl } from './rebrandly.js';
+import { recordPostEvent } from './safety-engine.js';
 
 // ─── 状態管理 ────────────────────────────────────────────────────────────────
 
@@ -168,7 +170,7 @@ async function emergencyPost(): Promise<void> {
   const tweetId = await postTweet(text, mediaIds);
 
   await new Promise((r) => setTimeout(r, 45_000)); // 45秒待機
-  const affiliateURL = item.affiliateURL ?? '';
+  const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
   const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
 
   await new Promise((r) => setTimeout(r, 30_000)); // 30秒待機
@@ -176,6 +178,7 @@ async function emergencyPost(): Promise<void> {
   await replyToTweet(replyId, engText);
 
   recordPost({ tweetId, replyId, item, text, type: 'emergency', imagePrompt });
+  recordPostEvent(true);
   console.log(`  [WATCHDOG] ✅ 緊急投稿完了: ${tweetId}`);
 }
 

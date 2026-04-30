@@ -8,10 +8,11 @@
 
 import { Router } from 'express';
 import {
-  getQueue, getPendingQueue, approveQueueItem, rejectQueueItem,
+  getQueue, getPendingQueue, rejectQueueItem,
   getQueueStats, getQueueItem,
 } from '../bot/post-queue.js';
 import { getRunConfig, updateRunConfig } from '../bot/run-config.js';
+import { approveAndPostQueueItem } from '../bot/queue-publisher.js';
 
 const router = Router();
 
@@ -37,10 +38,11 @@ router.get('/bot/queue/:id', (req, res) => {
   res.json({ ok: true, item });
 });
 
-router.post('/bot/queue/:id/approve', (req, res) => {
-  const item = approveQueueItem(req.params.id);
-  if (!item) { res.status(404).json({ error: 'キューアイテムが見つかりません' }); return; }
-  res.json({ ok: true, item });
+router.post('/bot/queue/:id/approve', async (req, res) => {
+  const result = await approveAndPostQueueItem(req.params.id);
+  if (!result.item) { res.status(404).json({ error: result.error ?? 'キューアイテムが見つかりません' }); return; }
+  if (!result.ok) { res.status(400).json(result); return; }
+  res.json(result);
 });
 
 router.post('/bot/queue/:id/reject', (req, res) => {

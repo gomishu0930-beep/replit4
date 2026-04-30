@@ -23,7 +23,8 @@ router.post('/safety/validate-post', (req, res) => {
 router.post('/safety/update-followers', (req, res) => {
   const { count } = req.body ?? {};
   if (typeof count !== 'number' || count < 0) {
-    return res.status(400).json({ error: 'count は0以上の数値が必要です' });
+    res.status(400).json({ error: 'count は0以上の数値が必要です' });
+    return;
   }
   updateFollowerCount(count);
   res.json({ ok: true, ...getSafetyStatus() });
@@ -43,7 +44,10 @@ router.put('/safety/config', (req, res) => {
 
 router.post('/safety/set-account-date', (req, res) => {
   const { date } = req.body ?? {};
-  if (!date) return res.status(400).json({ error: 'date は必須です' });
+  if (!date) {
+    res.status(400).json({ error: 'date は必須です' });
+    return;
+  }
   setAccountCreatedAt(date);
   res.json({ ok: true, ...getSafetyStatus() });
 });

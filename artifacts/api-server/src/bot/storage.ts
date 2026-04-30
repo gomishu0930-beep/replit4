@@ -18,6 +18,18 @@ interface PostMetrics {
   checkedAt: string;
 }
 
+function normalizePostMetrics(metrics?: any): PostMetrics | null {
+  if (!metrics) return null;
+  return {
+    like_count: metrics.like_count ?? 0,
+    retweet_count: metrics.retweet_count ?? 0,
+    reply_count: metrics.reply_count,
+    bookmark_count: metrics.bookmark_count,
+    impression_count: metrics.impression_count,
+    checkedAt: metrics.checkedAt ?? new Date().toISOString(),
+  };
+}
+
 // ─── 日次インプレッション記録型（回復チェック用）──────────────────────────────
 
 interface DailyImpressionSnapshot {
@@ -188,7 +200,7 @@ export function getRecentlyPostedIds(days = 30): Set<string> {
 export function updateMetrics(tweetId: string, metrics: any) {
   const post = postsCache.posts.find((p) => p.tweetId === tweetId);
   if (post) {
-    post.metrics = { ...metrics, checkedAt: new Date().toISOString() };
+    post.metrics = normalizePostMetrics(metrics);
     savePostsAsync();
   }
 }
@@ -198,7 +210,7 @@ export function recordPostManual({ tweetId, text, postedAt, metrics }: {
 }): { isNew: boolean; post: any } {
   const existing = postsCache.posts.find((p) => p.tweetId === tweetId);
   if (existing) {
-    if (metrics) existing.metrics = { ...metrics, checkedAt: new Date().toISOString() };
+    if (metrics) existing.metrics = normalizePostMetrics(metrics);
     savePostsAsync();
     return { isNew: false, post: existing };
   }
@@ -206,7 +218,7 @@ export function recordPostManual({ tweetId, text, postedAt, metrics }: {
     tweetId, replyId: '', type: 'manual', text,
     item: { id: '', title: '【手動投稿】', affiliateURL: '' },
     postedAt,
-    metrics: metrics ? { ...metrics, checkedAt: new Date().toISOString() } : null,
+    metrics: normalizePostMetrics(metrics),
   };
   postsCache.posts.push(post);
   postsCache.posts.sort(
@@ -258,6 +270,8 @@ export function getStats() {
   const totalRTs = withMetrics.reduce((sum, p) => sum + (p.metrics?.retweet_count || 0), 0);
   return {
     totalPosts: posts.length,
+    successfulPosts: posts.length,
+    failedPosts: 0,
     postsLast7Days: last7.length,
     lastPostedAt: lastPost?.postedAt ?? null,
     lastPostTitle: lastPost?.item?.title ?? null,
@@ -748,4 +762,3 @@ export function setLastPostMeetingResult(r: PostMeetingResult): void {
 export function getLastPostMeetingResult(): PostMeetingResult | null {
   return lastPostMeetingResult;
 }
-

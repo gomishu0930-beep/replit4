@@ -15,7 +15,7 @@ import { recordAnalytics, loadAnalytics, getAnalytics } from './post-analytics.j
 import { buildInsightContext, loadInsightMemory } from './insight-memory.js';
 import { runWeeklyReview, loadWeeklyReviews } from './weekly-review.js';
 import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
-import { runAutonomousMeeting, runMeetingAndPost } from './auto-meeting.js';
+import { processApprovedQueue } from './queue-publisher.js';
 import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics } from './analytics.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs, getStrategySummary } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
@@ -711,31 +711,18 @@ export function startScheduler() {
   // 感情爆発型・日常ｗｗ型テンプレートを優先。🔞タグなし、凍結リスク低
   cron.schedule('0 2 * * *', () => runScheduledSlot('02:00 深夜スロット④'), { timezone: 'Asia/Tokyo' });
 
-  // 火・木 20:00 JST — AI会議→投稿サイクル
-  cron.schedule('0 20 * * 2,4', async () => {
-    const safety = getSafetyStatus();
-    if (safety.automationLevel === 'MANUAL_ONLY') return;
-    console.log('\n  🎙 [火/木会議] AI会議→投稿サイクル開始...');
+  // 5分ごと — 承認済みキューを1件ずつ投稿
+  cron.schedule('*/5 * * * *', async () => {
     try {
-      const result = await runMeetingAndPost();
-      if (result.posted) console.log(`  ✅ [会議→投稿] 投稿完了: ${result.tweetId}`);
+      const results = await processApprovedQueue(1);
+      const posted = results.find((r) => r.ok && !r.skipped);
+      if (posted?.tweetId) console.log(`  ✅ [Queue] 承認済み投稿完了: ${posted.tweetId}`);
+      const failed = results.find((r) => !r.ok);
+      if (failed?.error) console.warn(`  ⚠ [Queue] 承認済み投稿失敗: ${failed.error}`);
     } catch (e: any) {
-      console.error(`  ❌ [会議→投稿] エラー: ${e.message}`);
+      console.warn(`  ⚠ [Queue] 承認済み投稿処理エラー: ${e.message}`);
     }
-  }, { timezone: 'Asia/Tokyo' });
-
-  // 月曜 04:00 JST — 週次自律AI会議
-  cron.schedule('0 4 * * 1', async () => {
-    const safety = getSafetyStatus();
-    if (safety.automationLevel === 'MANUAL_ONLY') return;
-    console.log('\n  🤝 [自律会議] 週次AI会議自動実行中...');
-    try {
-      const result = await runAutonomousMeeting();
-      console.log(`  ✅ [自律会議] 完了: 自動実行${result.autoExecuted.length}件`);
-    } catch (e: any) {
-      console.error(`  ❌ [自律会議] エラー: ${e.message}`);
-    }
-  }, { timezone: 'Asia/Tokyo' });
+  });
 
   // 09:00 JST — 日次フォロワースナップショット + Safety Engine更新
   cron.schedule('0 9 * * *', async () => {
