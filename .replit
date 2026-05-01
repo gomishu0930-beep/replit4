@@ -26,6 +26,9 @@ timeoutMs = 20000
 
 [userenv]
 
+[userenv.shared]
+FANZA_SAMPLE_VIDEO_ALLOWED_MAKERS = "*"
+
 
 
 [objectStorage]

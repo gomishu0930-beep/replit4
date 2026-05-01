@@ -98,5 +98,31 @@
     "createdAt": "2026-05-01T03:40:09.651Z",
     "updatedAt": "2026-05-01T03:40:17.564Z",
     "error": "安全制限: アフィリ比率が30%を超えます（現在100.0%）"
+  },
+  {
+    "type": "fanza",
+    "text": "🔞こういう選び方をしています\n\nレビュー件数・平均点・内容、全部見る\nその上で今一番おすすめなのが\n\n瀬戸環奈「最強ヒロインが壊れるほどの快楽を！ 禁欲・お…」(4.3点/40件)\n\n同じ選び方の人はリプ欄へ👇\n\nハイビジョン系を探してる人なら、これは候補に入れていいと思う。",
+    "itemTitle": "最強ヒロインが壊れるほどの快楽を！ 禁欲・おっぱい性感開発・焦らし・媚薬・追撃ピストン・目隠し拘束・大量玩具責め・全部のせ！ やりすぎエクスタシー 瀬戸環奈",
+    "affiliateUrl": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00131&af_id=bigshu0930-990&ch=api",
+    "sourceUrl": "snos00131",
+    "mediaFiles": [
+      {
+        "filename": "snos00131-1777677660285.mp4",
+        "url": "/api/bot/media/snos00131-1777677660285.mp4",
+        "type": "video/mp4"
+      }
+    ],
+    "templateType": "sample-video",
+    "templateCategory": "other",
+    "filterResult": {
+      "safe": true,
+      "blockedWords": []
+    },
+    "safetyScore": 100,
+    "id": "a375d6c5-e5ba-40bb-8b04-45bea193819c",
+    "status": "failed",
+    "createdAt": "2026-05-01T23:21:05.448Z",
+    "updatedAt": "2026-05-01T23:21:18.691Z",
+    "error": "🛑 ボット停止中につき投稿をブロックしました（理由: critical-failures:1）"
   }
 ]
