@@ -9,6 +9,7 @@ import {
   type PreparedSampleVideo,
   type SampleVideoPermission,
 } from './sample-video.js';
+import { getSampleImages } from './fanza.js';
 import { sendEmailNotification } from './email-notifier.js';
 
 export interface QueueSampleVideoPostOptions {
@@ -16,13 +17,16 @@ export interface QueueSampleVideoPostOptions {
   startSec?: number;
   durationSec?: number;
   notifyEmail?: string;
+  fallbackToImages?: boolean;
 }
 
 export interface QueueSampleVideoPostResult {
   queueItem: QueueItem;
-  clip: PreparedSampleVideo;
+  clip?: PreparedSampleVideo;
   permission: SampleVideoPermission;
   email: { ok: boolean; skipped?: boolean; error?: string };
+  usedImageFallback?: boolean;
+  fallbackReason?: string;
 }
 
 export function normalizeFanzaItemForVideo(rawItem: any): any {
@@ -46,6 +50,7 @@ export async function queueSampleVideoPost(
   rawItem: any,
   opts: QueueSampleVideoPostOptions = {},
 ): Promise<QueueSampleVideoPostResult> {
+  const fallbackToImages = opts.fallbackToImages !== false;
   const item = normalizeFanzaItemForVideo(rawItem);
   const permission = checkSampleVideoPermission(item);
   if (!permission.allowed) {
@@ -58,24 +63,60 @@ export async function queueSampleVideoPost(
     throw new Error(filterResult.reason ?? 'コンテンツフィルターで除外');
   }
 
-  const clip = await prepareSampleVideoClip(item, {
-    startSec: Number(opts.startSec ?? 3),
-    durationSec: Number(opts.durationSec ?? 8),
-  });
   const sourceUrl = item.content_id ?? item.id ?? '';
   const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
-  const queueItem = enqueuePost({
-    type: 'fanza',
-    text,
-    itemTitle: item.title,
-    affiliateUrl: item.affiliateURL ?? undefined,
-    sourceUrl,
-    mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
-    templateType: 'sample-video',
-    templateCategory: 'other',
-    filterResult,
-    safetyScore,
-  });
+
+  let clip: PreparedSampleVideo | undefined;
+  let usedImageFallback = false;
+  let fallbackReason: string | undefined;
+
+  try {
+    clip = await prepareSampleVideoClip(item, {
+      startSec: Number(opts.startSec ?? 3),
+      durationSec: Number(opts.durationSec ?? 8),
+    });
+  } catch (videoErr: any) {
+    if (!fallbackToImages) throw videoErr;
+    fallbackReason = videoErr?.message ?? String(videoErr);
+    usedImageFallback = true;
+  }
+
+  let queueItem: QueueItem;
+
+  if (clip) {
+    queueItem = enqueuePost({
+      type: 'fanza',
+      text,
+      itemTitle: item.title,
+      affiliateUrl: item.affiliateURL ?? undefined,
+      sourceUrl,
+      mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
+      templateType: 'sample-video',
+      templateCategory: 'other',
+      filterResult,
+      safetyScore,
+    });
+  } else {
+    const images = getSampleImages(item);
+    const imageUrl = images[0] ?? undefined;
+    if (!imageUrl) {
+      throw new Error(
+        `動画取得失敗かつ画像も見つかりません。動画エラー: ${fallbackReason ?? 'unknown'}`,
+      );
+    }
+    queueItem = enqueuePost({
+      type: 'fanza',
+      text,
+      itemTitle: item.title,
+      affiliateUrl: item.affiliateURL ?? undefined,
+      sourceUrl,
+      imageUrl,
+      templateType: 'sample-video',
+      templateCategory: 'other',
+      filterResult,
+      safetyScore,
+    });
+  }
 
   recordAnalytics({
     postId: queueItem.id,
@@ -100,14 +141,17 @@ export async function queueSampleVideoPost(
     metricsUpdatedAt: null,
   });
 
+  const emailSubject = usedImageFallback
+    ? 'FANZA投稿キュー作成（画像フォールバック）'
+    : 'FANZAサンプル動画キュー作成完了';
+  const emailBody = usedImageFallback
+    ? `動画取得に失敗したため、サンプル画像で代替投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画エラー: ${fallbackReason}`
+    : `サンプル動画付き投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画: ${clip!.url}`;
+
   const notifyTo = String(opts.notifyEmail || process.env.SAMPLE_VIDEO_NOTIFY_EMAIL || '').trim();
   const email = notifyTo
-    ? await sendEmailNotification({
-      to: notifyTo,
-      subject: 'FANZAサンプル動画キュー作成完了',
-      text: `サンプル動画付き投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画: ${clip.url}`,
-    })
+    ? await sendEmailNotification({ to: notifyTo, subject: emailSubject, text: emailBody })
     : { ok: false, skipped: true, error: '通知先未指定' };
 
-  return { queueItem, clip, permission, email };
+  return { queueItem, clip, permission, email, usedImageFallback, fallbackReason };
 }

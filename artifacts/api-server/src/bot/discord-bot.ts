@@ -1362,10 +1362,6 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       await i.editReply({ content: `⏳ 収益候補から動画付き投稿を作成中...${keyword ? ` keyword=${keyword}` : ''}` });
 
       const sampleVideo = await getSampleVideoStatus();
-      if (!sampleVideo.ffmpegAvailable) {
-        await i.editReply('❌ ffmpeg が利用できません。Replitのpackagesに ffmpeg が入っているか確認してください。');
-        break;
-      }
       if (sampleVideo.allowedMakers.length === 0) {
         await i.editReply('❌ FANZA_SAMPLE_VIDEO_ALLOWED_MAKERS が未設定です。許可メーカーを設定してから実行してください。');
         break;
@@ -1379,11 +1375,18 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             const result = await queueSampleVideoPost(candidate, {
               durationSec,
               notifyEmail: 'gomishu0930@icloud.com',
+              fallbackToImages: true,
             });
+            const mediaField = result.usedImageFallback
+              ? { name: 'メディア', value: `🖼 画像フォールバック（動画エラー: ${(result.fallbackReason ?? '').slice(0, 200)}）`, inline: false }
+              : { name: '動画', value: `${result.clip!.durationSec}秒 / ${result.clip!.filename.slice(0, 80)}`, inline: false };
+            const title = result.usedImageFallback
+              ? `🖼 画像キュー追加（動画失敗→フォールバック） — ${result.queueItem.itemTitle ?? 'FANZA'}`
+              : `🎬 サンプル動画キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`;
             const embed = buildQueueEmbed(result.queueItem)
-              .setTitle(`🎬 サンプル動画キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`)
+              .setTitle(title)
               .addFields(
-                { name: '動画', value: `${result.clip.durationSec}秒 / ${result.clip.filename.slice(0, 80)}`, inline: false },
+                mediaField,
                 { name: 'メール', value: result.email.ok ? '送信済み' : `未送信: ${result.email.error ?? '不明'}`.slice(0, 900), inline: false },
               )
               .setFooter({ text: '今すぐ投稿すると手動扱いでXへ投稿します' });
@@ -1397,9 +1400,9 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             lastError = e.message ?? String(e);
           }
         }
-        await i.editReply(`❌ 動画付きにできる収益候補が見つかりませんでした。最後の理由: ${lastError || '対象なし'}`);
+        await i.editReply(`❌ 収益候補が見つかりませんでした。最後の理由: ${lastError || '対象なし'}`);
       } catch (e: any) {
-        await i.editReply(`❌ サンプル動画キュー作成失敗: ${e.message}`);
+        await i.editReply(`❌ キュー作成失敗: ${e.message}`);
       }
       break;
     }
