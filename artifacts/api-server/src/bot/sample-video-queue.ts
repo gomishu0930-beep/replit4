@@ -6,6 +6,7 @@ import { recordAnalytics } from './post-analytics.js';
 import {
   checkSampleVideoPermission,
   prepareSampleVideoClip,
+  createSlideshowVideo,
   type PreparedSampleVideo,
   type SampleVideoPermission,
 } from './sample-video.js';
@@ -65,23 +66,31 @@ export async function queueSampleVideoPost(
 
   const sourceUrl = item.content_id ?? item.id ?? '';
   const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
+  const durationSec = Number(opts.durationSec ?? 8);
 
+  // ① 動画（直接ストリーム → スライドショーの順で自動フォールバック）
   let clip: PreparedSampleVideo | undefined;
-  let usedImageFallback = false;
-  let fallbackReason: string | undefined;
+  let videoError: string | undefined;
 
   try {
     clip = await prepareSampleVideoClip(item, {
       startSec: Number(opts.startSec ?? 3),
-      durationSec: Number(opts.durationSec ?? 8),
+      durationSec,
     });
-  } catch (videoErr: any) {
-    if (!fallbackToImages) throw videoErr;
-    fallbackReason = videoErr?.message ?? String(videoErr);
-    usedImageFallback = true;
+  } catch (e1: any) {
+    // prepareSampleVideoClip が直接+スライドショー両方失敗した場合のみここに到達
+    // スライドショーを単独で再試行（念のため）
+    try {
+      clip = await createSlideshowVideo(item, { durationSec });
+    } catch (e2: any) {
+      videoError = `直接動画: ${e1?.message ?? e1} / スライドショー: ${e2?.message ?? e2}`;
+    }
   }
 
+  // ② 動画が完全に取得できない場合 → 静止画フォールバック
   let queueItem: QueueItem;
+  let usedImageFallback = false;
+  let fallbackReason: string | undefined;
 
   if (clip) {
     queueItem = enqueuePost({
@@ -96,13 +105,13 @@ export async function queueSampleVideoPost(
       filterResult,
       safetyScore,
     });
-  } else {
+  } else if (fallbackToImages) {
+    usedImageFallback = true;
+    fallbackReason = videoError;
     const images = getSampleImages(item);
-    const imageUrl = images[0] ?? undefined;
+    const imageUrl = images[0];
     if (!imageUrl) {
-      throw new Error(
-        `動画取得失敗かつ画像も見つかりません。動画エラー: ${fallbackReason ?? 'unknown'}`,
-      );
+      throw new Error(`動画・スライドショー・画像いずれも取得できませんでした。エラー: ${videoError ?? 'unknown'}`);
     }
     queueItem = enqueuePost({
       type: 'fanza',
@@ -116,6 +125,8 @@ export async function queueSampleVideoPost(
       filterResult,
       safetyScore,
     });
+  } else {
+    throw new Error(videoError ?? '動画の取得に失敗しました');
   }
 
   recordAnalytics({
@@ -141,12 +152,15 @@ export async function queueSampleVideoPost(
     metricsUpdatedAt: null,
   });
 
+  const methodLabel = usedImageFallback ? '静止画' : clip?.method === 'slideshow' ? 'スライドショー動画' : '動画';
   const emailSubject = usedImageFallback
-    ? 'FANZA投稿キュー作成（画像フォールバック）'
-    : 'FANZAサンプル動画キュー作成完了';
+    ? 'FANZA投稿キュー作成（静止画フォールバック）'
+    : clip?.method === 'slideshow'
+      ? 'FANZAスライドショー動画キュー作成完了'
+      : 'FANZAサンプル動画キュー作成完了';
   const emailBody = usedImageFallback
-    ? `動画取得に失敗したため、サンプル画像で代替投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画エラー: ${fallbackReason}`
-    : `サンプル動画付き投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画: ${clip!.url}`;
+    ? `動画・スライドショー取得に失敗したため、静止画で代替投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\nエラー: ${fallbackReason}`
+    : `${methodLabel}付き投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画: ${clip!.url}`;
 
   const notifyTo = String(opts.notifyEmail || process.env.SAMPLE_VIDEO_NOTIFY_EMAIL || '').trim();
   const email = notifyTo

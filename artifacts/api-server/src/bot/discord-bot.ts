@@ -1377,12 +1377,17 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
               notifyEmail: 'gomishu0930@icloud.com',
               fallbackToImages: true,
             });
+            const methodLabel = result.usedImageFallback
+              ? '🖼 静止画'
+              : result.clip?.method === 'slideshow'
+                ? '🎞 スライドショー動画'
+                : '🎬 サンプル動画';
             const mediaField = result.usedImageFallback
-              ? { name: 'メディア', value: `🖼 画像フォールバック（動画エラー: ${(result.fallbackReason ?? '').slice(0, 200)}）`, inline: false }
-              : { name: '動画', value: `${result.clip!.durationSec}秒 / ${result.clip!.filename.slice(0, 80)}`, inline: false };
+              ? { name: 'メディア', value: `🖼 静止画フォールバック（エラー: ${(result.fallbackReason ?? '').slice(0, 200)}）`, inline: false }
+              : { name: 'メディア', value: `${methodLabel} ${result.clip!.durationSec}秒 / ${result.clip!.filename.slice(0, 60)}`, inline: false };
             const title = result.usedImageFallback
-              ? `🖼 画像キュー追加（動画失敗→フォールバック） — ${result.queueItem.itemTitle ?? 'FANZA'}`
-              : `🎬 サンプル動画キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`;
+              ? `🖼 静止画キュー追加（動画失敗） — ${result.queueItem.itemTitle ?? 'FANZA'}`
+              : `${methodLabel} キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`;
             const embed = buildQueueEmbed(result.queueItem)
               .setTitle(title)
               .addFields(

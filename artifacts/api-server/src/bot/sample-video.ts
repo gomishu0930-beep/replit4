@@ -21,6 +21,7 @@ export interface PreparedSampleVideo {
   url: string;
   sourceUrl: string;
   durationSec: number;
+  method: 'direct' | 'slideshow';
 }
 
 function walkStrings(value: any, out: string[]): void {
@@ -128,38 +129,145 @@ function runFfmpeg(args: string[]): Promise<void> {
   });
 }
 
+async function downloadImageToTemp(url: string, destPath: string): Promise<void> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FanzaBot/1.0)' },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`画像取得失敗 (${res.status}): ${url}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  await fsp.writeFile(destPath, buf);
+}
+
 export async function prepareSampleVideoClip(
   item: any,
   opts: { startSec?: number; durationSec?: number } = {},
 ): Promise<PreparedSampleVideo> {
-  const sourceUrl = extractSampleMovieUrl(item);
-  if (!sourceUrl) throw new Error('サンプル動画URLが見つかりません');
-
   const permission = checkSampleVideoPermission(item);
   if (!permission.allowed) throw new Error(`サンプル動画利用不可: ${permission.reason}`);
-  if (!(await hasFfmpeg())) throw new Error('ffmpeg が利用できません。Replitのnix packagesに ffmpeg を追加してください');
+  if (!(await hasFfmpeg())) throw new Error('ffmpeg が利用できません');
 
   await fsp.mkdir(VIDEO_DIR, { recursive: true });
   const durationSec = Math.min(Math.max(Number(opts.durationSec ?? 8), 4), 15);
-  const startSec = Math.min(Math.max(Number(opts.startSec ?? 3), 0), 120);
-  const filename = `${safeFilename(item?.content_id ?? item?.id ?? Date.now().toString())}-${Date.now()}.mp4`;
+  const contentId = item?.content_id ?? item?.id ?? Date.now().toString();
+  const filename = `${safeFilename(contentId)}-${Date.now()}.mp4`;
   const filePath = path.join(VIDEO_DIR, filename);
 
-  await runFfmpeg([
-    '-y',
-    '-ss', String(startSec),
-    '-user_agent', 'FanzaBot/1.0',
-    '-i', sourceUrl,
-    '-t', String(durationSec),
-    '-an',
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-movflags', '+faststart',
-    '-pix_fmt', 'yuv420p',
-    filePath,
-  ]);
+  const sourceUrl = extractSampleMovieUrl(item);
+  if (sourceUrl) {
+    try {
+      const startSec = Math.min(Math.max(Number(opts.startSec ?? 3), 0), 120);
+      await runFfmpeg([
+        '-y',
+        '-ss', String(startSec),
+        '-user_agent', 'FanzaBot/1.0',
+        '-i', sourceUrl,
+        '-t', String(durationSec),
+        '-an',
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-movflags', '+faststart',
+        '-pix_fmt', 'yuv420p',
+        filePath,
+      ]);
+      const stat = await fsp.stat(filePath);
+      if (stat.size > 1024) {
+        return { filename, filePath, url: `/api/bot/media/${encodeURIComponent(filename)}`, sourceUrl, durationSec, method: 'direct' };
+      }
+    } catch {
+    }
+  }
 
-  return { filename, filePath, url: `/api/bot/media/${encodeURIComponent(filename)}`, sourceUrl, durationSec };
+  return createSlideshowVideo(item, { durationSec, filename, filePath });
+}
+
+export async function createSlideshowVideo(
+  item: any,
+  opts: { durationSec?: number; filename?: string; filePath?: string } = {},
+): Promise<PreparedSampleVideo> {
+  if (!(await hasFfmpeg())) throw new Error('ffmpeg が利用できません');
+
+  const permission = checkSampleVideoPermission(item);
+  if (!permission.allowed) throw new Error(`サンプル動画利用不可: ${permission.reason}`);
+
+  await fsp.mkdir(VIDEO_DIR, { recursive: true });
+
+  const durationSec = Math.min(Math.max(Number(opts.durationSec ?? 8), 4), 15);
+  const contentId = item?.content_id ?? item?.id ?? Date.now().toString();
+  const filename = opts.filename ?? `${safeFilename(contentId)}-slide-${Date.now()}.mp4`;
+  const filePath = opts.filePath ?? path.join(VIDEO_DIR, filename);
+
+  const imageUrls = extractSampleImageUrls(item);
+  if (imageUrls.length === 0) {
+    throw new Error('スライドショー用のサンプル画像URLが見つかりません');
+  }
+
+  const maxImages = Math.min(imageUrls.length, 6);
+  const perImageSec = durationSec / maxImages;
+
+  const tmpDir = path.join(VIDEO_DIR, `tmp-${Date.now()}`);
+  await fsp.mkdir(tmpDir, { recursive: true });
+
+  try {
+    const downloadedPaths: string[] = [];
+    for (let i = 0; i < maxImages; i++) {
+      const tmpPath = path.join(tmpDir, `img${i}.jpg`);
+      await downloadImageToTemp(imageUrls[i], tmpPath);
+      downloadedPaths.push(tmpPath);
+    }
+
+    const ffArgs: string[] = ['-y'];
+    for (const imgPath of downloadedPaths) {
+      ffArgs.push('-loop', '1', '-t', String(perImageSec), '-i', imgPath);
+    }
+
+    const n = downloadedPaths.length;
+    const filterParts: string[] = [];
+    for (let i = 0; i < n; i++) {
+      filterParts.push(
+        `[${i}:v]scale=720:480:force_original_aspect_ratio=decrease,` +
+        `pad=720:480:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}]`,
+      );
+    }
+    const concatInputs = Array.from({ length: n }, (_, i) => `[v${i}]`).join('');
+    filterParts.push(`${concatInputs}concat=n=${n}:v=1:a=0[outv]`);
+
+    ffArgs.push(
+      '-filter_complex', filterParts.join(';'),
+      '-map', '[outv]',
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      filePath,
+    );
+
+    await runFfmpeg(ffArgs);
+  } finally {
+    fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+
+  return {
+    filename,
+    filePath,
+    url: `/api/bot/media/${encodeURIComponent(filename)}`,
+    sourceUrl: imageUrls[0],
+    durationSec,
+    method: 'slideshow',
+  };
+}
+
+export function extractSampleImageUrls(item: any): string[] {
+  const rawSamples =
+    item?.sampleImageURL?.sample_l?.image ??
+    item?.sampleImageURL?.sample_s?.image ??
+    item?.sampleImages ??
+    [];
+  const samples = Array.isArray(rawSamples) ? rawSamples : [rawSamples];
+  const fallback = [item?.imageURL?.large, item?.imageURL?.small, item?.thumbnail].filter(Boolean);
+  return [...new Set([...samples, ...fallback])]
+    .filter((url): url is string => typeof url === 'string' && /^https?:\/\//.test(url))
+    .slice(0, 8);
 }
 
 export function getSampleVideoFilePath(filename: string): string | null {
