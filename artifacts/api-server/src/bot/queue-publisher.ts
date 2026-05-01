@@ -12,6 +12,7 @@ import { recordPost } from './storage.js';
 import { uploadImages, postTweet, replyToTweet } from './twitter.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { recordPostEvent, validatePost } from './safety-engine.js';
+import { pickAffiliateReplyCopy, recordAnalytics } from './post-analytics.js';
 
 export interface PublishQueueResult {
   ok: boolean;
@@ -60,7 +61,7 @@ function mediaUrlsFor(item: QueueItem): string[] {
   return urls.slice(0, 4);
 }
 
-async function buildPostText(item: QueueItem): Promise<{ text: string; replyText?: string; shortUrl?: string }> {
+async function buildPostText(item: QueueItem): Promise<{ text: string; replyText?: string; shortUrl?: string; linkReplyVariant?: string }> {
   let text = fitTweetText(item.text);
   if (!item.affiliateUrl) return { text };
 
@@ -81,7 +82,8 @@ async function buildPostText(item: QueueItem): Promise<{ text: string; replyText
     return { text: `${text}\n${shortUrl}`, shortUrl };
   }
 
-  return { text, replyText: `作品ページはこちら\n${shortUrl}`, shortUrl };
+  const linkReply = pickAffiliateReplyCopy(shortUrl);
+  return { text, replyText: linkReply.text, shortUrl, linkReplyVariant: linkReply.variant };
 }
 
 export async function approveAndPostQueueItem(id: string): Promise<PublishQueueResult> {
@@ -113,7 +115,7 @@ export async function approveAndPostQueueItem(id: string): Promise<PublishQueueR
       return { ok: false, item: getQueueItem(item.id) ?? item, error: message };
     }
 
-    const { text, replyText } = await buildPostText(item);
+    const { text, replyText, shortUrl, linkReplyVariant } = await buildPostText(item);
     const filterResult = filterContent(text, getRunConfig().safetyStrictness);
     if (!filterResult.safe) {
       const message = `コンテンツフィルター: ${filterResult.reason ?? 'blocked'}`;
@@ -134,6 +136,29 @@ export async function approveAndPostQueueItem(id: string): Promise<PublishQueueR
     }
 
     markPosted(item.id, tweetId);
+    recordAnalytics({
+      postId: tweetId,
+      postedAt: new Date().toISOString(),
+      provider: 'twitter',
+      productId: item.sourceUrl ?? '',
+      productTitle: item.itemTitle ?? item.type,
+      category: item.type,
+      templateType: item.templateType ?? item.type,
+      templateCategory: item.templateCategory ?? (item.type === 'erotic-story' ? 'erotic-story' : item.type === 'engagement' ? 'engagement' : 'other'),
+      text,
+      url: item.affiliateUrl ?? '',
+      shortUrl: shortUrl ?? '',
+      linkReplyVariant,
+      imageUsed: mediaIds.length > 0,
+      safetyScore: item.safetyScore ?? 100,
+      result: 'posted',
+      clicks: 0,
+      impressions: 0,
+      likes: 0,
+      reposts: 0,
+      replies: 0,
+      metricsUpdatedAt: null,
+    });
     recordPost({
       tweetId,
       replyId,

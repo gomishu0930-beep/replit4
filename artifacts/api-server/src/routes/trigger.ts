@@ -10,6 +10,7 @@ import { diagnoseSheetsConnection, backfillAllData } from '../bot/sheets-writer.
 import { getStrategySummary } from '../bot/strategy.js';
 import { validatePost, recordPostEvent } from '../bot/safety-engine.js';
 import { resolveShortUrl, syncRebrandlyClicks } from '../bot/rebrandly.js';
+import { pickAffiliateReplyCopy } from '../bot/post-analytics.js';
 
 const router = Router();
 const TRIGGER_SECRET = process.env.TRIGGER_SECRET ?? 'fanza-bot-trigger';
@@ -25,7 +26,8 @@ async function postItem(item: any, type: string) {
   const mediaIds = await uploadImages(imageUrls);
   const tweetId = await postTweet(text, mediaIds);
   const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
-  const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+  const linkReply = pickAffiliateReplyCopy(affiliateURL);
+  const replyId = await replyToTweet(tweetId, linkReply.text);
   const engagementText = generateEngagementReply(type);
   await replyToTweet(replyId, engagementText);
   recordPost({ tweetId, replyId, item, text, type, imagePrompt });

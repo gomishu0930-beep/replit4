@@ -192,6 +192,9 @@ type Tab = "poll" | "senpai" | "story" | "studio" | "data";
 function Dashboard() {
   const [tab, setTab] = useState<Tab>("poll");
   const [copied, setCopied] = useState<string | null>(null);
+  const [syncingRevenue, setSyncingRevenue] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [rebrandlyAutoMessage, setRebrandlyAutoMessage] = useState("");
 
   const { data: status } = useQuery<BotStatus>({
     queryKey: ["botStatus"],
@@ -211,6 +214,7 @@ function Dashboard() {
   const { data: rebrandlyData, refetch: refetchRebrandly } = useQuery<{
     links: Array<{ id: string; slashtag: string; destination: string; title: string; clicks: number }>;
     lastSyncedAt: string | null;
+    status?: { apiKeyConfigured: boolean; storedLinks: number; totalClicks: number; lastSyncedAt: string | null };
   }>({
     queryKey: ["rebrandly"],
     queryFn: () => fetch(`${API}/api/bot/rebrandly`).then(r => r.json()),
@@ -240,9 +244,28 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/analytics/weekly-review`).then(r => r.json()),
     refetchInterval: 300000,
   });
-  const { data: analyticsStatsData } = useQuery<{ ok: boolean; stats: { total: number; posted: number; dryRun: number; avgImpressions: number; avgLikes: number; topCategory: string; topTemplateCategory: string } }>({
+  const { data: analyticsStatsData, refetch: refetchAnalyticsStats } = useQuery<{ ok: boolean; stats: { total: number; posted: number; dryRun: number; avgImpressions: number; avgLikes: number; totalClicks: number; ctrPct: number; topCategory: string; topTemplateCategory: string } }>({
     queryKey: ["analyticsStats"],
     queryFn: () => fetch(`${API}/api/analytics/stats?days=7`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: revenueData, refetch: refetchRevenue } = useQuery<{
+    ok: boolean;
+    stats: { totalClicks: number; ctrPct: number; posted: number; avgImpressions: number };
+    topProducts: Array<{ postId: string; productTitle: string; templateCategory: string; clicks: number; impressions: number; shortUrl: string }>;
+    topTemplates: Array<{ templateCategory: string; count: number; totalClicks: number; ctrPct: number; verdict?: "win" | "neutral" | "loss" }>;
+    templateVerdicts: Array<{ templateCategory: string; count: number; totalClicks: number; ctrPct: number; verdict: "win" | "neutral" | "loss" }>;
+    bestHours: Array<{ hour: number; count: number; totalClicks: number; ctrPct: number; score: number }>;
+    linkReplyTests: Array<{ variant: string; count: number; totalClicks: number; avgClicks: number }>;
+    zeroClickPosts: Array<{ postId: string; productTitle: string; impressions: number; shortUrl: string }>;
+    zeroClickAnalysis: {
+      total: number;
+      byTemplate: Array<{ templateCategory: string; count: number; avgImpressions: number }>;
+      byHour: Array<{ hour: number; count: number; avgImpressions: number }>;
+    };
+  }>({
+    queryKey: ["revenueSummary"],
+    queryFn: () => fetch(`${API}/api/analytics/revenue?days=30`).then(r => r.json()),
     refetchInterval: 60000,
   });
   const { data: runConfigData, refetch: refetchRunConfig } = useQuery<{
@@ -262,6 +285,34 @@ function Dashboard() {
   const safety = safetyData;
   const stats = status?.stats;
   const totalClicks = rebrandlyData?.links?.reduce((s, l) => s + l.clicks, 0) ?? 0;
+
+  const runRevenueSync = async () => {
+    setSyncingRevenue(true); setSyncMessage("");
+    try {
+      const res = await fetch(`${API}/api/analytics/revenue-sync`, { method: "POST" });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await Promise.all([refetchPosts(), refetchRebrandly(), refetchAnalyticsStats(), refetchRevenue()]);
+      setSyncMessage(`同期完了: クリック${data.rebrandly?.synced ?? 0}件 / 指標${data.metrics?.updated ?? 0}件 / TL${data.timeline?.updatedCount ?? 0}件`);
+    } catch (e: any) {
+      setSyncMessage(`同期失敗: ${e.message}`);
+    } finally {
+      setSyncingRevenue(false);
+    }
+  };
+
+  const runRebrandlyAutoCreate = async () => {
+    setRebrandlyAutoMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/rebrandly/auto-create`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchRebrandly();
+      setRebrandlyAutoMessage(`自動作成: 新規${data.created ?? 0}件 / 既存${data.reused ?? 0}件 / 対象${data.attempted ?? 0}件`);
+    } catch (e: any) {
+      setRebrandlyAutoMessage(`自動作成失敗: ${e.message}`);
+    }
+  };
 
   const [countdown, setCountdown] = useState(getNextPostTime().ms);
   useEffect(() => { const id = setInterval(() => setCountdown(getNextPostTime().ms), 1000); return () => clearInterval(id); }, []);
@@ -434,6 +485,7 @@ function Dashboard() {
               <div className="grid grid-cols-2 gap-2">
                 <ActionBtn label="TL同期" icon="🔄" action={async () => { await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" }); refetchPosts(); }} />
                 <ActionBtn label="リンク同期" icon="🔗" action={async () => { await fetch(`${API}/api/bot/rebrandly/sync`, { method: "POST" }); refetchRebrandly(); }} />
+                <ActionBtn label="リンク作成" icon="✨" action={runRebrandlyAutoCreate} />
                 <ActionBtn label="指標更新" icon="📊" action={async () => { await fetch(`${API}/api/trigger/metrics`, { method: "POST" }); refetchSafety(); }} />
                 <ActionBtn label="スナップショット" icon="📷" action={async () => { await fetch(`${API}/api/bot/snapshots/capture`, { method: "POST" }); refetchSafety(); }} />
               </div>
@@ -573,11 +625,121 @@ function Dashboard() {
 
         {tab === "story" && <StoryTab />}
 
-        {tab === "studio" && <StudioTab />}
+        {tab === "studio" && <StudioTab onRevenueQueued={() => { refetchQueue(); setTab("poll"); }} />}
 
         {tab === "data" && (
           <div className="space-y-4">
             <SectionHeader icon="📊" title="データ分析" sub="投稿履歴・推移・クリック計測" color="text-zinc-400" />
+
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">収益データ同期</p>
+                  <p className="text-[10px] text-zinc-600">クリック・X指標・直近TLをまとめて更新</p>
+                </div>
+                <button onClick={runRevenueSync} disabled={syncingRevenue}
+                  className="px-3 py-2 rounded-lg text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 disabled:opacity-50">
+                  {syncingRevenue ? "同期中..." : "今すぐ同期"}
+                </button>
+              </div>
+              {syncMessage && <p className={`text-[10px] ${syncMessage.startsWith("同期失敗") ? "text-red-400" : "text-blue-300"}`}>{syncMessage}</p>}
+            </div>
+
+            {revenueData?.stats && (
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">収益導線サマリー（30日）</p>
+                  <span className="text-[10px] text-blue-400">CTR {revenueData.stats.ctrPct}%</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  <MiniStat label="クリック" value={String(revenueData.stats.totalClicks)} />
+                  <MiniStat label="投稿済" value={String(revenueData.stats.posted)} />
+                  <MiniStat label="平均IP" value={revenueData.stats.avgImpressions.toLocaleString()} />
+                </div>
+                {revenueData.topProducts.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] text-zinc-500 uppercase tracking-wider">クリック上位作品</p>
+                    {revenueData.topProducts.slice(0, 5).map((p) => (
+                      <div key={p.postId} className="rounded-lg bg-black/30 px-3 py-2 flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-zinc-300 truncate">{p.productTitle || p.postId}</p>
+                          <p className="text-[9px] text-zinc-600">{p.templateCategory} / IP {p.impressions.toLocaleString()}</p>
+                        </div>
+                        <span className="text-[13px] font-bold text-blue-400">{p.clicks}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {revenueData.topTemplates.length > 0 && (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {revenueData.topTemplates.slice(0, 4).map((t) => (
+                      <div key={t.templateCategory} className="rounded-lg bg-black/30 px-2.5 py-2">
+                        <p className="text-[10px] font-semibold text-zinc-300 truncate">
+                          {t.templateCategory}
+                          {t.verdict === "win" && <span className="ml-1 text-emerald-400">強い</span>}
+                          {t.verdict === "loss" && <span className="ml-1 text-red-400">弱い</span>}
+                        </p>
+                        <p className="text-[9px] text-zinc-500">{t.count}件 / {t.totalClicks}クリック / CTR {t.ctrPct}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(revenueData.templateVerdicts?.length || revenueData.bestHours?.length || revenueData.linkReplyTests?.length) && (
+                  <div className="grid grid-cols-1 gap-2">
+                    {revenueData.templateVerdicts?.length > 0 && (
+                      <div className="rounded-lg bg-black/25 px-3 py-2">
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">テンプレ勝ち負け</p>
+                        <div className="flex flex-wrap gap-1">
+                          {revenueData.templateVerdicts.slice(0, 7).map((t) => (
+                            <span key={t.templateCategory} className={`px-2 py-1 rounded-lg text-[9px] ${t.verdict === "win" ? "bg-emerald-500/10 text-emerald-300" : t.verdict === "loss" ? "bg-red-500/10 text-red-300" : "bg-zinc-800 text-zinc-400"}`}>
+                              {t.templateCategory}:{t.verdict === "win" ? "強" : t.verdict === "loss" ? "弱" : "中"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {revenueData.bestHours?.length > 0 && (
+                      <div className="rounded-lg bg-black/25 px-3 py-2">
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">クリックが強い時間帯</p>
+                        <div className="flex flex-wrap gap-1">
+                          {revenueData.bestHours.slice(0, 6).map((h) => (
+                            <span key={h.hour} className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 text-[9px]">{h.hour}時 CTR {h.ctrPct}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {revenueData.linkReplyTests?.length > 0 && (
+                      <div className="rounded-lg bg-black/25 px-3 py-2">
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">リンク文AB</p>
+                        <div className="flex flex-wrap gap-1">
+                          {revenueData.linkReplyTests.slice(0, 4).map((l) => (
+                            <span key={l.variant} className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 text-[9px]">{l.variant}: 平均{l.avgClicks}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {revenueData.zeroClickAnalysis?.total > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] text-zinc-500 uppercase tracking-wider">クリック0分析（{revenueData.zeroClickAnalysis.total}件）</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {revenueData.zeroClickAnalysis.byTemplate.slice(0, 4).map((z) => (
+                        <div key={z.templateCategory} className="rounded-lg bg-red-500/5 border border-red-500/10 px-2.5 py-2">
+                          <p className="text-[10px] font-semibold text-red-300 truncate">{z.templateCategory}</p>
+                          <p className="text-[9px] text-zinc-500">{z.count}件 / 平均IP {z.avgImpressions.toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {revenueData.zeroClickAnalysis.byHour.slice(0, 6).map((z) => (
+                        <span key={z.hour} className="px-2 py-1 rounded-lg bg-black/30 text-[9px] text-zinc-400">{z.hour}時: {z.count}件</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 overflow-hidden">
               <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
@@ -644,9 +806,21 @@ function Dashboard() {
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-5">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">クリック計測</p>
-                <span className="text-[18px] font-bold text-blue-400">{totalClicks}</span>
+                <div>
+                  <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">クリック計測</p>
+                  <p className={`text-[9px] ${rebrandlyData?.status?.apiKeyConfigured ? "text-emerald-400" : "text-amber-400"}`}>
+                    {rebrandlyData?.status?.apiKeyConfigured ? "Rebrandly自動作成ON" : "REBRANDLY_API_KEY未設定"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[18px] font-bold text-blue-400">{totalClicks}</span>
+                  <button onClick={runRebrandlyAutoCreate}
+                    className="block mt-1 px-2 py-1 rounded-lg text-[9px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                    リンク自動作成
+                  </button>
+                </div>
               </div>
+              {rebrandlyAutoMessage && <p className={`text-[10px] mb-2 ${rebrandlyAutoMessage.startsWith("自動作成失敗") ? "text-red-400" : "text-blue-300"}`}>{rebrandlyAutoMessage}</p>}
               {rebrandlyData?.links && rebrandlyData.links.length > 0 ? (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {[...rebrandlyData.links].sort((a, b) => b.clicks - a.clicks).slice(0, 10).map(link => {
@@ -691,6 +865,16 @@ function Dashboard() {
                   <div className="rounded-lg bg-black/30 py-2">
                     <p className="text-[9px] text-zinc-500">多いカテゴリ</p>
                     <p className="text-[11px] font-bold text-purple-400">{analyticsStatsData.stats.topTemplateCategory}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-center">
+                  <div className="rounded-lg bg-black/30 py-2">
+                    <p className="text-[9px] text-zinc-500">クリック</p>
+                    <p className="text-[14px] font-bold text-blue-400">{analyticsStatsData.stats.totalClicks}</p>
+                  </div>
+                  <div className="rounded-lg bg-black/30 py-2">
+                    <p className="text-[9px] text-zinc-500">CTR</p>
+                    <p className="text-[14px] font-bold text-emerald-400">{analyticsStatsData.stats.ctrPct}%</p>
                   </div>
                 </div>
               </div>
@@ -802,9 +986,13 @@ interface FanzaItem {
   actress: string[]; genre: string[]; reviewCount: number;
   reviewAvg: number | null; thumbnail: string | null;
   sampleImages: string[]; price: string | null; date: string | null;
+  sampleMovieUrl?: string | null;
+  makers?: string[];
+  sampleVideoAllowed?: { allowed: boolean; reason: string; makers: string[]; allowedMakers: string[] };
+  revenueScore?: { score: number; qualityScore: number; clickBoost: number; reasons: string[] };
 }
 
-function StudioTab() {
+function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
   const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score">("tweet");
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -817,20 +1005,23 @@ function StudioTab() {
   const [searchType, setSearchType] = useState("rank");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [autoQueueLoading, setAutoQueueLoading] = useState(false);
+  const [sampleVideoLoading, setSampleVideoLoading] = useState(false);
   const [fanzaItems, setFanzaItems] = useState<FanzaItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<FanzaItem | null>(null);
   const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null; shortUrl: string } | null>(null);
   const [tweetCopied, setTweetCopied] = useState<string | null>(null);
+  const [queueMessage, setQueueMessage] = useState("");
   const [genStep, setGenStep] = useState<"search" | "result">("search");
   const [refImages, setRefImages] = useState<string[]>([]);
   const [useRef, setUseRef] = useState(true);
   const [imageEngine, setImageEngine] = useState<string>("auto");
 
   const handleSearch = async () => {
-    setSearchLoading(true); setError(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
+    setSearchLoading(true); setError(""); setQueueMessage(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
     try {
       const params = new URLSearchParams({ type: searchType, count: "10" });
-      if (searchType === "keyword" && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
+      if ((searchType === "keyword" || searchType === "revenue") && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
       const res = await fetch(`${API}/api/bot/fanza-search?${params}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -863,6 +1054,40 @@ function StudioTab() {
       if (data.imagePrompt) setPrompt(data.imagePrompt);
       setGenStep("result");
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+  };
+
+  const handleRevenueQueue = async () => {
+    setAutoQueueLoading(true); setError(""); setQueueMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/fanza-revenue-queue`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 3, keyword: searchKeyword.trim() || undefined, withImage: true }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQueueMessage(`収益候補を${data.queuedCount ?? 0}件キューに追加しました`);
+      if ((data.queuedCount ?? 0) > 0) setTimeout(() => onRevenueQueued?.(), 700);
+    } catch (e: any) { setError(e.message); } finally { setAutoQueueLoading(false); }
+  };
+
+  const handleSampleVideoQueue = async () => {
+    if (!selectedItem || !tweetResult) return;
+    setSampleVideoLoading(true); setError(""); setQueueMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/sample-video/queue`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item: selectedItem,
+          text: tweetResult.tweet,
+          durationSec: 8,
+          notifyEmail: "gomishu0930@icloud.com",
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQueueMessage(`サンプル動画付き投稿をキューに追加しました（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
+      setTimeout(() => onRevenueQueued?.(), 700);
+    } catch (e: any) { setError(e.message); } finally { setSampleVideoLoading(false); }
   };
 
   const copyText = (text: string, key: string) => {
@@ -955,6 +1180,7 @@ function StudioTab() {
                 { value: "amateur", label: "素人" },
                 { value: "sale", label: "セール" },
                 { value: "buzz", label: "バズ" },
+                { value: "revenue", label: "収益候補" },
                 { value: "random", label: "ランダム" },
                 { value: "keyword", label: "キーワード" },
               ].map(t => (
@@ -965,20 +1191,27 @@ function StudioTab() {
               ))}
             </div>
 
-            {searchType === "keyword" && (
+            {(searchType === "keyword" || searchType === "revenue") && (
               <input type="text" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)}
-                placeholder="検索キーワード（例: 巨乳 OL）"
+                placeholder={searchType === "revenue" ? "任意キーワード（空でもOK）" : "検索キーワード（例: 巨乳 OL）"}
                 onKeyDown={e => e.key === "Enter" && handleSearch()}
                 className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-[12px] text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none mb-2" />
             )}
 
             <button onClick={handleSearch} disabled={searchLoading || (searchType === "keyword" && !searchKeyword.trim())}
               className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110">
-              {searchLoading ? "検索中..." : "FANZA作品を検索"}
+              {searchLoading ? "検索中..." : searchType === "revenue" ? "収益候補を検索" : "FANZA作品を検索"}
             </button>
+            {searchType === "revenue" && (
+              <button onClick={handleRevenueQueue} disabled={autoQueueLoading}
+                className="mt-2 w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30">
+                {autoQueueLoading ? "キュー追加中..." : "上位3件をキュー追加"}
+              </button>
+            )}
           </div>
 
           {error && <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{error}</div>}
+          {queueMessage && <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-[12px] text-blue-300">{queueMessage}</div>}
 
           {fanzaItems.length > 0 && genStep === "search" && (
             <div className="space-y-2">
@@ -1000,6 +1233,9 @@ function StudioTab() {
                         <p className="text-[10px] text-pink-400 mt-0.5">{item.actress.join(", ")}</p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
+                        {item.revenueScore && (
+                          <span className="text-[10px] text-emerald-400 font-bold">収益{item.revenueScore.score}</span>
+                        )}
                         {item.reviewAvg && (
                           <span className="text-[10px] text-amber-400">★{item.reviewAvg}</span>
                         )}
@@ -1009,10 +1245,18 @@ function StudioTab() {
                         {item.price && (
                           <span className="text-[10px] text-zinc-400">{item.price}</span>
                         )}
+                        {item.sampleMovieUrl && (
+                          <span className={`text-[10px] ${item.sampleVideoAllowed?.allowed ? "text-blue-400" : "text-zinc-500"}`}>
+                            動画{item.sampleVideoAllowed?.allowed ? "OK" : "要確認"}
+                          </span>
+                        )}
                       </div>
                       {item.genre.length > 0 && (
                         <p className="text-[9px] text-zinc-600 mt-1 line-clamp-1">{item.genre.join(" / ")}</p>
                       )}
+                      {item.revenueScore?.reasons?.length ? (
+                        <p className="text-[9px] text-emerald-500 mt-1 line-clamp-1">{item.revenueScore.reasons.join(" / ")}</p>
+                      ) : null}
                     </div>
                     <div className="flex-shrink-0 self-center">
                       {loading && selectedItem?.content_id === item.content_id
@@ -1062,6 +1306,26 @@ function StudioTab() {
                     </button>
                   </div>
                   <p className="text-[12px] text-blue-400 bg-black/20 rounded-lg p-3 break-all">{tweetResult.shortUrl}</p>
+                </div>
+              )}
+
+              {selectedItem?.sampleMovieUrl && (
+                <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-blue-300 uppercase tracking-wider font-bold">サンプル動画</p>
+                      <p className="text-[10px] text-zinc-500 truncate">
+                        {selectedItem.sampleVideoAllowed?.allowed ? "許可メーカー一致。短尺化してキュー追加できます" : selectedItem.sampleVideoAllowed?.reason ?? "許可判定待ち"}
+                      </p>
+                    </div>
+                    <button onClick={handleSampleVideoQueue} disabled={sampleVideoLoading || !selectedItem.sampleVideoAllowed?.allowed}
+                      className="px-3 py-2 rounded-lg text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 disabled:opacity-40">
+                      {sampleVideoLoading ? "作成中..." : "動画キュー追加"}
+                    </button>
+                  </div>
+                  {selectedItem.makers?.length ? (
+                    <p className="text-[9px] text-zinc-600">メーカー: {selectedItem.makers.join(", ")}</p>
+                  ) : null}
                 </div>
               )}
 

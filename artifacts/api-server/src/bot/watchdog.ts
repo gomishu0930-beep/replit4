@@ -15,6 +15,7 @@ import { recordPost, getStats, getTopPatterns, getExternalTopPatterns } from './
 import { readJson, writeJson } from './cloudStore.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { recordPostEvent } from './safety-engine.js';
+import { pickAffiliateReplyCopy } from './post-analytics.js';
 
 // ─── 状態管理 ────────────────────────────────────────────────────────────────
 
@@ -171,7 +172,8 @@ async function emergencyPost(): Promise<void> {
 
   await new Promise((r) => setTimeout(r, 45_000)); // 45秒待機
   const affiliateURL = await resolveShortUrl(item.affiliateURL ?? '', item.content_id ?? item.id, item.title);
-  const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+  const linkReply = pickAffiliateReplyCopy(affiliateURL);
+  const replyId = await replyToTweet(tweetId, linkReply.text);
 
   await new Promise((r) => setTimeout(r, 30_000)); // 30秒待機
   const engText = generateEngagementReply('random');

@@ -11,18 +11,18 @@
     "meeting-post": 0.44
   },
   "cycleStats": {
-    "lastNewPatterns": 39,
-    "avgNewPatterns": 39.176513262682064,
-    "totalCycles": 502
+    "lastNewPatterns": 40,
+    "avgNewPatterns": 39.71754404909995,
+    "totalCycles": 505
   },
   "hypotheses": [
     {
       "id": "monitor-interval",
       "question": "外部情報の収集間隔（現在 8h）は最適か？",
       "status": "confirmed",
-      "finding": "502サイクル実績 / 平均新規パターン 39.2件/サイクル",
+      "finding": "505サイクル実績 / 平均新規パターン 39.7件/サイクル",
       "adjustment": null,
-      "testedAt": "2026-04-30T16:57:31.681Z"
+      "testedAt": "2026-05-01T09:43:33.346Z"
     },
     {
       "id": "type-weights",
@@ -30,23 +30,23 @@
       "status": "confirmed",
       "finding": "エンゲージメント順: manual(14.2) > celebrity(1.5) > meeting-post(0.5)",
       "adjustment": null,
-      "testedAt": "2026-04-30T16:57:31.681Z"
+      "testedAt": "2026-05-01T09:43:33.346Z"
     },
     {
       "id": "dynamic-templates",
       "question": "動的テンプレート（外部データ由来）は静的テンプレートより効果があるか？",
-      "status": "confirmed",
-      "finding": "直近 42件の平均スコア 25.7 vs 以前 0.6 (+4475.4%)",
+      "status": "rejected",
+      "finding": "直近 54件の平均スコア 11.4 vs 以前 15.6 (-26.7%)",
       "adjustment": null,
-      "testedAt": "2026-04-30T16:57:31.681Z"
+      "testedAt": "2026-05-01T09:43:33.545Z"
     },
     {
       "id": "posting-hours",
       "question": "現在の投稿スロット（09/12/18/21/23時）は最適か？",
       "status": "confirmed",
-      "finding": "最高スロット: 0時 (avg 264.7) / 最低スロット: 20時 (avg 0.0)",
+      "finding": "最高スロット: 14時 (avg 160.5) / 最低スロット: 20時 (avg 0.0)",
       "adjustment": null,
-      "testedAt": "2026-04-30T16:57:31.682Z"
+      "testedAt": "2026-05-01T09:43:33.546Z"
     },
     {
       "id": "content-5types",
@@ -54,15 +54,15 @@
       "status": "pending",
       "finding": "データ不足 (0件)。各型に1件以上、合計5件以上で評価開始。",
       "adjustment": null,
-      "testedAt": "2026-04-16T18:00:01.147Z"
+      "testedAt": "2026-04-30T18:00:00.015Z"
     },
     {
       "id": "impression-effect",
       "question": "インプ狙い投稿（10:30）の追加はアフィリ投稿のエンゲージメントを向上させているか？",
       "status": "confirmed",
-      "finding": "インプ投稿データなし / 宣伝投稿avg 16.9 / 宣伝投稿スコア推移: 前半avg 0.5 → 後半avg 32.7 (📈改善)",
+      "finding": "インプ投稿データなし / 宣伝投稿avg 13.3 / 宣伝投稿スコア推移: 前半avg 0.6 → 後半avg 25.7 (📈改善)",
       "adjustment": null,
-      "testedAt": "2026-04-16T18:00:01.148Z"
+      "testedAt": "2026-04-30T18:00:00.016Z"
     },
     {
       "id": "research-engagement",
@@ -70,7 +70,7 @@
       "status": "pending",
       "finding": "インプ投稿データなし。10:30スロットで蓄積開始。",
       "adjustment": "回復後に採用予定: 最もエンゲージメントを得たスタイルを主力にする",
-      "testedAt": "2026-04-16T18:00:01.148Z"
+      "testedAt": "2026-04-30T18:00:00.016Z"
     },
     {
       "id": "research-product",
@@ -78,7 +78,7 @@
       "status": "pending",
       "finding": "芸能人スロット投稿 5件 蓄積中。代表タイトル: Nana なないろファンタジア・八木奈々 / DAHLIA専属 穂高結花 あのお嬢様大 / 【VR】8KVR！2SEX！長尺130分 。観察ログに個別メモを記録してください。",
       "adjustment": "回復後に採用予定: 品質スコア算式（レビュー数×評価×セール係数）を調整する",
-      "testedAt": "2026-04-16T18:00:01.445Z"
+      "testedAt": "2026-04-30T18:00:00.016Z"
     },
     {
       "id": "research-safe-post",
@@ -86,10 +86,38 @@
       "status": "pending",
       "finding": "直近14件のうち🔞マーク含む投稿: 0件。現状: 投稿1本/日(インプ) + 芸能人1本/日 = 2件体制継続中。観察ログにBAN回避ノウハウを記録してください。",
       "adjustment": "回復後に採用予定: BANリスクが低いと判明したパターンを標準テンプレートに採用",
-      "testedAt": "2026-04-16T18:00:01.446Z"
+      "testedAt": "2026-04-30T18:00:00.016Z"
     }
   ],
   "decisionLog": [
+    {
+      "at": "2026-05-01T09:43:33.546Z",
+      "cycle": 505,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-05-01T08:57:56.405Z",
+      "cycle": 504,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-05-01T00:57:43.994Z",
+      "cycle": 503,
+      "decisions": [
+        "評価完了 / 変更なし"
+      ]
+    },
+    {
+      "at": "2026-04-30T18:00:00.016Z",
+      "cycle": 502,
+      "decisions": [
+        "日次評価完了 / 変更なし"
+      ]
+    },
     {
       "at": "2026-04-30T16:57:31.682Z",
       "cycle": 502,
@@ -411,38 +439,10 @@
       "decisions": [
         "監視間隔を 14h → 13h に短縮（平均新規パターン 39.4件/サイクル）"
       ]
-    },
-    {
-      "at": "2026-04-28T10:52:52.517Z",
-      "cycle": 456,
-      "decisions": [
-        "監視間隔を 15h → 14h に短縮（平均新規パターン 39.2件/サイクル）"
-      ]
-    },
-    {
-      "at": "2026-04-28T09:49:40.320Z",
-      "cycle": 455,
-      "decisions": [
-        "監視間隔を 16h → 15h に短縮（平均新規パターン 38.9件/サイクル）"
-      ]
-    },
-    {
-      "at": "2026-04-28T09:39:30.889Z",
-      "cycle": 454,
-      "decisions": [
-        "監視間隔を 17h → 16h に短縮（平均新規パターン 38.4件/サイクル）"
-      ]
-    },
-    {
-      "at": "2026-04-28T09:27:22.404Z",
-      "cycle": 453,
-      "decisions": [
-        "監視間隔を 18h → 17h に短縮（平均新規パターン 37.7件/サイクル）"
-      ]
     }
   ],
-  "lastEvaluatedAt": "2026-04-30T16:57:31.682Z",
-  "version": 507,
+  "lastEvaluatedAt": "2026-05-01T09:43:33.546Z",
+  "version": 511,
   "imagePolicy": {
     "enableOnUrlPost": false,
     "alwaysGenerate": false,

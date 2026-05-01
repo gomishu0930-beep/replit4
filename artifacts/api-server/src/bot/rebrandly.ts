@@ -6,6 +6,7 @@
  */
 
 import { upsertRebrandlyLinks, getRebrandlyData, RebrandlyLink } from './storage.js';
+import { syncAnalyticsClicksFromRebrandly } from './post-analytics.js';
 
 const REBRANDLY_BASE = 'https://api.rebrandly.com/v1';
 
@@ -80,18 +81,30 @@ export async function syncRebrandlyClicks(): Promise<{
   }));
 
   upsertRebrandlyLinks(links);
+  const analyticsUpdated = syncAnalyticsClicksFromRebrandly(links);
 
   const totalClicks = links.reduce((s, l) => s + l.clicks, 0);
-  console.log(`  ✅ [Rebrandly] ${links.length}件同期完了 / 合計クリック: ${totalClicks}`);
+  console.log(`  ✅ [Rebrandly] ${links.length}件同期完了 / 合計クリック: ${totalClicks} / Analytics更新: ${analyticsUpdated}件`);
   return { synced: links.length, totalClicks };
+}
+
+export function getRebrandlyStatus() {
+  const data = getRebrandlyData();
+  return {
+    apiKeyConfigured: Boolean(process.env.REBRANDLY_API_KEY),
+    storedLinks: data.links.length,
+    totalClicks: data.links.reduce((s, l) => s + l.clicks, 0),
+    lastSyncedAt: data.lastSyncedAt,
+  };
 }
 
 /**
  * 作品IDからRebrandly用のslashtag文字列を生成。
  * 英数字とハイフンのみ許可（Rebrandly仕様）。
  */
-function toSlashtag(itemId: string): string {
-  const slug = itemId.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().slice(0, 46);
+function toSlashtag(itemId: string, suffix = ''): string {
+  const base = itemId.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase().replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const slug = suffix ? `${base.slice(0, Math.max(1, 46 - suffix.length))}${suffix}` : base.slice(0, 46);
   // Rebrandly: slashtag must start with a letter (not digit or hyphen)
   return /^[a-z]/.test(slug) ? slug : `fz-${slug}`;
 }
@@ -100,7 +113,7 @@ function toSlashtag(itemId: string): string {
  * Rebrandly APIで新しい短縮リンクを作成する。
  * 作成したリンクはストレージに追加して返す。
  */
-async function createRebrandlyLink(
+export async function createRebrandlyLink(
   itemId: string,
   title: string,
   affiliateUrl: string,
@@ -108,52 +121,55 @@ async function createRebrandlyLink(
   const apiKey = process.env.REBRANDLY_API_KEY;
   if (!apiKey) return null;
 
-  const slashtag = toSlashtag(itemId);
-
   try {
-    const res = await fetch(`${REBRANDLY_BASE}/links`, {
-      method: 'POST',
-      headers: {
-        'apikey': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        destination: affiliateUrl,
-        slashtag,
-        title: title.slice(0, 100),
-      }),
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const slashtag = toSlashtag(itemId, attempt === 0 ? '' : `-${attempt + 1}`);
+      const res = await fetch(`${REBRANDLY_BASE}/links`, {
+        method: 'POST',
+        headers: {
+          'apikey': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          destination: affiliateUrl,
+          slashtag,
+          title: title.slice(0, 100),
+        }),
+      });
 
-    if (!res.ok) {
-      const body = await res.text();
-      // 409 = slashtag重複（すでに存在する）→ そのまま使う
-      if (res.status === 409) {
-        console.log(`  🔗 [Rebrandly] slashtag既存: ${slashtag}`);
-        const short = `https://rebrand.ly/${slashtag}`;
-        return short;
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 409) {
+          console.log(`  🔗 [Rebrandly] slashtag既存: ${slashtag}`);
+          await syncRebrandlyClicks().catch(() => null);
+          const existing = getRebrandlyData().links.find(l => l.destination === affiliateUrl);
+          if (existing) return `https://rebrand.ly/${existing.slashtag}`;
+          continue;
+        }
+        console.warn(`  ⚠ [Rebrandly] リンク作成失敗 (${res.status}): ${body.slice(0, 100)}`);
+        return null;
       }
-      console.warn(`  ⚠ [Rebrandly] リンク作成失敗 (${res.status}): ${body.slice(0, 100)}`);
-      return null;
+
+      const data = await res.json() as RebrandlyApiLink;
+      const now = new Date().toISOString();
+      const newLink: RebrandlyLink = {
+        id: data.id,
+        slashtag: data.slashtag,
+        destination: data.destination,
+        title: data.title || title,
+        clicks: 0,
+        lastSyncedAt: now,
+      };
+
+      const current = getRebrandlyData();
+      upsertRebrandlyLinks([...current.links.filter(l => l.destination !== newLink.destination), newLink]);
+
+      const short = `https://rebrand.ly/${data.slashtag}`;
+      console.log(`  ✅ [Rebrandly] 新規リンク作成: ${data.slashtag} → ${short}`);
+      return short;
     }
-
-    const data = await res.json() as RebrandlyApiLink;
-    const now = new Date().toISOString();
-    const newLink: RebrandlyLink = {
-      id: data.id,
-      slashtag: data.slashtag,
-      destination: data.destination,
-      title: data.title || title,
-      clicks: 0,
-      lastSyncedAt: now,
-    };
-
-    // ストレージに追加
-    const current = getRebrandlyData();
-    upsertRebrandlyLinks([...current.links, newLink]);
-
-    const short = `https://rebrand.ly/${data.slashtag}`;
-    console.log(`  ✅ [Rebrandly] 新規リンク作成: ${data.slashtag} → ${short}`);
-    return short;
+    console.warn(`  ⚠ [Rebrandly] slashtag重複によりリンク作成スキップ: ${itemId}`);
+    return null;
   } catch (e: any) {
     console.warn(`  ⚠ [Rebrandly] リンク作成例外: ${e.message}`);
     return null;
@@ -188,4 +204,55 @@ export async function resolveShortUrl(
   }
 
   return affiliateUrl;
+}
+
+export async function autoCreateRebrandlyLinks(candidates: Array<{
+  affiliateUrl?: string;
+  itemId?: string;
+  title?: string;
+}>): Promise<{
+  attempted: number;
+  created: number;
+  reused: number;
+  skipped: number;
+  items: Array<{ affiliateUrl: string; shortUrl: string; status: 'created' | 'reused' | 'skipped' }>;
+}> {
+  const unique = new Map<string, { affiliateUrl: string; itemId: string; title: string }>();
+  for (const c of candidates) {
+    if (!c.affiliateUrl || !c.itemId) continue;
+    unique.set(c.affiliateUrl, {
+      affiliateUrl: c.affiliateUrl,
+      itemId: c.itemId,
+      title: c.title ?? c.itemId,
+    });
+  }
+
+  let created = 0;
+  let reused = 0;
+  let skipped = 0;
+  const items: Array<{ affiliateUrl: string; shortUrl: string; status: 'created' | 'reused' | 'skipped' }> = [];
+
+  for (const c of unique.values()) {
+    const existing = getRebrandlyData().links.find(l => l.destination === c.affiliateUrl);
+    if (existing) {
+      reused++;
+      items.push({ affiliateUrl: c.affiliateUrl, shortUrl: `https://rebrand.ly/${existing.slashtag}`, status: 'reused' });
+      continue;
+    }
+
+    const before = getRebrandlyData().links.length;
+    const shortUrl = await resolveShortUrl(c.affiliateUrl, c.itemId, c.title);
+    if (shortUrl === c.affiliateUrl) {
+      skipped++;
+      items.push({ affiliateUrl: c.affiliateUrl, shortUrl, status: 'skipped' });
+      continue;
+    }
+
+    const after = getRebrandlyData().links.length;
+    const status = after > before ? 'created' : 'reused';
+    if (status === 'created') created++; else reused++;
+    items.push({ affiliateUrl: c.affiliateUrl, shortUrl, status });
+  }
+
+  return { attempted: unique.size, created, reused, skipped, items };
 }

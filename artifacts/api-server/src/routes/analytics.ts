@@ -1,8 +1,12 @@
 import { Router } from 'express';
-import { getAnalytics, getAllAnalytics, getAnalyticsStats, updateAnalyticsMetrics } from '../bot/post-analytics.js';
+import { getAnalytics, getAllAnalytics, getAnalyticsStats, getRevenueSummary, getTemplateCategoryWeights, updateAnalyticsFromTweetMetrics, updateAnalyticsMetrics } from '../bot/post-analytics.js';
 import { runWeeklyReview, getLatestWeeklyReview, getAllWeeklyReviews } from '../bot/weekly-review.js';
 import { pickFanzaTemplate, CATEGORY_POOLS } from '../bot/fanza-templates.js';
 import type { TemplateCategory } from '../bot/fanza-templates.js';
+import { refreshRecentMetrics } from '../bot/analytics.js';
+import { syncRebrandlyClicks } from '../bot/rebrandly.js';
+import { getOwnRecentTweets } from '../bot/twitter.js';
+import { recordPostManual, getRebrandlyData } from '../bot/storage.js';
 
 const router = Router();
 
@@ -20,6 +24,53 @@ router.get('/posts', (req, res) => {
 router.get('/stats', (req, res) => {
   const days = parseInt(String(req.query.days ?? '7'), 10);
   res.json({ ok: true, stats: getAnalyticsStats(days) });
+});
+
+// GET /api/analytics/revenue?days=30
+router.get('/revenue', (req, res) => {
+  const days = parseInt(String(req.query.days ?? '30'), 10);
+  res.json({ ok: true, ...getRevenueSummary(days) });
+});
+
+// POST /api/analytics/revenue-sync
+// Rebrandlyクリック、X指標、直近TLをまとめて同期する。
+router.post('/revenue-sync', async (_req, res) => {
+  try {
+    const [rebrandly, metrics] = await Promise.all([
+      syncRebrandlyClicks().catch((e: any) => ({ error: e.message, synced: 0, totalClicks: getRebrandlyData().links.reduce((s, l) => s + l.clicks, 0) })),
+      refreshRecentMetrics().catch((e: any) => ({ error: e.message, checked: 0, updated: 0 })),
+    ]);
+
+    let timeline = { total: 0, newCount: 0, updatedCount: 0 };
+    try {
+      const tweets = await getOwnRecentTweets(50);
+      timeline.total = tweets.length;
+      for (const t of tweets) {
+        const metricsData = (t.public_metrics as any) ?? null;
+        const { isNew } = recordPostManual({
+          tweetId: t.id,
+          text: t.text,
+          postedAt: (t as any).created_at ?? new Date().toISOString(),
+          metrics: metricsData,
+        });
+        if (metricsData) updateAnalyticsFromTweetMetrics(t.id, metricsData);
+        if (isNew) timeline.newCount++; else timeline.updatedCount++;
+      }
+    } catch (e: any) {
+      timeline = { ...timeline, total: 0, newCount: 0, updatedCount: 0 };
+      console.warn('  ⚠ 収益同期TL取得失敗:', e.message);
+    }
+
+    res.json({ ok: true, rebrandly, metrics, timeline, revenue: getRevenueSummary(30) });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/analytics/template-weights?days=30
+router.get('/template-weights', (req, res) => {
+  const days = parseInt(String(req.query.days ?? '30'), 10);
+  res.json({ ok: true, weights: getTemplateCategoryWeights(days) });
 });
 
 // PATCH /api/analytics/posts/:postId/metrics

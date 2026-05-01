@@ -1,5 +1,6 @@
 import { getRecentlyPostedIds } from './storage.js';
 import { readJson, writeJson } from './cloudStore.js';
+import { getProductClickSignals } from './post-analytics.js';
 
 const API_BASE = 'https://api.dmm.com/affiliate/v3/ItemList';
 const CAMPAIGN_CACHE_KEY = 'campaign-ids.json';
@@ -217,20 +218,95 @@ async function fetchByCampaignId(count: number): Promise<any[]> {
 //   星4.9 × レビュー3件   → composite ≈ 3.3  ← 過大評価を抑制
 //   星4.7 × レビュー200件 → composite ≈ 5.0  ← 真の人気作を優先
 //
-function compositeScore(item: any): number {
+export interface FanzaRevenueScore {
+  score: number;
+  qualityScore: number;
+  clickBoost: number;
+  detail: {
+    review: number;
+    rating: number;
+    sale: number;
+    sample: number;
+    genre: number;
+    actress: number;
+    freshness: number;
+  };
+  reasons: string[];
+}
+
+const HIGH_INTENT_GENRES = ['素人', '人妻', 'OL', 'お姉さん', 'ギャル', '美少女', '巨乳', '中出し', '企画', '単体作品'];
+
+function collectNames(values: any): string[] {
+  return Array.isArray(values)
+    ? values.map((v: any) => typeof v === 'string' ? v : v?.name ?? '').filter(Boolean)
+    : [];
+}
+
+export function scoreFanzaItem(item: any): FanzaRevenueScore {
   const avg = parseFloat(item.review?.average ?? '0');
   const count = item.review?.count ?? 0;
-  if (avg === 0 || count === 0) return 0;
+  const reasons: string[] = [];
+  if (avg === 0 || count === 0) {
+    return {
+      score: 0,
+      qualityScore: 0,
+      clickBoost: 0,
+      detail: { review: 0, rating: 0, sale: 0, sample: 0, genre: 0, actress: 0, freshness: 0 },
+      reasons: ['レビュー不足'],
+    };
+  }
 
   // ベイズ平均: 事前平均 m=4.0、基準レビュー数 C=50
   const C = 50;
   const m = 4.0;
   const bayesianAvg = (C * m + count * avg) / (C + count);
 
-  // 人気度ウェイト: レビュー数の対数スケール
-  const popularityWeight = Math.log10(count + 1);
+  const reviewScore = Math.min(Math.log10(count + 1) * 1.15, 3);
+  const ratingScore = Math.max(0, (bayesianAvg - 3.7) * 1.6);
+  const qualityScore = reviewScore + ratingScore;
+  const clickSignals = getProductClickSignals();
+  const priorClicks = clickSignals[item.content_id] ?? 0;
+  const clickBoost = priorClicks > 0 ? Math.min(Math.log10(priorClicks + 1) * 1.1, 1.8) : 0;
+  const sampleCount = getSampleImages(item).length;
+  const sampleBoost = sampleCount >= 4 ? 0.55 : sampleCount > 0 ? 0.3 : 0;
+  const title = String(item.title ?? '');
+  const saleBoost = /セール|sale|SALE|割引|限定|キャンペーン|%OFF|OFF/.test(title) ? 0.75 : 0;
+  const freshBoost = item.date && Date.now() - new Date(item.date).getTime() < 45 * 86400000 ? 0.35 : 0;
+  const genres = collectNames(item.iteminfo?.genre ?? item.genre);
+  const matchedGenres = genres.filter((g) => HIGH_INTENT_GENRES.some((keyword) => g.includes(keyword) || title.includes(keyword)));
+  const genreBoost = Math.min(matchedGenres.length * 0.18, 0.72);
+  const actresses = collectNames(item.iteminfo?.actress ?? item.actress);
+  const actressBoost = actresses.length >= 2 ? 0.28 : actresses.length === 1 ? 0.18 : 0;
 
-  return bayesianAvg * popularityWeight;
+  if (count >= 50) reasons.push(`レビュー${count}件`);
+  if (avg >= 4.5) reasons.push(`高評価${avg.toFixed(1)}`);
+  if (priorClicks > 0) reasons.push(`過去クリック${priorClicks}`);
+  if (sampleBoost > 0) reasons.push(`サンプル${sampleCount}枚`);
+  if (saleBoost > 0) reasons.push('セール訴求向き');
+  if (genreBoost > 0) reasons.push(`強ジャンル:${matchedGenres.slice(0, 2).join('/')}`);
+  if (actressBoost > 0) reasons.push(actresses.length >= 2 ? '複数女優' : '女優名あり');
+  if (freshBoost > 0) reasons.push('新しめ');
+  if (count < 15) reasons.push('レビュー少なめ');
+
+  return {
+    score: Number((qualityScore + clickBoost + sampleBoost + saleBoost + genreBoost + actressBoost + freshBoost).toFixed(3)),
+    qualityScore: Number(qualityScore.toFixed(3)),
+    clickBoost: Number(clickBoost.toFixed(3)),
+    detail: {
+      review: Number(reviewScore.toFixed(3)),
+      rating: Number(ratingScore.toFixed(3)),
+      sale: Number(saleBoost.toFixed(3)),
+      sample: Number(sampleBoost.toFixed(3)),
+      genre: Number(genreBoost.toFixed(3)),
+      actress: Number(actressBoost.toFixed(3)),
+      freshness: Number(freshBoost.toFixed(3)),
+    },
+    reasons: reasons.slice(0, 5),
+  };
+}
+
+function compositeScore(item: any): number {
+  return scoreFanzaItem(item).score;
 }
 
 // ─── 最低品質フィルター ──────────────────────────────────────────────────────
@@ -251,6 +327,17 @@ function topByScore(items: any[], n: number, minReviews = 5, minAvg = 4.0): any[
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.max(n * 3, 10)) // 上位3倍を候補として渡す
     .map((s) => s.item);
+}
+
+export function rankRevenueCandidates(items: any[], count = 10): Array<any & { revenueScore: FanzaRevenueScore }> {
+  const dedupMap = new Map<string, any>();
+  for (const item of items) {
+    if (item?.content_id) dedupMap.set(item.content_id, item);
+  }
+  return [...dedupMap.values()]
+    .map((item) => ({ ...item, revenueScore: scoreFanzaItem(item) }))
+    .sort((a, b) => b.revenueScore.score - a.revenueScore.score)
+    .slice(0, count);
 }
 
 // ─── FANZA素人フロア専用APIリクエスト ────────────────────────────────────────
@@ -453,6 +540,17 @@ export async function getRandomItems(count = 2) {
   const quality = items.filter((i) => qualityFilter(i, { minReviews: 5, minAvg: 4.0 }));
   const pool = quality.length >= count ? quality : items;
   return pickNUnique(pool, count);
+}
+
+export async function getRevenueOptimizedItems(count = 10, keyword?: string) {
+  const pools = await Promise.all([
+    fetchItems({ sort: 'rank', offset: randomOffset(150), ...(keyword ? { keyword } : {}) }).catch(() => []),
+    fetchItems({ sort: 'review', offset: randomOffset(150), ...(keyword ? { keyword } : {}) }).catch(() => []),
+    fetchItems({ sort: 'date', offset: randomOffset(80), ...(keyword ? { keyword } : {}) }).catch(() => []),
+  ]);
+  const items = pools.flat();
+  const ranked = rankRevenueCandidates(items, Math.max(count * 2, 20));
+  return pickNUnique(ranked, count);
 }
 
 // キーワード検索（手動トリガー用）

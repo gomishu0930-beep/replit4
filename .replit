@@ -33,3 +33,4 @@ defaultBucketID = "replit-objstore-d1d25208-c118-4823-ab4e-4ec919bf4b01"
 
 [nix]
 packages = ["zip"]
+channel = "stable-25_05"

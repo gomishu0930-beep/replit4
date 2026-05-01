@@ -1,21 +1,21 @@
 import cron from 'node-cron';
 import Anthropic from '@anthropic-ai/sdk';
 
-import { getRandomItems, getHighRatedItems, getSampleImages, discoverCampaignIds } from './fanza.js';
+import { getRandomItems, getHighRatedItems, getSampleImages, discoverCampaignIds, getRevenueOptimizedItems } from './fanza.js';
 import { uploadImages, postTweet, replyToTweet, getAccountInfo, getOwnRecentTweets } from './twitter.js';
 import { generateTweetText, generateEngagementReply, generateImpressionTweet, generateEroticStoryTweet, buildManualPostFeedback } from './ai.js';
 import { generateImage, buildImagePrompt } from './imageGen.js';
 import { filterContent, filterImagePrompt } from './content-filter.js';
 import { isAutoPostEnabled, isDryRun, getRunConfig } from './run-config.js';
-import { enqueuePost, markPosted, markFailed } from './post-queue.js';
+import { enqueuePost, getQueue, markPosted, markFailed } from './post-queue.js';
+import { processApprovedQueue } from './queue-publisher.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { pickFanzaTemplate } from './fanza-templates.js';
-import { recordAnalytics, loadAnalytics, getAnalytics } from './post-analytics.js';
+import { recordAnalytics, loadAnalytics, getAnalytics, isHighRevenueHour, pickAffiliateReplyCopy } from './post-analytics.js';
 import { buildInsightContext, loadInsightMemory } from './insight-memory.js';
 import { runWeeklyReview, loadWeeklyReviews } from './weekly-review.js';
-import { syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
-import { processApprovedQueue } from './queue-publisher.js';
+import { autoCreateRebrandlyLinks, syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
 import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics } from './analytics.js';
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs, getStrategySummary } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
@@ -51,6 +51,7 @@ type ContentSlotType = 'engagement' | 'erotic-story' | 'fanza' | 'myfans';
 
 function pickSlotType(): ContentSlotType {
   const rand = Math.random() * 100;
+  if (isHighRevenueHour() && rand < 45) return 'fanza';
   if (rand < 40) return 'engagement';
   if (rand < 65) return 'erotic-story';
   if (rand < 90) return 'fanza';
@@ -99,6 +100,10 @@ async function postFanzaItem(item: any, type: string, label: string) {
     imagePrompt: undefined,
     itemTitle: item.title,
     affiliateUrl: item.affiliateURL ?? undefined,
+    sourceUrl: item.content_id ?? item.id,
+    templateType: tmpl.templateType,
+    templateCategory: tmpl.templateCategory,
+    safetyScore,
     filterResult,
   });
 
@@ -162,7 +167,8 @@ async function postFanzaItem(item: any, type: string, label: string) {
     isHighScore ? (item.content_id ?? item.id) : undefined,
     isHighScore ? item.title : undefined,
   );
-  const replyId = await replyToTweet(tweetId, `🔗 作品ページはこちら👇\n${affiliateURL}`);
+  const linkReply = pickAffiliateReplyCopy(affiliateURL);
+  const replyId = await replyToTweet(tweetId, linkReply.text);
 
   await randomSleep(20, 60);
   const engagementText = generateEngagementReply(type);
@@ -181,6 +187,7 @@ async function postFanzaItem(item: any, type: string, label: string) {
     text,
     url: item.affiliateURL ?? '',
     shortUrl: affiliateURL,
+    linkReplyVariant: linkReply.variant,
     imageUsed: imageUrls.length > 0,
     safetyScore,
     result: 'posted',
@@ -401,10 +408,15 @@ export async function manualGenerateAndQueue(type: ContentSlotType): Promise<{
   type: string;
   affiliateUrl?: string;
   itemTitle?: string;
+  imageUrl?: string;
 }> {
   let text = '';
   let affiliateUrl: string | undefined;
   let itemTitle: string | undefined;
+  let sourceUrl: string | undefined;
+  let imageUrl: string | undefined;
+  let templateType: string | undefined;
+  let templateCategory: ReturnType<typeof pickFanzaTemplate>['templateCategory'] | undefined;
 
   if (type === 'engagement') {
     const res = generateImpressionTweet(Math.random() < 0.3);
@@ -418,8 +430,12 @@ export async function manualGenerateAndQueue(type: ContentSlotType): Promise<{
     const item = items[0];
     const tmpl = pickFanzaTemplate(item, 'videoa');
     text = tmpl.text;
+    templateType = tmpl.templateType;
+    templateCategory = tmpl.templateCategory;
     affiliateUrl = item.affiliateURL;
     itemTitle = item.title;
+    sourceUrl = item.content_id ?? item.id;
+    imageUrl = getSampleImages(item)[0] ?? undefined;
   } else {
     // myfans
     const mfTemplates = [
@@ -435,10 +451,15 @@ export async function manualGenerateAndQueue(type: ContentSlotType): Promise<{
     text,
     itemTitle,
     affiliateUrl,
+    imageUrl,
+    sourceUrl,
+    templateType,
+    templateCategory,
+    safetyScore: Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20),
     filterResult,
   });
 
-  return { queueId: queueItem.id, text, type, affiliateUrl, itemTitle };
+  return { queueId: queueItem.id, text, type, affiliateUrl, itemTitle, imageUrl };
 }
 
 // ─── スマート投稿生成（インサイト+トレンド+画像連携）────────────────────────
@@ -551,7 +572,7 @@ ${topOwn || '（データなし）'}
         const prompt = buildImagePrompt(text);
         const filtered = filterImagePrompt(prompt);
         if (filtered.safe) {
-          imageUrl = await generateImage(filtered.prompt ?? prompt, { engine: 'auto' });
+          imageUrl = await generateImage(prompt, { engine: 'auto' });
         }
       }
     } catch (e: any) {
@@ -567,7 +588,8 @@ ${topOwn || '（データなし）'}
     text,
     itemTitle,
     affiliateUrl,
-    imagePrompt: imageUrl ? undefined : undefined,
+    imageUrl,
+    sourceUrl: fanzaItem?.content_id ?? fanzaItem?.id,
     filterResult,
   });
 
@@ -601,7 +623,9 @@ async function runScheduledSlot(label: string) {
         await postEroticStorySlot(label);
         break;
       case 'fanza': {
-        const items = await getRandomItems(1);
+        const items = isHighRevenueHour()
+          ? await getRevenueOptimizedItems(1).catch(() => getRandomItems(1))
+          : await getRandomItems(1);
         if (items.length > 0) await postFanzaItem(items[0], 'random', label);
         break;
       }
@@ -722,7 +746,7 @@ export function startScheduler() {
     } catch (e: any) {
       console.warn(`  ⚠ [Queue] 承認済み投稿処理エラー: ${e.message}`);
     }
-  });
+  }, { timezone: 'Asia/Tokyo' });
 
   // 09:00 JST — 日次フォロワースナップショット + Safety Engine更新
   cron.schedule('0 9 * * *', async () => {
@@ -762,6 +786,17 @@ export function startScheduler() {
   // 06:00 JST — Rebrandlyクリック数自動同期
   cron.schedule('0 6 * * *', async () => {
     try {
+      const candidates = getQueue(['pending', 'approved'])
+        .filter(item => item.affiliateUrl)
+        .map(item => ({
+          affiliateUrl: item.affiliateUrl,
+          itemId: item.sourceUrl ?? item.id,
+          title: item.itemTitle ?? item.type,
+        }));
+      if (candidates.length > 0 && process.env.REBRANDLY_API_KEY) {
+        const created = await autoCreateRebrandlyLinks(candidates);
+        console.log(`  🔗 [Rebrandly] キュー内リンク自動作成: 新規${created.created}件 / 既存${created.reused}件`);
+      }
       const result = await syncRebrandlyClicks();
       if (result) console.log(`  🔗 [Rebrandly] 同期完了: ${result.synced}件 / 総クリック ${result.totalClicks}`);
     } catch (e: any) {

@@ -5,6 +5,7 @@
 
 import { readJson, writeJson } from './cloudStore.js';
 import type { TemplateCategory } from './fanza-templates.js';
+import type { RebrandlyLink } from './storage.js';
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ export interface PostAnalyticsRecord {
   text: string;              // 投稿テキスト
   url: string;               // アフィリエイトURL（なければ空文字）
   shortUrl: string;          // 短縮URL（Rebrandly）
+  linkReplyVariant?: string; // リプ欄リンク文のABテスト識別子
   imageUsed: boolean;        // 画像を使用したか
   safetyScore: number;       // コンテンツフィルタースコア (0-100, 高い=安全)
   result: 'posted' | 'dry_run' | 'failed' | 'queued';
@@ -40,6 +42,13 @@ interface AnalyticsData {
 
 let analyticsCache: AnalyticsData = { records: [] };
 let analyticsLoaded = false;
+const FANZA_TEMPLATE_CATEGORIES: TemplateCategory[] = ['friend', 'promo', 'sale', 'ranking', 'night', 'review', 'compare'];
+export const LINK_REPLY_VARIANTS = [
+  { id: 'plain', text: '作品ページはこちら\n{url}' },
+  { id: 'check', text: '気になる方はこちら👇\n{url}' },
+  { id: 'reply', text: 'リプ欄用リンクです👇\n{url}' },
+  { id: 'limited', text: '詳細・セール確認はこちら👇\n{url}' },
+] as const;
 
 // ─── 永続化 ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +85,43 @@ export function updateAnalyticsMetrics(
   if (!record) return;
   Object.assign(record, metrics, { metricsUpdatedAt: new Date().toISOString() });
   saveAnalyticsAsync();
+}
+
+export function updateAnalyticsFromTweetMetrics(postId: string, metrics: any): boolean {
+  const record = analyticsCache.records.find(r => r.postId === postId);
+  if (!record) return false;
+  record.impressions = metrics?.impression_count ?? record.impressions;
+  record.likes = metrics?.like_count ?? record.likes;
+  record.reposts = metrics?.retweet_count ?? record.reposts;
+  record.replies = metrics?.reply_count ?? record.replies;
+  record.metricsUpdatedAt = new Date().toISOString();
+  saveAnalyticsAsync();
+  return true;
+}
+
+function linkMatchesRecord(link: RebrandlyLink, record: PostAnalyticsRecord): boolean {
+  if (!record.url && !record.shortUrl) return false;
+  const short = `rebrand.ly/${link.slashtag}`;
+  return (
+    record.shortUrl.includes(short) ||
+    record.shortUrl.includes(link.slashtag) ||
+    record.url === link.destination
+  );
+}
+
+export function syncAnalyticsClicksFromRebrandly(links: RebrandlyLink[]): number {
+  let updated = 0;
+  for (const record of analyticsCache.records) {
+    const match = links.find((link) => linkMatchesRecord(link, record));
+    if (!match) continue;
+    if (record.clicks !== match.clicks) {
+      record.clicks = match.clicks;
+      record.metricsUpdatedAt = new Date().toISOString();
+      updated++;
+    }
+  }
+  if (updated > 0) saveAnalyticsAsync();
+  return updated;
 }
 
 // ─── 読み取り ─────────────────────────────────────────────────────────────────
@@ -129,6 +175,8 @@ export function getAnalyticsStats(days = 7): {
   failed: number;
   avgImpressions: number;
   avgLikes: number;
+  totalClicks: number;
+  ctrPct: number;
   topCategory: string;
   topTemplateCategory: string;
 } {
@@ -143,6 +191,9 @@ export function getAnalyticsStats(days = 7): {
   const avgLikes = posted.length > 0
     ? Math.round(posted.reduce((s, r) => s + r.likes, 0) / posted.length)
     : 0;
+  const totalClicks = posted.reduce((s, r) => s + r.clicks, 0);
+  const totalImpressions = posted.reduce((s, r) => s + r.impressions, 0);
+  const ctrPct = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(3)) : 0;
 
   const categoryCounts = records.reduce<Record<string, number>>((acc, r) => {
     acc[r.category] = (acc[r.category] ?? 0) + 1;
@@ -166,7 +217,208 @@ export function getAnalyticsStats(days = 7): {
     failed: failed.length,
     avgImpressions,
     avgLikes,
+    totalClicks,
+    ctrPct,
     topCategory,
     topTemplateCategory,
+  };
+}
+
+export function getTemplatePerformance(days = 30): Array<{
+  templateCategory: string;
+  count: number;
+  totalClicks: number;
+  totalImpressions: number;
+  avgClicks: number;
+  ctrPct: number;
+  verdict: 'win' | 'neutral' | 'loss';
+}> {
+  const records = getAnalytics(days).filter(r => r.result === 'posted');
+  const totalClicks = records.reduce((s, r) => s + r.clicks, 0);
+  const totalImpressions = records.reduce((s, r) => s + r.impressions, 0);
+  const baselineCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const grouped: Record<string, PostAnalyticsRecord[]> = {};
+  for (const r of records) {
+    const key = String(r.templateCategory || 'other');
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(r);
+  }
+  return Object.entries(grouped)
+    .map(([templateCategory, recs]) => {
+      const totalClicks = recs.reduce((s, r) => s + r.clicks, 0);
+      const totalImpressions = recs.reduce((s, r) => s + r.impressions, 0);
+      const ctrPct = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(3)) : 0;
+      let verdict: 'win' | 'neutral' | 'loss' = 'neutral';
+      if (recs.length >= 3 && baselineCtr > 0) {
+        if (ctrPct >= baselineCtr * 1.2) verdict = 'win';
+        else if (ctrPct <= baselineCtr * 0.75) verdict = 'loss';
+      }
+      return {
+        templateCategory,
+        count: recs.length,
+        totalClicks,
+        totalImpressions,
+        avgClicks: recs.length > 0 ? Number((totalClicks / recs.length).toFixed(2)) : 0,
+        ctrPct,
+        verdict,
+      };
+    })
+    .sort((a, b) => b.totalClicks - a.totalClicks || b.ctrPct - a.ctrPct);
+}
+
+export function getPostingHourPerformance(days = 30): Array<{
+  hour: number;
+  count: number;
+  totalClicks: number;
+  totalImpressions: number;
+  ctrPct: number;
+  score: number;
+}> {
+  const grouped = new Map<number, PostAnalyticsRecord[]>();
+  for (const r of getAnalytics(days).filter(r => r.result === 'posted' && r.category === 'fanza')) {
+    const hour = (new Date(r.postedAt).getUTCHours() + 9) % 24;
+    grouped.set(hour, [...(grouped.get(hour) ?? []), r]);
+  }
+  return [...grouped.entries()]
+    .map(([hour, recs]) => {
+      const totalClicks = recs.reduce((s, r) => s + r.clicks, 0);
+      const totalImpressions = recs.reduce((s, r) => s + r.impressions, 0);
+      const ctrPct = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(3)) : 0;
+      return {
+        hour,
+        count: recs.length,
+        totalClicks,
+        totalImpressions,
+        ctrPct,
+        score: Number((totalClicks + ctrPct * 2 + Math.min(recs.length, 5) * 0.2).toFixed(3)),
+      };
+    })
+    .sort((a, b) => b.score - a.score || b.totalClicks - a.totalClicks);
+}
+
+export function isHighRevenueHour(date = new Date()): boolean {
+  const hours = getPostingHourPerformance(30).filter(h => h.count >= 2).slice(0, 3).map(h => h.hour);
+  if (hours.length === 0) return false;
+  const jstHour = (date.getUTCHours() + 9) % 24;
+  return hours.includes(jstHour);
+}
+
+export function getLinkReplyPerformance(days = 30): Array<{
+  variant: string;
+  count: number;
+  totalClicks: number;
+  avgClicks: number;
+}> {
+  const grouped = new Map<string, PostAnalyticsRecord[]>();
+  for (const r of getAnalytics(days).filter(r => r.result === 'posted' && r.shortUrl)) {
+    const variant = r.linkReplyVariant ?? 'plain';
+    grouped.set(variant, [...(grouped.get(variant) ?? []), r]);
+  }
+  return [...grouped.entries()]
+    .map(([variant, recs]) => {
+      const totalClicks = recs.reduce((s, r) => s + r.clicks, 0);
+      return {
+        variant,
+        count: recs.length,
+        totalClicks,
+        avgClicks: recs.length > 0 ? Number((totalClicks / recs.length).toFixed(2)) : 0,
+      };
+    })
+    .sort((a, b) => b.avgClicks - a.avgClicks || b.totalClicks - a.totalClicks);
+}
+
+export function pickAffiliateReplyCopy(url: string): { text: string; variant: string } {
+  const performance = getLinkReplyPerformance(30).filter(p => p.count >= 3);
+  const winner = performance[0];
+  const explore = Math.random() < 0.35 || !winner;
+  const variant = explore
+    ? LINK_REPLY_VARIANTS[Math.floor(Math.random() * LINK_REPLY_VARIANTS.length)]
+    : LINK_REPLY_VARIANTS.find(v => v.id === winner.variant) ?? LINK_REPLY_VARIANTS[0];
+  return { text: variant.text.replace('{url}', url), variant: variant.id };
+}
+
+export function getTemplateCategoryWeights(days = 30): Record<TemplateCategory, number> {
+  const performance = getTemplatePerformance(days);
+  const weights = FANZA_TEMPLATE_CATEGORIES.reduce<Record<TemplateCategory, number>>((acc, category) => {
+    acc[category] = 1;
+    return acc;
+  }, {} as Record<TemplateCategory, number>);
+
+  for (const p of performance) {
+    if (!FANZA_TEMPLATE_CATEGORIES.includes(p.templateCategory as TemplateCategory)) continue;
+    const category = p.templateCategory as TemplateCategory;
+    const sampleConfidence = Math.min(p.count / 8, 1);
+    const clickScore = Math.min(p.avgClicks / 3, 1.5);
+    const ctrScore = Math.min(p.ctrPct / 1.5, 1.5);
+    const rawWeight = 1 + sampleConfidence * (clickScore * 0.7 + ctrScore * 0.5);
+    weights[category] = Number(Math.min(Math.max(rawWeight, 0.7), 3).toFixed(2));
+  }
+
+  return weights;
+}
+
+export function getProductClickSignals(): Record<string, number> {
+  const signals: Record<string, number> = {};
+  for (const r of analyticsCache.records) {
+    if (!r.productId || r.result !== 'posted') continue;
+    signals[r.productId] = Math.max(signals[r.productId] ?? 0, r.clicks);
+  }
+  return signals;
+}
+
+export function getRevenueSummary(days = 30): {
+  stats: ReturnType<typeof getAnalyticsStats>;
+  topProducts: PostAnalyticsRecord[];
+  topTemplates: ReturnType<typeof getTemplatePerformance>;
+  templateVerdicts: ReturnType<typeof getTemplatePerformance>;
+  bestHours: ReturnType<typeof getPostingHourPerformance>;
+  linkReplyTests: ReturnType<typeof getLinkReplyPerformance>;
+  zeroClickPosts: PostAnalyticsRecord[];
+  zeroClickAnalysis: {
+    total: number;
+    byTemplate: Array<{ templateCategory: string; count: number; avgImpressions: number }>;
+    byHour: Array<{ hour: number; count: number; avgImpressions: number }>;
+  };
+} {
+  const records = getAnalytics(days).filter(r => r.result === 'posted');
+  const zeroClickPosts = records
+    .filter(r => r.shortUrl && r.clicks === 0)
+    .sort((a, b) => b.impressions - a.impressions);
+
+  const groupZeroClicks = <T extends string | number>(keyFn: (r: PostAnalyticsRecord) => T) => {
+    const grouped = new Map<T, PostAnalyticsRecord[]>();
+    for (const r of zeroClickPosts) {
+      const key = keyFn(r);
+      grouped.set(key, [...(grouped.get(key) ?? []), r]);
+    }
+    return [...grouped.entries()]
+      .map(([key, recs]) => ({
+        key,
+        count: recs.length,
+        avgImpressions: recs.length > 0 ? Math.round(recs.reduce((s, r) => s + r.impressions, 0) / recs.length) : 0,
+      }))
+      .sort((a, b) => b.count - a.count || b.avgImpressions - a.avgImpressions);
+  };
+
+  return {
+    stats: getAnalyticsStats(days),
+    topProducts: records
+      .filter(r => r.productId || r.productTitle)
+      .sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
+      .slice(0, 10),
+    topTemplates: getTemplatePerformance(days).slice(0, 10),
+    templateVerdicts: getTemplatePerformance(days),
+    bestHours: getPostingHourPerformance(days).slice(0, 6),
+    linkReplyTests: getLinkReplyPerformance(days).slice(0, 6),
+    zeroClickPosts: zeroClickPosts.slice(0, 10),
+    zeroClickAnalysis: {
+      total: zeroClickPosts.length,
+      byTemplate: groupZeroClicks(r => String(r.templateCategory || 'other'))
+        .slice(0, 6)
+        .map(g => ({ templateCategory: String(g.key), count: g.count, avgImpressions: g.avgImpressions })),
+      byHour: groupZeroClicks(r => (new Date(r.postedAt).getUTCHours() + 9) % 24)
+        .slice(0, 6)
+        .map(g => ({ hour: Number(g.key), count: g.count, avgImpressions: g.avgImpressions })),
+    },
   };
 }

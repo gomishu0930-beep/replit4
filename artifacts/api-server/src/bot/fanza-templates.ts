@@ -6,6 +6,9 @@
  * 禁止事項: 露骨な性的表現・未成年連想・実在人物を模した表現・過度な誇張・詐欺的表現
  */
 
+import { getTemplateCategoryWeights } from './post-analytics.js';
+import { getExternalTopPatterns } from './storage.js';
+
 export type TemplateCategory =
   | 'friend'    // 友達にすすめる自然な口調
   | 'promo'     // 少しだけ煽る販促口調
@@ -19,6 +22,7 @@ export interface TemplateResult {
   text: string;
   templateCategory: TemplateCategory;
   templateType: string;  // カテゴリ内の識別子（例: friend-1, review-2）
+  proofLine?: string;
 }
 
 // ─── プレースホルダー変数 ─────────────────────────────────────────────────────
@@ -223,6 +227,17 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function pickWeightedCategory(categories: TemplateCategory[]): TemplateCategory {
+  const weights = getTemplateCategoryWeights(30);
+  const total = categories.reduce((sum, category) => sum + (weights[category] ?? 1), 0);
+  let cursor = Math.random() * total;
+  for (const category of categories) {
+    cursor -= weights[category] ?? 1;
+    if (cursor <= 0) return category;
+  }
+  return categories[categories.length - 1] ?? 'friend';
+}
+
 function fillTemplate(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
     (t, [k, v]) => t.replace(new RegExp(`\\{${k}\\}`, 'g'), v),
@@ -232,6 +247,66 @@ function fillTemplate(template: string, vars: Record<string, string>): string {
 
 function shortTitle(title: string, maxLen = 22): string {
   return title.length > maxLen ? title.slice(0, maxLen) + '…' : title;
+}
+
+function getFirstName(values: any): string {
+  return Array.isArray(values)
+    ? values.map((v: any) => typeof v === 'string' ? v : v?.name ?? '').filter(Boolean)[0] ?? ''
+    : '';
+}
+
+function buildProofLine(item: any, category: TemplateCategory): string | null {
+  const avg = parseFloat(item?.review?.average ?? '0');
+  const count = Number(item?.review?.count ?? 0);
+  const title = String(item?.title ?? '');
+  const genre = getFirstName(item?.iteminfo?.genre ?? item?.genre);
+  const sale = /セール|sale|SALE|割引|限定|キャンペーン|%OFF|OFF/.test(title);
+  const marketStyle = pickMarketStyleHint(item);
+  const rating = avg > 0 ? `★${avg.toFixed(1)}` : '';
+
+  if (sale && count >= 30 && rating) {
+    return marketStyle === 'discovery'
+      ? `今お得になってて、${count}件レビューで${rating}ならかなり見つけ得。`
+      : `セール中でこの評価なら、後で探し直すより今見ておきたい。`;
+  }
+  if (count >= 80 && rating) {
+    return marketStyle === 'question'
+      ? `${count}件まで伸びてて${rating}、こういう安定作好きな人いませんか。`
+      : `レビュー${count}件まで伸びてて、評価も${rating}でかなり安定してる。`;
+  }
+  if (genre && category !== 'night') {
+    return marketStyle === 'casual'
+      ? `${genre}系を探してる人なら、これは候補に入れていいと思う。`
+      : `${genre}系で迷ってるなら、これはかなり入りやすい。`;
+  }
+  if (rating && avg >= 4.5) {
+    return `評価${rating}まで出てるの、普通に強い。`;
+  }
+  return null;
+}
+
+function pickMarketStyleHint(item: any): 'discovery' | 'question' | 'casual' | 'review' {
+  const genre = getFirstName(item?.iteminfo?.genre ?? item?.genre);
+  const title = String(item?.title ?? '');
+  const patterns = getExternalTopPatterns(20)
+    .filter((p) => {
+      const text = p.text ?? '';
+      return !genre || text.includes(genre) || title.split(/\s+/).some((word) => word.length >= 3 && text.includes(word));
+    });
+  const sample = (patterns[0]?.text ?? '').slice(0, 120);
+  if (/見つけ|発見|出会/.test(sample)) return 'discovery';
+  if (/？|\?|どっち|いる/.test(sample)) return 'question';
+  if (/レビュー|評価|件/.test(sample)) return 'review';
+  return 'casual';
+}
+
+export function strengthenFanzaPostText(text: string, item: any, category: TemplateCategory): { text: string; proofLine?: string } {
+  const proofLine = buildProofLine(item, category);
+  if (!proofLine) return { text };
+
+  const strengthened = `${text}\n\n${proofLine}`;
+  if (strengthened.length <= 260) return { text: strengthened, proofLine };
+  return { text, proofLine };
 }
 
 // ─── メイン公開関数 ──────────────────────────────────────────────────────────
@@ -256,7 +331,7 @@ export function pickFanzaTemplate(
     pool = CATEGORY_POOLS.night;
   } else {
     const categories = TYPE_TO_CATEGORIES[postType] ?? Object.keys(CATEGORY_POOLS) as TemplateCategory[];
-    const selectedCategory = pickRandom(categories);
+    const selectedCategory = pickWeightedCategory(categories);
     pool = CATEGORY_POOLS[selectedCategory];
   }
 
@@ -271,15 +346,16 @@ export function pickFanzaTemplate(
     .map((g: any) => typeof g === 'string' ? g : g?.name ?? '')
     .filter(Boolean)[0] ?? '';
 
-  const text = fillTemplate(entry.text, {
+  const baseText = fillTemplate(entry.text, {
     actress,
     shortTitle: shortTitle(item?.title ?? '作品'),
     reviewAvg,
     reviewCount,
     genre,
   });
+  const strengthened = strengthenFanzaPostText(baseText, item, entry.category);
 
-  return { text, templateType: entry.id, templateCategory: entry.category };
+  return { text: strengthened.text, templateType: entry.id, templateCategory: entry.category, proofLine: strengthened.proofLine };
 }
 
 /**

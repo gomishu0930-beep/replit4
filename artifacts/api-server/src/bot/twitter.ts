@@ -98,8 +98,12 @@ async function downloadImageBufferWithMime(url: string): Promise<{ buf: Buffer; 
   const buf = Buffer.from(ab);
   // MIME判定: content-typeが明示されていればそれを使う、なければURLの拡張子から推定
   let mimeType = 'image/jpeg';
-  if (contentType.startsWith('image/')) {
+  if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
     mimeType = contentType.split(';')[0].trim();
+  } else if (url.match(/\.mp4(\?|$)/i)) {
+    mimeType = 'video/mp4';
+  } else if (url.match(/\.(mov|qt)(\?|$)/i)) {
+    mimeType = 'video/quicktime';
   } else if (url.match(/\.png(\?|$)/i)) {
     mimeType = 'image/png';
   } else if (url.match(/\.webp(\?|$)/i)) {
@@ -118,7 +122,7 @@ export async function uploadImages(imageUrls: string[]): Promise<string[]> {
       const id = await rw.v1.uploadMedia(buf, { mimeType });
       ids.push(id);
     } catch (e: any) {
-      console.error(`  ⚠ 画像アップロード失敗 (${url}): ${e.message}`);
+      console.error(`  ⚠ メディアアップロード失敗 (${url}): ${e.message}`);
     }
   }
   return ids;

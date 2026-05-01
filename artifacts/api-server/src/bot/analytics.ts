@@ -1,5 +1,6 @@
 import { getRecentPostIds, updateMetrics, upsertExternalPatterns, getExternalTopPatterns, upsertDynamicTemplates, getAllPosts, recordDailyImpressionAvg, getDailyImpressionSnapshots } from './storage.js';
 import { getTweetMetrics, searchTweetsByHashtag, fetchUserTimelineByUsername } from './twitter.js';
+import { updateAnalyticsFromTweetMetrics } from './post-analytics.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { contact } from './contact.js';
 
@@ -11,14 +12,17 @@ export async function refreshRecentMetrics() {
   const ids = getRecentPostIds(7);
   if (!ids.length) {
     console.log('  指標更新対象の投稿がありません');
-    return;
+    return { checked: 0, updated: 0 };
   }
 
   console.log(`  ${ids.length} 件の投稿の指標を更新中...`);
+  let updated = 0;
   for (const tweetId of ids) {
     const metrics = await getTweetMetrics(tweetId);
     if (metrics) {
       updateMetrics(tweetId, metrics);
+      updateAnalyticsFromTweetMetrics(tweetId, metrics);
+      updated++;
       console.log(
         `    ✓ ${tweetId}: ❤${metrics.like_count} 🔁${metrics.retweet_count} 🔖${(metrics as any).bookmark_count ?? '-'}`,
       );
@@ -26,6 +30,7 @@ export async function refreshRecentMetrics() {
     await sleep(1500);
   }
   console.log('  指標更新完了');
+  return { checked: ids.length, updated };
 }
 
 // ※ min_faves: はEnterprise専用。Basicプランでは使えないため単純クエリのみ

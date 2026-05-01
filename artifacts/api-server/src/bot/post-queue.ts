@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { isAutoPostEnabled, isDryRun } from './run-config.js';
+import type { TemplateCategory } from './fanza-templates.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
@@ -28,6 +29,9 @@ export interface QueueItem {
   itemTitle?: string;
   provider?: string;
   sourceUrl?: string;
+  templateType?: string;
+  templateCategory?: TemplateCategory | 'engagement' | 'erotic-story' | 'other';
+  safetyScore?: number;
   mediaFiles?: Array<{ filename: string; url?: string; type: string }>;
   status: QueueItemStatus;
   filterResult?: { safe: boolean; reason?: string };

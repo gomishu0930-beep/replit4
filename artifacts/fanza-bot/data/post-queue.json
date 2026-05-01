@@ -83,5 +83,20 @@
     "createdAt": "2026-04-30T16:35:30.962Z",
     "updatedAt": "2026-04-30T17:00:00.023Z",
     "error": "安全制限: アフィリ比率が30%を超えます（現在100.0%）"
+  },
+  {
+    "type": "fanza",
+    "text": "🔞みんなが選ぶ理由、見てわかった\n\n恋渕ももな「【VR】【8K】時間停止VR 恋渕ももな」\n⭐4.5(28件の支持)\n\n数字だけじゃなく中身が伴ってる\n👇リプ欄でチェック",
+    "itemTitle": "【VR】【8K】時間停止VR 恋渕ももな",
+    "affiliateUrl": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3D13dsvr01740&af_id=bigshu0930-990&ch=api",
+    "filterResult": {
+      "safe": true,
+      "blockedWords": []
+    },
+    "id": "a9248c06-2acf-463e-984d-8de457c5d100",
+    "status": "failed",
+    "createdAt": "2026-05-01T03:40:09.651Z",
+    "updatedAt": "2026-05-01T03:40:17.564Z",
+    "error": "安全制限: アフィリ比率が30%を超えます（現在100.0%）"
   }
 ]
