@@ -1390,7 +1390,12 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
               : `${methodLabel} キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`;
             const extraFields: { name: string; value: string; inline: boolean }[] = [];
             if (!result.usedImageFallback && result.clip?.url) {
-              extraFields.push({ name: '動画URL（コピー用）', value: `\`\`\`\n${result.clip.url}\n\`\`\``, inline: false });
+              const videoUrl = result.clip.url;
+              extraFields.push({
+                name: '動画URL',
+                value: `[▶ ブラウザで開く](${videoUrl})\n\`${videoUrl}\``,
+                inline: false,
+              });
             }
             const embed = buildQueueEmbed(result.queueItem)
               .setTitle(title)

@@ -3,22 +3,66 @@ import fsp from 'fs/promises';
 import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import { Storage } from '@google-cloud/storage';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
 const VIDEO_DIR = path.join(DATA_DIR, 'sample-videos');
 
-function getMediaBaseUrl(): string {
+const REPLIT_SIDECAR = 'http://127.0.0.1:1106';
+const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? '';
+
+function createGcsClient(): Storage | null {
+  if (!BUCKET_ID) return null;
+  try {
+    return new Storage({
+      credentials: {
+        audience: 'replit',
+        subject_token_type: 'access_token',
+        token_url: `${REPLIT_SIDECAR}/token`,
+        type: 'external_account',
+        credential_source: {
+          url: `${REPLIT_SIDECAR}/credential`,
+          format: { type: 'json', subject_token_field_name: 'access_token' },
+        },
+        universe_domain: 'googleapis.com',
+      } as any,
+      projectId: '',
+    });
+  } catch {
+    return null;
+  }
+}
+
+const gcs = createGcsClient();
+
+async function uploadVideoToGcs(filePath: string, filename: string): Promise<void> {
+  if (!gcs || !BUCKET_ID) return;
+  try {
+    const gcsPath = `fanza-bot/sample-videos/${filename}`;
+    const file = gcs.bucket(BUCKET_ID).file(gcsPath);
+    await file.save(await fsp.readFile(filePath), {
+      contentType: 'video/mp4',
+      resumable: false,
+    });
+  } catch {
+    // バックグラウンドバックアップ失敗は無視
+  }
+}
+
+function getFallbackMediaUrl(filename: string): string {
   const domain =
     process.env.REPLIT_DEV_DOMAIN ??
     process.env.REPLIT_DEPLOYMENT_DOMAIN ??
     (process.env.REPLIT_DOMAINS ?? '').split(',')[0].trim();
-  if (domain) return `https://${domain}/api/bot/media`;
-  return '/api/bot/media';
+  const base = domain ? `https://${domain}/api/bot/media` : '/api/bot/media';
+  return `${base}/${encodeURIComponent(filename)}`;
 }
 
-function mediaUrl(filename: string): string {
-  return `${getMediaBaseUrl()}/${encodeURIComponent(filename)}`;
+async function mediaUrl(filename: string, filePath: string): Promise<string> {
+  // GCSへのバックアップは非同期でバックグラウンド実行（URLには使わない）
+  uploadVideoToGcs(filePath, filename).catch(() => {});
+  return getFallbackMediaUrl(filename);
 }
 
 export interface SampleVideoPermission {
@@ -185,7 +229,7 @@ export async function prepareSampleVideoClip(
       ]);
       const stat = await fsp.stat(filePath);
       if (stat.size > 1024) {
-        return { filename, filePath, url: mediaUrl(filename), sourceUrl, durationSec, method: 'direct' };
+        return { filename, filePath, url: await mediaUrl(filename, filePath), sourceUrl, durationSec, method: 'direct' };
       }
     } catch {
     }
@@ -263,7 +307,7 @@ export async function createSlideshowVideo(
   return {
     filename,
     filePath,
-    url: mediaUrl(filename),
+    url: await mediaUrl(filename, filePath),
     sourceUrl: imageUrls[0],
     durationSec,
     method: 'slideshow',
