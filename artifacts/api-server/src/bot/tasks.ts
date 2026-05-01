@@ -59,6 +59,16 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     emoji: '🤖',
   },
   {
+    id: 'daily-revenue-queue',
+    title: '収益候補キュー補充',
+    description: 'クリック実績が強い時間帯に、売れやすいFANZA候補を自動でキューへ追加する。',
+    frequency: 'daily',
+    assignee: 'ai',
+    category: 'post',
+    scheduledTime: '強い時間帯の毎時05分',
+    emoji: '🤖',
+  },
+  {
     id: 'daily-shadowban-check',
     title: '23:00 シャドウバンチェック',
     description: 'アカウントのシャドウバン回復状況を自動確認・記録。',

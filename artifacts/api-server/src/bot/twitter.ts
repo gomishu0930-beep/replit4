@@ -1,4 +1,5 @@
 import { TwitterApi } from 'twitter-api-v2';
+import fsp from 'fs/promises';
 import { readJson, writeJson } from './cloudStore.js';
 
 const client = new TwitterApi({
@@ -119,13 +120,21 @@ export async function uploadImages(imageUrls: string[]): Promise<string[]> {
   for (const url of imageUrls.slice(0, 4)) {
     try {
       const { buf, mimeType } = await downloadImageBufferWithMime(url);
-      const id = await rw.v1.uploadMedia(buf, { mimeType });
-      ids.push(id);
+      ids.push(await uploadMediaBuffer(buf, mimeType));
     } catch (e: any) {
       console.error(`  ⚠ メディアアップロード失敗 (${url}): ${e.message}`);
     }
   }
   return ids;
+}
+
+export async function uploadMediaBuffer(buf: Buffer, mimeType: string): Promise<string> {
+  return await rw.v1.uploadMedia(buf, { mimeType });
+}
+
+export async function uploadLocalMediaFile(filePath: string, mimeType: string): Promise<string> {
+  const buf = await fsp.readFile(filePath);
+  return uploadMediaBuffer(buf, mimeType);
 }
 
 export async function postTweet(text: string, mediaIds: string[] = []): Promise<string> {

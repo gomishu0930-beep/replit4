@@ -29,7 +29,7 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 - **`bot/run-config.ts`**: AUTO_POST_ENABLED / DRY_RUN / 日/時間上限 / cooldown管理 (初期値: DRY_RUN=true, AUTO_POST=false)
 - **`bot/content-filter.ts`**: 危険ワードフィルター (未成年/非同意/強制等) + 画像プロンプト検査 / strict/moderate/permissive
 - **`bot/post-queue.ts`**: 投稿キューシステム (pending→approved/rejected/posted/failed/dry_run)
-- **`routes/queue.ts`**: `GET /api/bot/queue` / `POST /api/bot/queue/:id/approve|reject` / `DELETE /api/bot/queue`
+- **`routes/queue.ts`**: `GET /api/bot/queue` / `POST /api/bot/queue/:id/approve|reject`。`manualDirect=true` でDiscord/ダッシュボードの「今すぐ投稿」と同じ手動投稿扱い。
 - **`routes/health.ts`**: 拡張ヘルスチェック (rateLimit/安全制限/フィルター/キュー情報付き)
 - **スケジューラー統合**: engagement/erotic-story/fanza/myfans全4スロット → フィルター検査→キュー追加→DRY_RUN制御
 - **テスト**: vitest 16ケース全て合格 (safety.test.ts) / `pnpm --filter @workspace/api-server test`
@@ -59,7 +59,6 @@ Production URL: `asset-manager-3-gomishu0930.replit.app`
 artifacts/api-server/src/bot/
   scheduler.ts        — cron jobs: 10:30/17:00/20:00 JST 3スロット + Safety Engine統合
   safety-engine.ts    — 凍結回避: リスクスコアリング・自動化レベル管理・投稿バリデーション
-  auto-meeting.ts     — 3-party AI meeting (Grok→GPT→Claude)
   strategy.ts         — strategy config (GCS: strategy-config.json)
   storage.ts          — post records, templates, meeting data (GCS)
   meeting.ts          — meeting room, directives, research sessions
@@ -91,10 +90,18 @@ artifacts/bot-dashboard/src/
 
 ## Dashboard (4タブ)
 
-1. **Poll Lab** (@fanza_poll_lab): 手動投稿支援 — 次回投稿カウントダウン・投稿前チェックリスト・テンプレートコピー・曜日テーマ一覧
-2. **先輩** (@ero_senpai1): API接続 — 安全レベル監視・KPI (インプ/クリック/いいね/RT)・操作 (TL同期/リンク同期/指標更新)・凍結回避ルール・ボット制御
-3. **スタジオ**: FANZA検索→投稿文生成→画像生成 (Nanobanana2, 参照画像img2img対応) + 採点 (GPT-4o Vision, 橋本環奈100点基準)
-4. **データ**: 投稿履歴・IP/EV推移グラフ・リスクスコア推移・クリック計測 (Rebrandly)・月額コスト
+1. **Poll Lab**: @fanza_poll_lab の手動Poll支援。次回投稿、曜日テーマ、本文コピー。
+2. **運用**: キュー、収益候補補充、Rebrandly同期/作成、動画設定、DRY_RUN/自動投稿、今すぐ投稿。
+3. **投稿**: FANZA検索、投稿文生成、選択作品のキュー追加、サンプル動画キュー、画像生成/採点。
+4. **分析**: クリック、CTR、テンプレ勝ち負け、推奨投稿時間、リンク文A/B、週次AIレビュー。
+
+## Revenue Posting Flow
+
+- 収益候補は `revenue-queue.ts` に集約。ダッシュボード、Discord `/revenue-queue`、スケジューラーが同じ処理を使う。
+- FANZA親投稿は「投稿文 + 画像/サンプル動画」、リプライに短縮アフィリエイトリンク。
+- Rebrandly APIキーがある場合はキュー投入時に短縮リンクを自動作成。
+- `AUTO_REVENUE_QUEUE_ENABLED=true` の場合、クリック実績から推奨された時間帯にFANZAキューを自動補充。
+- Discord/ダッシュボードの「今すぐ投稿」は手動投稿扱い。DRY_RUN/日次上限はスキップし、コンテンツフィルターは維持する。
 
 ## MyFans Workflow Server (artifacts/myfans-workflow)
 
@@ -160,6 +167,12 @@ artifacts/bot-dashboard/src/
 - `GET /api/bot/posts` — 投稿履歴
 - `GET /api/bot/rebrandly` — Rebrandlyクリックデータ
 - `POST /api/bot/rebrandly/sync` — Rebrandly手動同期
+- `POST /api/bot/rebrandly/auto-create` — キュー内アフィリエイトURLの短縮リンク作成
+- `GET /api/bot/fanza-search` — FANZA検索（rank/sale/revenue/keyword等）
+- `POST /api/bot/fanza-revenue-queue` — 収益候補を自動選定してキュー投入
+- `POST /api/bot/fanza-item-queue` — ダッシュボードで選んだ作品をキュー投入
+- `GET /api/bot/sample-video/status` — サンプル動画処理状態
+- `POST /api/bot/sample-video/queue` — 許可メーカーのサンプル動画を短尺化してキュー投入
 - `POST /api/bot/posts/sync-timeline` — TL同期
 - `POST /api/bot/nanobanana/generate` — 画像生成 (Nanobanana2)
 - `POST /api/bot/nanobanana/upload` — 画像アップロード (Twitter media)

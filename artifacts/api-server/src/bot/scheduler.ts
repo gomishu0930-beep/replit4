@@ -12,7 +12,7 @@ import { processApprovedQueue } from './queue-publisher.js';
 import { researchBuzzForItem } from './grok.js';
 import { recordPost, recordPostManual, getTopPatterns, getExternalTopPatterns, getPostsAfter, getStats, recordAccountSnapshot, getLatestSnapshot, getRebrandlyData, getDailyImpressionSnapshots, recordManualFeedback } from './storage.js';
 import { pickFanzaTemplate } from './fanza-templates.js';
-import { recordAnalytics, loadAnalytics, getAnalytics, isHighRevenueHour, pickAffiliateReplyCopy } from './post-analytics.js';
+import { recordAnalytics, loadAnalytics, getAnalytics, isHighRevenueHour, getRecommendedRevenueHours, pickAffiliateReplyCopy } from './post-analytics.js';
 import { buildInsightContext, loadInsightMemory } from './insight-memory.js';
 import { runWeeklyReview, loadWeeklyReviews } from './weekly-review.js';
 import { autoCreateRebrandlyLinks, syncRebrandlyClicks, resolveShortUrl } from './rebrandly.js';
@@ -20,6 +20,7 @@ import { refreshExternalPatterns, checkShadowbanRecovery, refreshRecentMetrics }
 import { loadStrategyConfig, evaluateAndAdapt, runDailyEvaluation, getMonitorIntervalMs, getStrategySummary } from './strategy.js';
 import { startWatchdog, injectSchedulerHooks } from './watchdog.js';
 import { autoCompleteTask } from './tasks.js';
+import { queueRevenueOptimizedItems } from './revenue-queue.js';
 import { validatePost, recordPostEvent, loadSafetyState, updateFollowerCount, getSafetyStatus } from './safety-engine.js';
 import {
   appendPostLog,
@@ -56,6 +57,27 @@ function pickSlotType(): ContentSlotType {
   if (rand < 65) return 'erotic-story';
   if (rand < 90) return 'fanza';
   return 'myfans';
+}
+
+function isAutoRevenueQueueEnabled(): boolean {
+  return process.env.AUTO_REVENUE_QUEUE_ENABLED === 'true';
+}
+
+async function autoFillRevenueQueue(label: string): Promise<void> {
+  const activeFanzaCount = getQueue(['pending', 'approved']).filter(item => item.type === 'fanza').length;
+  if (activeFanzaCount >= 2) {
+    console.log(`  📬 [${label}] FANZAキューが十分あります (${activeFanzaCount}件)`);
+    return;
+  }
+  const result = await queueRevenueOptimizedItems({
+    count: Math.max(1, 2 - activeFanzaCount),
+    withImage: true,
+    source: 'scheduler',
+  });
+  console.log(`  📬 [${label}] 収益候補キュー投入: ${result.queuedCount}/${result.requested}件`);
+  if (result.queuedCount > 0) {
+    autoCompleteTask('daily-revenue-queue', 'daily').catch(() => {});
+  }
 }
 
 async function postFanzaItem(item: any, type: string, label: string) {
@@ -734,6 +756,17 @@ export function startScheduler() {
   // 02:00 JST — 深夜インプ投稿④ [Grok分析: 深夜2-4時 インプ+50%]
   // 感情爆発型・日常ｗｗ型テンプレートを優先。🔞タグなし、凍結リスク低
   cron.schedule('0 2 * * *', () => runScheduledSlot('02:00 深夜スロット④'), { timezone: 'Asia/Tokyo' });
+
+  // 毎時05分 — クリック実績で強い時間帯だけ収益候補を自動キュー投入
+  cron.schedule('5 * * * *', async () => {
+    if (!isAutoRevenueQueueEnabled()) return;
+    if (!isHighRevenueHour()) return;
+    try {
+      await autoFillRevenueQueue(`収益候補自動キュー ${getRecommendedRevenueHours(30).join('/')}時`);
+    } catch (e: any) {
+      console.warn(`  ⚠ [収益候補自動キュー] 失敗: ${e.message}`);
+    }
+  }, { timezone: 'Asia/Tokyo' });
 
   // 5分ごと — 承認済みキューを1件ずつ投稿
   cron.schedule('*/5 * * * *', async () => {

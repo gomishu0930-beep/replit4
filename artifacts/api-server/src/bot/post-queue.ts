@@ -134,10 +134,10 @@ export function rejectQueueItem(id: string): QueueItem | null {
   return item;
 }
 
-export function markPosted(id: string, tweetId: string): void {
+export function markPosted(id: string, tweetId: string, status?: 'posted' | 'dry_run'): void {
   const item = queue.find(i => i.id === id);
   if (!item) return;
-  item.status = isDryRun() ? 'dry_run' : 'posted';
+  item.status = status ?? (isDryRun() ? 'dry_run' : 'posted');
   item.tweetId = tweetId;
   item.postedAt = new Date().toISOString();
   item.updatedAt = new Date().toISOString();

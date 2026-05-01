@@ -5,25 +5,23 @@ import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, upload
 import { generateImage, getImageGenStatus, type ImageEngine } from '../bot/imageGen.js';
 import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageScorer.js';
 import { getStrategySummary } from '../bot/strategy.js';
-import { getCampaignCacheInfo, discoverCampaignIds, fetchItems, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getRevenueOptimizedItems, getSampleImages, scoreFanzaItem } from '../bot/fanza.js';
+import { getCampaignCacheInfo, discoverCampaignIds, getAmateurItems, getBuzzItems, getRankingItems, getSaleItems, getRandomItems, getKeywordItems, getRevenueOptimizedItems, getSampleImages, scoreFanzaItem } from '../bot/fanza.js';
 import { getWatchdogState } from '../bot/watchdog.js';
 import { getSafetyStatus, validatePost, recordPostEvent, updateFollowerCount } from '../bot/safety-engine.js';
 import { generateTweetText, generateEroticStoryTweet } from '../bot/ai.js';
 import { researchBuzzForItem } from '../bot/grok.js';
-import { enqueuePost, getQueue } from '../bot/post-queue.js';
-import { filterContent } from '../bot/content-filter.js';
-import { getRunConfig } from '../bot/run-config.js';
-import { pickFanzaTemplate, strengthenFanzaPostText } from '../bot/fanza-templates.js';
-import { recordAnalytics } from '../bot/post-analytics.js';
+import { getQueue } from '../bot/post-queue.js';
+import { strengthenFanzaPostText } from '../bot/fanza-templates.js';
 import {
   checkSampleVideoPermission,
   extractSampleMovieUrl,
   getFanzaMakerNames,
   getSampleVideoFilePath,
   getSampleVideoStatus,
-  prepareSampleVideoClip,
 } from '../bot/sample-video.js';
-import { getEmailNotifyStatus, sendEmailNotification } from '../bot/email-notifier.js';
+import { queueSampleVideoPost } from '../bot/sample-video-queue.js';
+import { queueRevenueOptimizedItems, queueSingleFanzaItem } from '../bot/revenue-queue.js';
+import { getEmailNotifyStatus } from '../bot/email-notifier.js';
 
 const router = Router();
 
@@ -249,23 +247,6 @@ router.get('/bot/media/:filename', (req, res) => {
   res.type('video/mp4').sendFile(filePath);
 });
 
-function normalizeFanzaItem(rawItem: any): any {
-  return {
-    ...rawItem,
-    title: rawItem?.title ?? '',
-    content_id: rawItem?.content_id ?? rawItem?.id ?? '',
-    affiliateURL: rawItem?.affiliateURL ?? rawItem?.affiliateUrl ?? '',
-    review: rawItem?.review ?? { count: rawItem?.reviewCount ?? 0, average: rawItem?.reviewAvg ?? '4.0' },
-    iteminfo: {
-      ...(rawItem?.iteminfo ?? {}),
-      actress: rawItem?.iteminfo?.actress ?? (Array.isArray(rawItem?.actress) ? rawItem.actress.map((name: string) => ({ name })) : []),
-      genre: rawItem?.iteminfo?.genre ?? (Array.isArray(rawItem?.genre) ? rawItem.genre.map((name: string) => ({ name })) : []),
-      maker: rawItem?.iteminfo?.maker ?? (Array.isArray(rawItem?.makers) ? rawItem.makers.map((name: string) => ({ name })) : []),
-    },
-    sampleMovieURL: rawItem?.sampleMovieURL ?? rawItem?.sampleMovieUrl,
-  };
-}
-
 router.post('/bot/sample-video/queue', requireAdminToken, async (req, res) => {
   const rawItem = req.body?.item;
   if (!rawItem?.title) {
@@ -274,71 +255,15 @@ router.post('/bot/sample-video/queue', requireAdminToken, async (req, res) => {
   }
 
   try {
-    const item = normalizeFanzaItem(rawItem);
-    const permission = checkSampleVideoPermission(item);
-    if (!permission.allowed) {
-      res.status(400).json({ error: permission.reason, permission });
-      return;
-    }
-
-    const text = String(req.body?.text ?? '').trim() || pickFanzaTemplate(item, 'revenue').text;
-    const filterResult = filterContent(text, getRunConfig().safetyStrictness);
-    if (!filterResult.safe) {
-      res.status(400).json({ error: filterResult.reason ?? 'コンテンツフィルターで除外', filterResult });
-      return;
-    }
-
-    const clip = await prepareSampleVideoClip(item, {
+    const result = await queueSampleVideoPost(rawItem, {
+      text: String(req.body?.text ?? ''),
       startSec: Number(req.body?.startSec ?? 3),
       durationSec: Number(req.body?.durationSec ?? 8),
+      notifyEmail: String(req.body?.notifyEmail ?? ''),
     });
-    const sourceUrl = item.content_id ?? item.id;
-    const queueItem = enqueuePost({
-      type: 'fanza',
-      text,
-      itemTitle: item.title,
-      affiliateUrl: item.affiliateURL ?? undefined,
-      sourceUrl,
-      mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
-      filterResult,
-      safetyScore: Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20),
-    });
-
-    recordAnalytics({
-      postId: queueItem.id,
-      postedAt: queueItem.createdAt,
-      provider: 'twitter',
-      productId: sourceUrl ?? '',
-      productTitle: item.title ?? '',
-      category: 'fanza',
-      templateType: 'sample-video',
-      templateCategory: 'other',
-      text,
-      url: item.affiliateURL ?? '',
-      shortUrl: '',
-      imageUsed: true,
-      safetyScore: queueItem.safetyScore ?? 100,
-      result: 'queued',
-      clicks: 0,
-      impressions: 0,
-      likes: 0,
-      reposts: 0,
-      replies: 0,
-      metricsUpdatedAt: null,
-    });
-
-    const notifyTo = String(req.body?.notifyEmail || process.env.SAMPLE_VIDEO_NOTIFY_EMAIL || '').trim();
-    const email = notifyTo
-      ? await sendEmailNotification({
-        to: notifyTo,
-        subject: 'FANZAサンプル動画キュー作成完了',
-        text: `サンプル動画付き投稿をキューに追加しました。\n\n作品: ${item.title}\nqueue_id: ${queueItem.id}\n動画: ${clip.url}`,
-      })
-      : { ok: false, skipped: true, error: '通知先未指定' };
-
-    res.json({ ok: true, queueItem, clip, permission, email });
+    res.json({ ok: true, ...result });
   } catch (e: any) {
-    res.status(500).json({ error: e.message ?? String(e) });
+    res.status(400).json({ error: e.message ?? String(e) });
   }
 });
 
@@ -535,101 +460,31 @@ router.get('/bot/fanza-search', requireAdminToken, async (req, res) => {
 });
 
 router.post('/bot/fanza-revenue-queue', requireAdminToken, async (req, res) => {
-  const count = Math.min(Math.max(Number(req.body?.count) || 3, 1), 10);
-  const keyword = String(req.body?.keyword || '').trim();
-  const withImage = req.body?.withImage !== false;
-
   try {
-    const items = await getRevenueOptimizedItems(count, keyword || undefined);
-    const activeSourceUrls = new Set(
-      getQueue(['pending', 'approved'])
-        .filter((queueItem) => queueItem.type === 'fanza' && queueItem.sourceUrl)
-        .map((queueItem) => queueItem.sourceUrl),
-    );
-    const queued = [];
-    const rebrandlyCandidates: Array<{ affiliateUrl?: string; itemId?: string; title?: string }> = [];
-
-    for (const item of items) {
-      const sourceUrl = item.content_id ?? item.id;
-      if (sourceUrl && activeSourceUrls.has(sourceUrl)) {
-        queued.push({
-          ok: false,
-          content_id: item.content_id,
-          title: item.title,
-          error: '既にキューにあります',
-        });
-        continue;
-      }
-
-      const tmpl = pickFanzaTemplate(item, 'revenue');
-      const filterResult = filterContent(tmpl.text, getRunConfig().safetyStrictness);
-      if (!filterResult.safe) {
-        queued.push({
-          ok: false,
-          content_id: item.content_id,
-          title: item.title,
-          error: filterResult.reason ?? 'コンテンツフィルターで除外',
-        });
-        continue;
-      }
-
-      const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
-      const imageUrl = withImage ? getSampleImages(item)[0] ?? undefined : undefined;
-      const queueItem = enqueuePost({
-        type: 'fanza',
-        text: tmpl.text,
-        itemTitle: item.title,
-        affiliateUrl: item.affiliateURL ?? undefined,
-        imageUrl,
-        sourceUrl,
-        templateType: tmpl.templateType,
-        templateCategory: tmpl.templateCategory,
-        safetyScore,
-        filterResult,
-      });
-
-      recordAnalytics({
-        postId: queueItem.id,
-        postedAt: queueItem.createdAt,
-        provider: 'twitter',
-        productId: item.content_id ?? item.id ?? '',
-        productTitle: item.title ?? '',
-        category: 'fanza',
-        templateType: tmpl.templateType,
-        templateCategory: tmpl.templateCategory,
-        text: tmpl.text,
-        url: item.affiliateURL ?? '',
-        shortUrl: '',
-        imageUsed: Boolean(imageUrl),
-        safetyScore,
-        result: 'queued',
-        clicks: 0,
-        impressions: 0,
-        likes: 0,
-        reposts: 0,
-        replies: 0,
-        metricsUpdatedAt: null,
-      });
-
-      queued.push({
-        ok: true,
-        queueId: queueItem.id,
-        content_id: item.content_id,
-        title: item.title,
-        revenueScore: item.revenueScore ?? scoreFanzaItem(item),
-        templateCategory: tmpl.templateCategory,
-      });
-      rebrandlyCandidates.push({ affiliateUrl: item.affiliateURL, itemId: sourceUrl, title: item.title });
-      if (sourceUrl) activeSourceUrls.add(sourceUrl);
-    }
-
-    const rebrandly = process.env.REBRANDLY_API_KEY
-      ? await autoCreateRebrandlyLinks(rebrandlyCandidates)
-      : null;
-
-    res.json({ ok: true, requested: count, queuedCount: queued.filter(i => i.ok).length, items: queued, rebrandly });
+    const result = await queueRevenueOptimizedItems({
+      count: Number(req.body?.count) || 3,
+      keyword: String(req.body?.keyword || ''),
+      withImage: req.body?.withImage !== false,
+      source: 'dashboard',
+    });
+    res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/fanza-item-queue', requireAdminToken, async (req, res) => {
+  try {
+    const rawItem = req.body?.item;
+    if (!rawItem?.title) { res.status(400).json({ error: 'item.title が必要です' }); return; }
+    const result = await queueSingleFanzaItem(rawItem, {
+      text: String(req.body?.text ?? ''),
+      withImage: req.body?.withImage !== false,
+      source: 'dashboard',
+    });
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
   }
 });
 

@@ -80,6 +80,19 @@ interface Post {
   metrics: { like_count: number; retweet_count: number; impression_count?: number } | null;
 }
 
+interface SampleVideoStatusResponse {
+  ok: boolean;
+  sampleVideo: {
+    ffmpegAvailable: boolean;
+    allowedMakers: string[];
+    videoDir: string;
+  };
+  email: {
+    configured: boolean;
+    missing: string[];
+  };
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
     timeZone: "Asia/Tokyo", hour12: false,
@@ -187,7 +200,7 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
-type Tab = "poll" | "senpai" | "story" | "studio" | "data";
+type Tab = "poll" | "senpai" | "studio" | "data";
 
 function Dashboard() {
   const [tab, setTab] = useState<Tab>("poll");
@@ -195,6 +208,7 @@ function Dashboard() {
   const [syncingRevenue, setSyncingRevenue] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [rebrandlyAutoMessage, setRebrandlyAutoMessage] = useState("");
+  const [revenueQueueMessage, setRevenueQueueMessage] = useState("");
 
   const { data: status } = useQuery<BotStatus>({
     queryKey: ["botStatus"],
@@ -227,6 +241,11 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/bot/queue`).then(r => r.json()),
     refetchInterval: 15000,
   });
+  const { data: sampleVideoStatusData, refetch: refetchSampleVideoStatus } = useQuery<SampleVideoStatusResponse>({
+    queryKey: ["sampleVideoStatus"],
+    queryFn: () => fetch(`${API}/api/bot/sample-video/status`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
   const { data: weeklyReviewData, refetch: refetchWeeklyReview } = useQuery<{
     ok: boolean;
     latest: {
@@ -256,6 +275,8 @@ function Dashboard() {
     topTemplates: Array<{ templateCategory: string; count: number; totalClicks: number; ctrPct: number; verdict?: "win" | "neutral" | "loss" }>;
     templateVerdicts: Array<{ templateCategory: string; count: number; totalClicks: number; ctrPct: number; verdict: "win" | "neutral" | "loss" }>;
     bestHours: Array<{ hour: number; count: number; totalClicks: number; ctrPct: number; score: number }>;
+    recommendedHours: number[];
+    nextRecommendedHour: number;
     linkReplyTests: Array<{ variant: string; count: number; totalClicks: number; avgClicks: number }>;
     zeroClickPosts: Array<{ postId: string; productTitle: string; impressions: number; shortUrl: string }>;
     zeroClickAnalysis: {
@@ -285,6 +306,8 @@ function Dashboard() {
   const safety = safetyData;
   const stats = status?.stats;
   const totalClicks = rebrandlyData?.links?.reduce((s, l) => s + l.clicks, 0) ?? 0;
+  const sampleVideo = sampleVideoStatusData?.sampleVideo;
+  const sampleVideoEmail = sampleVideoStatusData?.email;
 
   const runRevenueSync = async () => {
     setSyncingRevenue(true); setSyncMessage("");
@@ -314,6 +337,23 @@ function Dashboard() {
     }
   };
 
+  const runRevenueQueue = async () => {
+    setRevenueQueueMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/fanza-revenue-queue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 3, withImage: true }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await Promise.all([refetchQueue(), refetchRebrandly(), refetchRevenue()]);
+      setRevenueQueueMessage(`収益候補: 追加${data.queuedCount ?? 0}/${data.requested ?? 3}件`);
+    } catch (e: any) {
+      setRevenueQueueMessage(`収益候補失敗: ${e.message}`);
+    }
+  };
+
   const [countdown, setCountdown] = useState(getNextPostTime().ms);
   useEffect(() => { const id = setInterval(() => setCountdown(getNextPostTime().ms), 1000); return () => clearInterval(id); }, []);
 
@@ -328,7 +368,7 @@ function Dashboard() {
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-20">
       <div className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-[15px] font-bold tracking-tight">FANZA Bot</h1>
+          <h1 className="text-[15px] font-bold tracking-tight">FANZA Revenue Ops</h1>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }} />
             <span className="text-[11px] font-semibold" style={{ color: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }}>
@@ -342,36 +382,7 @@ function Dashboard() {
 
         {tab === "poll" && (
           <div className="space-y-4">
-            <SectionHeader icon="🗳️" title="@fanza_poll_lab" sub="メイン — 手動投稿（Xアプリから）" color="text-blue-400" />
-
-            <div className="rounded-2xl bg-blue-500/5 border border-blue-500/15 p-4">
-              <p className="text-[11px] text-blue-400 font-bold mb-2">Pollとは？</p>
-              <p className="text-[11px] text-zinc-300 leading-relaxed mb-2">
-                Xの「投票機能」です。ツイート作成画面の下部にある📊マークから2〜4択の投票を作れます。
-                フォロワーがタップするだけで参加でき、エンゲージメントが爆発的に伸びます。
-              </p>
-              <div className="space-y-1.5 mb-2">
-                <div className="flex items-start gap-2">
-                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">1.</span>
-                  <p className="text-[10px] text-zinc-400">Xアプリで新規ツイート → 下の📊アイコンをタップ</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">2.</span>
-                  <p className="text-[10px] text-zinc-400">選択肢を2つ以上入力（例:「巨乳派」「美乳派」「貧乳派」）</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-[10px] text-blue-400 font-bold mt-0.5">3.</span>
-                  <p className="text-[10px] text-zinc-400">投票期間を設定（推奨: 24時間）→ ツイート本文に下のテンプレをコピペ</p>
-                </div>
-              </div>
-              <div className="bg-black/20 rounded-lg p-2.5">
-                <p className="text-[10px] text-amber-400 font-medium mb-1">なぜPollが最強？</p>
-                <p className="text-[10px] text-zinc-400 leading-relaxed">
-                  投票=エンゲージメント扱い → アルゴ評価UP → インプレッション爆増。
-                  リンクなし・画像なしで凍結リスクもゼロ。1日2本で十分な効果。
-                </p>
-              </div>
-            </div>
+            <SectionHeader icon="🗳️" title="Poll Lab" sub="@fanza_poll_lab 手動Poll" color="text-blue-400" />
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-5">
               <div className="flex items-center justify-between mb-2">
@@ -435,13 +446,13 @@ function Dashboard() {
               </div>
             </div>
 
-            <InfoCard icon="📌" text="このアカウントはXアプリから手動で投稿します。上のテンプレートをコピーして貼り付けてください。" />
+            <InfoCard icon="📌" text="PollはXアプリで手動投稿。リンクなしで反応を取り、収益投稿は運用/投稿タブからキュー投入します。" />
           </div>
         )}
 
         {tab === "senpai" && (
           <div className="space-y-4">
-            <SectionHeader icon="💎" title="@ero_senpai1" sub="サブ — API接続済み（青バッジ）" color="text-purple-400" />
+            <SectionHeader icon="💎" title="運用コントロール" sub="キュー・収益候補・動画付き投稿" color="text-purple-400" />
 
             <div className="rounded-2xl border p-5" style={{
               backgroundColor: riskScore <= 30 ? "rgba(34,197,94,0.05)" : riskScore <= 60 ? "rgba(245,158,11,0.05)" : "rgba(239,68,68,0.05)",
@@ -483,13 +494,46 @@ function Dashboard() {
                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">操作</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <ActionBtn label="TL同期" icon="🔄" action={async () => { await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" }); refetchPosts(); }} />
+                <ActionBtn label="収益候補を補充" icon="📬" action={runRevenueQueue} />
                 <ActionBtn label="リンク同期" icon="🔗" action={async () => { await fetch(`${API}/api/bot/rebrandly/sync`, { method: "POST" }); refetchRebrandly(); }} />
+                <ActionBtn label="TL同期" icon="🔄" action={async () => { await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" }); refetchPosts(); }} />
                 <ActionBtn label="リンク作成" icon="✨" action={runRebrandlyAutoCreate} />
                 <ActionBtn label="指標更新" icon="📊" action={async () => { await fetch(`${API}/api/trigger/metrics`, { method: "POST" }); refetchSafety(); }} />
                 <ActionBtn label="スナップショット" icon="📷" action={async () => { await fetch(`${API}/api/bot/snapshots/capture`, { method: "POST" }); refetchSafety(); }} />
               </div>
+              {revenueQueueMessage && (
+                <p className={`text-[10px] mt-2 ${revenueQueueMessage.startsWith("収益候補失敗") ? "text-red-400" : "text-emerald-300"}`}>{revenueQueueMessage}</p>
+              )}
             </div>
+
+            {sampleVideo && (
+              <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">🎬 サンプル動画</p>
+                    <p className="text-[10px] text-zinc-600">Studio / Discord から動画付き投稿をキュー追加</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => refetchSampleVideoStatus()} className="text-[9px] text-zinc-600 hover:text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800">更新</button>
+                    <button onClick={() => setTab("studio")} className="text-[9px] text-blue-300 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">Studioへ</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <MiniStat label="ffmpeg" value={sampleVideo.ffmpegAvailable ? "OK" : "NG"} />
+                  <MiniStat label="許可メーカー" value={sampleVideo.allowedMakers.includes("*") ? "全許可" : `${sampleVideo.allowedMakers.length}件`} />
+                  <MiniStat label="メール" value={sampleVideoEmail?.configured ? "OK" : "未設定"} />
+                </div>
+                {!sampleVideo.ffmpegAvailable && (
+                  <p className="text-[10px] text-amber-400 bg-amber-500/5 rounded-lg px-3 py-1.5">ffmpeg未検出。Replitのpackages反映後に再起動してください。</p>
+                )}
+                {sampleVideo.allowedMakers.length === 0 && (
+                  <p className="text-[10px] text-amber-400 bg-amber-500/5 rounded-lg px-3 py-1.5">FANZA_SAMPLE_VIDEO_ALLOWED_MAKERS が未設定です。</p>
+                )}
+                {sampleVideoEmail && !sampleVideoEmail.configured && (
+                  <p className="text-[10px] text-zinc-500 bg-black/20 rounded-lg px-3 py-1.5">メール通知未設定: {sampleVideoEmail.missing.join(", ")}</p>
+                )}
+              </div>
+            )}
 
             {safety && (
               <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
@@ -541,7 +585,7 @@ function Dashboard() {
                   </div>
                 </div>
                 {runConfigData.config.dryRun && (
-                  <p className="text-[10px] text-amber-400 bg-amber-500/5 rounded-lg px-3 py-1.5">⚠ DRY_RUN中 — スロットが実行されても実際には投稿されません</p>
+                  <p className="text-[10px] text-amber-400 bg-amber-500/5 rounded-lg px-3 py-1.5">⚠ DRY_RUN中 — 自動スロットは投稿されません。キューの「今すぐ投稿」は手動扱いで本番投稿します。</p>
                 )}
                 {!runConfigData.config.autoPostEnabled && !runConfigData.config.dryRun && (
                   <p className="text-[10px] text-zinc-500 bg-zinc-800 rounded-lg px-3 py-1.5">ℹ 自動投稿OFF — 生成した投稿はキューに積まれますが投稿されません</p>
@@ -582,6 +626,9 @@ function Dashboard() {
                       ) : (
                         <span className="text-[9px] text-zinc-500">{item.type}</span>
                       )}
+                      {item.mediaFiles?.some((m: any) => String(m.type).startsWith("video/")) && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">🎬 動画付き</span>
+                      )}
                       {item.itemTitle && (
                         <span className="text-[9px] text-zinc-400 truncate max-w-[120px]">{item.itemTitle}</span>
                       )}
@@ -592,9 +639,13 @@ function Dashboard() {
                       <p className="text-[9px] text-blue-400 truncate">{item.affiliateUrl}</p>
                     )}
                     <div className="flex gap-1.5">
-                      <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/approve`, { method: "POST" }); refetchQueue(); }}
+                      <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/approve`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ manualDirect: true, forceLive: true, bypassSafetyLimits: true, source: "dashboard" }),
+                      }); refetchQueue(); }}
                         className="flex-1 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25">
-                        ✅ 承認して投稿
+                        🚀 今すぐ投稿
                       </button>
                       <button onClick={async () => { await fetch(`${API}/api/bot/queue/${item.id}/reject`, { method: "POST" }); refetchQueue(); }}
                         className="flex-1 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20">
@@ -605,6 +656,9 @@ function Dashboard() {
                 ))}
                 {queueData.items.filter((i: any) => i.status === "pending").length === 0 && (
                   <p className="text-[11px] text-zinc-600 text-center py-2">待機中の投稿なし</p>
+                )}
+                {queueData.items.filter((i: any) => i.status === "pending").length > 0 && (
+                  <p className="text-[9px] text-zinc-500 bg-black/20 rounded-lg px-3 py-1.5">今すぐ投稿はDiscordと同じ手動投稿扱いです。日次上限/DRY_RUNはスキップし、本文フィルターは実行します。</p>
                 )}
               </div>
             )}
@@ -619,13 +673,11 @@ function Dashboard() {
               </div>
             </div>
 
-            <InfoCard icon="📌" text="このアカウントはAPI接続済み。SBI≤2を連続3日確認するまで投稿ゼロ。計測のみ実行中。" />
+            <InfoCard icon="📌" text="収益候補の補充、動画付きキュー、今すぐ投稿、クリック同期をここに集約しています。細かい制作は投稿タブ、検証は分析タブで確認します。" />
           </div>
         )}
 
-        {tab === "story" && <StoryTab />}
-
-        {tab === "studio" && <StudioTab onRevenueQueued={() => { refetchQueue(); setTab("poll"); }} />}
+        {tab === "studio" && <StudioTab sampleVideoStatus={sampleVideoStatusData} onRevenueQueued={() => { refetchQueue(); setTab("senpai"); }} />}
 
         {tab === "data" && (
           <div className="space-y-4">
@@ -706,6 +758,20 @@ function Dashboard() {
                             <span key={h.hour} className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 text-[9px]">{h.hour}時 CTR {h.ctrPct}%</span>
                           ))}
                         </div>
+                        {revenueData.recommendedHours?.length > 0 && (
+                          <p className="text-[9px] text-zinc-500 mt-1">推奨: {revenueData.recommendedHours.join(" / ")}時 / 次 {revenueData.nextRecommendedHour}時</p>
+                        )}
+                      </div>
+                    )}
+                    {revenueData.bestHours?.length === 0 && revenueData.recommendedHours?.length > 0 && (
+                      <div className="rounded-lg bg-black/25 px-3 py-2">
+                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">推奨投稿時間</p>
+                        <div className="flex flex-wrap gap-1">
+                          {revenueData.recommendedHours.map((hour) => (
+                            <span key={hour} className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 text-[9px]">{hour}時</span>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-zinc-500 mt-1">次 {revenueData.nextRecommendedHour}時</p>
                       </div>
                     )}
                     {revenueData.linkReplyTests?.length > 0 && (
@@ -964,10 +1030,9 @@ function Dashboard() {
         <div className="max-w-lg mx-auto flex">
           {([
             { key: "poll" as Tab, label: "Poll", icon: "🗳️" },
-            { key: "senpai" as Tab, label: "先輩", icon: "💎" },
-            { key: "story" as Tab, label: "猥談", icon: "🔞" },
-            { key: "studio" as Tab, label: "Studio", icon: "🎨" },
-            { key: "data" as Tab, label: "Data", icon: "📊" },
+            { key: "senpai" as Tab, label: "運用", icon: "💎" },
+            { key: "studio" as Tab, label: "投稿", icon: "🎨" },
+            { key: "data" as Tab, label: "分析", icon: "📊" },
           ]).map(({ key, label, icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-blue-400" : "text-zinc-600"}`}>
@@ -992,7 +1057,7 @@ interface FanzaItem {
   revenueScore?: { score: number; qualityScore: number; clickBoost: number; reasons: string[] };
 }
 
-function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
+function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: () => void; sampleVideoStatus?: SampleVideoStatusResponse }) {
   const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score">("tweet");
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -1006,6 +1071,7 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [autoQueueLoading, setAutoQueueLoading] = useState(false);
+  const [selectedQueueLoading, setSelectedQueueLoading] = useState(false);
   const [sampleVideoLoading, setSampleVideoLoading] = useState(false);
   const [fanzaItems, setFanzaItems] = useState<FanzaItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<FanzaItem | null>(null);
@@ -1068,6 +1134,25 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
       setQueueMessage(`収益候補を${data.queuedCount ?? 0}件キューに追加しました`);
       if ((data.queuedCount ?? 0) > 0) setTimeout(() => onRevenueQueued?.(), 700);
     } catch (e: any) { setError(e.message); } finally { setAutoQueueLoading(false); }
+  };
+
+  const handleSelectedItemQueue = async () => {
+    if (!selectedItem || !tweetResult) return;
+    setSelectedQueueLoading(true); setError(""); setQueueMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/fanza-item-queue`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item: selectedItem,
+          text: tweetResult.tweet,
+          withImage: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQueueMessage(`この作品をキューに追加しました（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
+      setTimeout(() => onRevenueQueued?.(), 700);
+    } catch (e: any) { setError(e.message); } finally { setSelectedQueueLoading(false); }
   };
 
   const handleSampleVideoQueue = async () => {
@@ -1152,12 +1237,22 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
 
   return (
     <div className="space-y-4">
-      <SectionHeader icon="🎨" title="スタジオ" sub="投稿文+画像プロンプト生成・画像生成・採点" color="text-pink-400" />
+      <SectionHeader icon="🎨" title="投稿作成" sub="FANZA検索・収益候補・動画付きキュー" color="text-pink-400" />
+
+      {studioMode === "tweet" && sampleVideoStatus && (
+        <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-3">
+          <div className="grid grid-cols-3 gap-1.5">
+            <MiniStat label="動画処理" value={sampleVideoStatus.sampleVideo.ffmpegAvailable ? "OK" : "NG"} />
+            <MiniStat label="許可" value={sampleVideoStatus.sampleVideo.allowedMakers.includes("*") ? "全許可" : `${sampleVideoStatus.sampleVideo.allowedMakers.length}件`} />
+            <MiniStat label="通知" value={sampleVideoStatus.email.configured ? "OK" : "未設定"} />
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1">
         <button onClick={() => setStudioMode("tweet")}
           className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "tweet" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
-          ✍️ 投稿文
+          ✍️ FANZA投稿
         </button>
         <button onClick={() => setStudioMode("generate")}
           className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "generate" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
@@ -1172,7 +1267,7 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
       {studioMode === "tweet" && (
         <>
           <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → タップで投稿文+リンク自動生成</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → 投稿文生成 → キュー投入</p>
 
             <div className="flex gap-1 flex-wrap mb-2">
               {[
@@ -1274,11 +1369,17 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
             <>
               <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-[10px] text-emerald-400 uppercase tracking-wider font-bold">完成 — コピペするだけ！</p>
-                  <button onClick={copyAll}
-                    className="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-500 text-white hover:bg-emerald-400 transition-colors">
-                    {tweetCopied === "all" ? "✅ コピー済み" : "投稿文+リンクをコピー"}
-                  </button>
+                  <p className="text-[10px] text-emerald-400 uppercase tracking-wider font-bold">投稿文生成完了</p>
+                  <div className="flex gap-1">
+                    <button onClick={handleSelectedItemQueue} disabled={selectedQueueLoading}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-500 text-white hover:bg-emerald-400 transition-colors disabled:opacity-40">
+                      {selectedQueueLoading ? "追加中..." : "キュー追加"}
+                    </button>
+                    <button onClick={copyAll}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-zinc-800 text-zinc-300 border border-white/5 hover:bg-zinc-700 transition-colors">
+                      {tweetCopied === "all" ? "コピー済" : "コピー"}
+                    </button>
+                  </div>
                 </div>
                 {selectedItem && (
                   <p className="text-[10px] text-zinc-500 mb-2">{selectedItem.title}</p>
@@ -1315,10 +1416,12 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
                     <div className="min-w-0">
                       <p className="text-[10px] text-blue-300 uppercase tracking-wider font-bold">サンプル動画</p>
                       <p className="text-[10px] text-zinc-500 truncate">
-                        {selectedItem.sampleVideoAllowed?.allowed ? "許可メーカー一致。短尺化してキュー追加できます" : selectedItem.sampleVideoAllowed?.reason ?? "許可判定待ち"}
+                        {sampleVideoStatus?.sampleVideo.ffmpegAvailable === false
+                          ? "ffmpeg未検出。Replit再起動後に再確認してください"
+                          : selectedItem.sampleVideoAllowed?.allowed ? "許可メーカー一致。短尺化してキュー追加できます" : selectedItem.sampleVideoAllowed?.reason ?? "許可判定待ち"}
                       </p>
                     </div>
-                    <button onClick={handleSampleVideoQueue} disabled={sampleVideoLoading || !selectedItem.sampleVideoAllowed?.allowed}
+                    <button onClick={handleSampleVideoQueue} disabled={sampleVideoLoading || !selectedItem.sampleVideoAllowed?.allowed || sampleVideoStatus?.sampleVideo.ffmpegAvailable === false}
                       className="px-3 py-2 rounded-lg text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 disabled:opacity-40">
                       {sampleVideoLoading ? "作成中..." : "動画キュー追加"}
                     </button>
@@ -1513,201 +1616,6 @@ function StudioTab({ onRevenueQueued }: { onRevenueQueued?: () => void }) {
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function StoryTab() {
-  const [text, setText] = useState("");
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [generatedImageUrl, setGeneratedImageUrl] = useState("");
-  const [draftLoading, setDraftLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [postLoading, setPostLoading] = useState(false);
-  const [postedId, setPostedId] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  const fetchDraft = async () => {
-    setDraftLoading(true); setError(""); setPostedId(null);
-    try {
-      const res = await fetch(`${API}/api/bot/erotic-story/draft`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setText(data.text);
-      setImagePrompt(data.imagePrompt);
-      setGeneratedImageUrl("");
-    } catch (e: any) { setError(e.message); }
-    finally { setDraftLoading(false); }
-  };
-
-  const generateImage = async () => {
-    if (!imagePrompt.trim()) return;
-    setImageLoading(true); setError("");
-    try {
-      const res = await fetch(`${API}/api/bot/nanobanana/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: imagePrompt.trim(), engine: "fal" }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setGeneratedImageUrl(data.imageUrl);
-    } catch (e: any) { setError(e.message); }
-    finally { setImageLoading(false); }
-  };
-
-  const handlePost = async () => {
-    if (!text.trim()) return;
-    setPostLoading(true); setError(""); setPostedId(null);
-    try {
-      const res = await fetch(`${API}/api/bot/erotic-story/post`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), imageUrl: generatedImageUrl || undefined }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setPostedId(data.tweetId);
-    } catch (e: any) { setError(e.message); }
-    finally { setPostLoading(false); }
-  };
-
-  const copyText = () => {
-    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-  };
-
-  const hasDraft = text.length > 0;
-
-  return (
-    <div className="space-y-4">
-      <SectionHeader icon="🔞" title="猥談スタジオ" sub="実体験風テキスト＋Pony V6生成画像" color="text-rose-400" />
-
-      {/* Step 1: テキスト生成 */}
-      <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 1 — 猥談テキスト生成</p>
-          {hasDraft && (
-            <button onClick={fetchDraft} disabled={draftLoading}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded-lg bg-zinc-800 border border-white/5">
-              🔀 シャッフル
-            </button>
-          )}
-        </div>
-
-        {!hasDraft ? (
-          <button onClick={fetchDraft} disabled={draftLoading}
-            className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:brightness-110">
-            {draftLoading ? "生成中..." : "🔞 猥談テキストを生成"}
-          </button>
-        ) : (
-          <div className="space-y-2">
-            <textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              rows={7}
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[12px] text-white leading-relaxed placeholder-zinc-600 focus:border-rose-500/50 focus:outline-none resize-none"
-            />
-            <div className="flex gap-2">
-              <button onClick={copyText}
-                className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors">
-                {copied ? "✅ コピー済" : "📋 コピー"}
-              </button>
-              <button onClick={fetchDraft} disabled={draftLoading}
-                className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
-                {draftLoading ? "..." : "🔀 別のを生成"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Step 2: 画像生成 */}
-      {hasDraft && (
-        <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 2 — Pony V6 画像生成</p>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-600">画像プロンプト（編集可）</p>
-            <textarea
-              value={imagePrompt}
-              onChange={e => setImagePrompt(e.target.value)}
-              rows={3}
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-[11px] text-zinc-300 leading-relaxed placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none font-mono"
-            />
-          </div>
-
-          <button onClick={generateImage} disabled={imageLoading || !imagePrompt.trim()}
-            className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:brightness-110">
-            {imageLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Pony V6 生成中...
-              </span>
-            ) : "🎨 Pony V6で画像生成"}
-          </button>
-
-          {generatedImageUrl && (
-            <div className="space-y-2">
-              <img
-                src={generatedImageUrl}
-                alt="generated"
-                className="w-full rounded-xl border border-white/10 object-cover"
-              />
-              <div className="flex gap-2">
-                <button onClick={generateImage} disabled={imageLoading}
-                  className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors disabled:opacity-40">
-                  🔄 再生成
-                </button>
-                <a href={generatedImageUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 py-2 rounded-lg text-[11px] font-medium bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white transition-colors text-center">
-                  🔗 原寸表示
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: 投稿 */}
-      {hasDraft && (
-        <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Step 3 — 投稿</p>
-
-          <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-            {generatedImageUrl
-              ? <span className="text-emerald-400">✅ 画像あり — テキスト＋画像で投稿</span>
-              : <span className="text-zinc-500">⚠ 画像なし — テキストのみで投稿</span>
-            }
-          </div>
-
-          {postedId ? (
-            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-center space-y-2">
-              <p className="text-[13px] text-emerald-400 font-bold">✅ 投稿完了！</p>
-              <a
-                href={`https://twitter.com/ero_senpai1/status/${postedId}`}
-                target="_blank" rel="noopener noreferrer"
-                className="text-[11px] text-blue-400 underline block"
-              >
-                ツイートを確認する →
-              </a>
-            </div>
-          ) : (
-            <button onClick={handlePost} disabled={postLoading || !text.trim()}
-              className="w-full py-3 rounded-xl text-[13px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:brightness-110">
-              {postLoading ? "投稿中..." : "🐦 今すぐ投稿する"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">
-          {error}
-        </div>
-      )}
-
-      <InfoCard icon="📌" text="スケジューラでは 25% の確率でこの形式が自動選択されます。手動でテスト投稿する際はここから実行できます。" />
     </div>
   );
 }

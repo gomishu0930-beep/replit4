@@ -9,10 +9,11 @@ import {
 import { filterContent } from './content-filter.js';
 import { getRunConfig, isDryRun } from './run-config.js';
 import { recordPost } from './storage.js';
-import { uploadImages, postTweet, replyToTweet } from './twitter.js';
+import { uploadImages, uploadLocalMediaFile, postTweet, replyToTweet } from './twitter.js';
 import { resolveShortUrl } from './rebrandly.js';
 import { recordPostEvent, validatePost } from './safety-engine.js';
 import { pickAffiliateReplyCopy, recordAnalytics } from './post-analytics.js';
+import { getSampleVideoFilePath } from './sample-video.js';
 
 export interface PublishQueueResult {
   ok: boolean;
@@ -22,6 +23,12 @@ export interface PublishQueueResult {
   dryRun?: boolean;
   skipped?: boolean;
   error?: string;
+}
+
+export interface PublishQueueOptions {
+  forceLive?: boolean;
+  bypassSafetyLimits?: boolean;
+  source?: 'discord' | 'dashboard' | 'scheduler' | 'api';
 }
 
 let publishing = false;
@@ -36,29 +43,70 @@ function fitTweetText(text: string): string {
 }
 
 function publicBaseUrl(): string | null {
-  const raw =
+  const rawValue =
     process.env.PUBLIC_BASE_URL ??
     process.env.APP_URL ??
     process.env.REPLIT_DEPLOYMENT_DOMAIN ??
     process.env.REPLIT_DEV_DOMAIN ??
+    process.env.REPLIT_DOMAINS ??
     null;
+  const raw = rawValue?.split(',')[0]?.trim() ?? null;
   if (!raw) return null;
   return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
 }
 
-function mediaUrlsFor(item: QueueItem): string[] {
-  const urls: string[] = [];
-  if (item.imageUrl) urls.push(item.imageUrl);
+async function uploadQueueMedia(item: QueueItem): Promise<string[]> {
+  const ids: string[] = [];
+  if (item.imageUrl) ids.push(...await uploadImages([item.imageUrl]));
+
+  const remoteUrls: string[] = [];
   const base = publicBaseUrl();
+  let videoMediaCount = 0;
+  let uploadedVideoCount = 0;
   for (const media of item.mediaFiles ?? []) {
+    const isVideo = media.type.startsWith('video/');
+    if (isVideo) videoMediaCount++;
+    const localPath = media.filename ? getSampleVideoFilePath(media.filename) : null;
+    if (localPath) {
+      try {
+        ids.push(await uploadLocalMediaFile(localPath, media.type));
+        if (isVideo) uploadedVideoCount++;
+      } catch (e: any) {
+        console.error(`  ⚠ ローカルメディアアップロード失敗 (${media.filename}): ${e.message}`);
+      }
+      continue;
+    }
+
     if (!media.url) continue;
     if (media.url.startsWith('http://') || media.url.startsWith('https://')) {
-      urls.push(media.url);
+      remoteUrls.push(media.url);
     } else if (base && media.url.startsWith('/')) {
-      urls.push(new URL(media.url, base).toString());
+      remoteUrls.push(new URL(media.url, base).toString());
     }
   }
-  return urls.slice(0, 4);
+
+  if (remoteUrls.length > 0) {
+    const before = ids.length;
+    ids.push(...await uploadImages(remoteUrls));
+    uploadedVideoCount += Math.max(0, ids.length - before);
+  }
+  if (videoMediaCount > 0 && uploadedVideoCount === 0) {
+    throw new Error('サンプル動画のアップロードに失敗したため、動画なし投稿を中止しました');
+  }
+  return ids.slice(0, 4);
+}
+
+function removeUrls(text: string, urls: string[]): string {
+  let cleaned = text;
+  for (const url of urls.filter(Boolean)) {
+    cleaned = cleaned.replaceAll(url, '');
+  }
+  cleaned = cleaned.replace(/https?:\/\/\S+/g, '');
+  return cleaned.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function shouldPutAffiliateLinkInReply(item: QueueItem): boolean {
+  return item.type === 'fanza' || item.templateType === 'sample-video';
 }
 
 async function buildPostText(item: QueueItem): Promise<{ text: string; replyText?: string; shortUrl?: string; linkReplyVariant?: string }> {
@@ -70,6 +118,16 @@ async function buildPostText(item: QueueItem): Promise<{ text: string; replyText
     item.sourceUrl ?? item.id,
     item.itemTitle ?? item.type,
   );
+
+  if (shouldPutAffiliateLinkInReply(item)) {
+    const linkReply = pickAffiliateReplyCopy(shortUrl);
+    return {
+      text: fitTweetText(removeUrls(text, [item.affiliateUrl, shortUrl])),
+      replyText: linkReply.text,
+      shortUrl,
+      linkReplyVariant: linkReply.variant,
+    };
+  }
 
   if (text.includes(item.affiliateUrl)) {
     text = fitTweetText(text.replaceAll(item.affiliateUrl, shortUrl));
@@ -86,14 +144,24 @@ async function buildPostText(item: QueueItem): Promise<{ text: string; replyText
   return { text, replyText: linkReply.text, shortUrl, linkReplyVariant: linkReply.variant };
 }
 
-export async function approveAndPostQueueItem(id: string): Promise<PublishQueueResult> {
+function formatPublishError(e: any): string {
+  const code = e?.code ?? e?.status ?? e?.statusCode;
+  const detail = e?.data?.detail ?? e?.errors?.[0]?.message ?? e?.data?.errors?.[0]?.message;
+  const message = e?.message ?? String(e);
+  return [code ? `HTTP ${code}` : '', message, detail && detail !== message ? detail : ''].filter(Boolean).join(' | ');
+}
+
+export async function approveAndPostQueueItem(
+  id: string,
+  options: PublishQueueOptions = {},
+): Promise<PublishQueueResult> {
   if (publishing) {
     return { ok: false, item: getQueueItem(id) ?? null, skipped: true, error: '別のキュー投稿が進行中です' };
   }
 
   const current = getQueueItem(id);
   if (!current) return { ok: false, item: null, error: 'キューアイテムが見つかりません' };
-  if (current.status === 'posted' || current.status === 'dry_run') {
+  if (current.status === 'posted' || (current.status === 'dry_run' && !options.forceLive)) {
     return { ok: true, item: current, skipped: true, tweetId: current.tweetId, dryRun: current.status === 'dry_run' };
   }
   if (current.status === 'rejected' || current.status === 'failed') {
@@ -108,11 +176,15 @@ export async function approveAndPostQueueItem(id: string): Promise<PublishQueueR
   publishing = true;
   try {
     const isAffiliate = isAffiliateItem(item);
-    const validation = validatePost(isAffiliate);
-    if (!validation.allowed) {
-      const message = `安全制限: ${validation.errors.join(', ')}`;
-      markFailed(item.id, message);
-      return { ok: false, item: getQueueItem(item.id) ?? item, error: message };
+    if (!options.bypassSafetyLimits) {
+      const validation = validatePost(isAffiliate);
+      if (!validation.allowed) {
+        const message = `安全制限: ${validation.errors.join(', ')}`;
+        markFailed(item.id, message);
+        return { ok: false, item: getQueueItem(item.id) ?? item, error: message };
+      }
+    } else {
+      console.warn(`  ⚠ [Queue] 手動投稿のため安全制限をスキップ: id=${item.id} source=${options.source ?? 'unknown'}`);
     }
 
     const { text, replyText, shortUrl, linkReplyVariant } = await buildPostText(item);
@@ -123,19 +195,20 @@ export async function approveAndPostQueueItem(id: string): Promise<PublishQueueR
       return { ok: false, item: getQueueItem(item.id) ?? item, error: message };
     }
 
-    if (isDryRun()) {
-      markPosted(item.id, 'dry_run');
+    const dryRun = !options.forceLive && isDryRun();
+    if (dryRun) {
+      markPosted(item.id, 'dry_run', 'dry_run');
       return { ok: true, item: getQueueItem(item.id) ?? item, tweetId: 'dry_run', dryRun: true };
     }
 
-    const mediaIds = await uploadImages(mediaUrlsFor(item));
+    const mediaIds = await uploadQueueMedia(item);
     const tweetId = await postTweet(text, mediaIds);
     let replyId = '';
     if (replyText) {
       replyId = await replyToTweet(tweetId, replyText);
     }
 
-    markPosted(item.id, tweetId);
+    markPosted(item.id, tweetId, 'posted');
     recordAnalytics({
       postId: tweetId,
       postedAt: new Date().toISOString(),
@@ -175,7 +248,7 @@ export async function approveAndPostQueueItem(id: string): Promise<PublishQueueR
 
     return { ok: true, item: getQueueItem(item.id) ?? item, tweetId, replyId };
   } catch (e: any) {
-    const message = e?.message ?? String(e);
+    const message = formatPublishError(e);
     markFailed(item.id, message);
     return { ok: false, item: getQueueItem(item.id) ?? item, error: message };
   } finally {

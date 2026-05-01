@@ -43,6 +43,7 @@ interface AnalyticsData {
 let analyticsCache: AnalyticsData = { records: [] };
 let analyticsLoaded = false;
 const FANZA_TEMPLATE_CATEGORIES: TemplateCategory[] = ['friend', 'promo', 'sale', 'ranking', 'night', 'review', 'compare'];
+const DEFAULT_REVENUE_HOURS = [17, 20, 23];
 export const LINK_REPLY_VARIANTS = [
   { id: 'plain', text: '作品ページはこちら\n{url}' },
   { id: 'check', text: '気になる方はこちら👇\n{url}' },
@@ -297,10 +298,23 @@ export function getPostingHourPerformance(days = 30): Array<{
 }
 
 export function isHighRevenueHour(date = new Date()): boolean {
-  const hours = getPostingHourPerformance(30).filter(h => h.count >= 2).slice(0, 3).map(h => h.hour);
-  if (hours.length === 0) return false;
+  const hours = getRecommendedRevenueHours(30);
   const jstHour = (date.getUTCHours() + 9) % 24;
   return hours.includes(jstHour);
+}
+
+export function getRecommendedRevenueHours(days = 30): number[] {
+  const learned = getPostingHourPerformance(days)
+    .filter(h => h.count >= 2)
+    .slice(0, 3)
+    .map(h => h.hour);
+  return learned.length > 0 ? learned : DEFAULT_REVENUE_HOURS;
+}
+
+export function getNextRecommendedRevenueHour(date = new Date(), days = 30): number {
+  const jstHour = (date.getUTCHours() + 9) % 24;
+  const hours = [...getRecommendedRevenueHours(days)].sort((a, b) => a - b);
+  return hours.find(hour => hour > jstHour) ?? hours[0] ?? DEFAULT_REVENUE_HOURS[0];
 }
 
 export function getLinkReplyPerformance(days = 30): Array<{
@@ -366,12 +380,27 @@ export function getProductClickSignals(): Record<string, number> {
   return signals;
 }
 
+export function getClickedProductSignals(limit = 80): Array<{ productId: string; productTitle: string; clicks: number; impressions: number }> {
+  return analyticsCache.records
+    .filter(r => r.result === 'posted' && r.category === 'fanza' && r.clicks > 0)
+    .sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
+    .slice(0, limit)
+    .map(r => ({
+      productId: r.productId,
+      productTitle: r.productTitle,
+      clicks: r.clicks,
+      impressions: r.impressions,
+    }));
+}
+
 export function getRevenueSummary(days = 30): {
   stats: ReturnType<typeof getAnalyticsStats>;
   topProducts: PostAnalyticsRecord[];
   topTemplates: ReturnType<typeof getTemplatePerformance>;
   templateVerdicts: ReturnType<typeof getTemplatePerformance>;
   bestHours: ReturnType<typeof getPostingHourPerformance>;
+  recommendedHours: number[];
+  nextRecommendedHour: number;
   linkReplyTests: ReturnType<typeof getLinkReplyPerformance>;
   zeroClickPosts: PostAnalyticsRecord[];
   zeroClickAnalysis: {
@@ -409,6 +438,8 @@ export function getRevenueSummary(days = 30): {
     topTemplates: getTemplatePerformance(days).slice(0, 10),
     templateVerdicts: getTemplatePerformance(days),
     bestHours: getPostingHourPerformance(days).slice(0, 6),
+    recommendedHours: getRecommendedRevenueHours(days),
+    nextRecommendedHour: getNextRecommendedRevenueHour(new Date(), days),
     linkReplyTests: getLinkReplyPerformance(days).slice(0, 6),
     zeroClickPosts: zeroClickPosts.slice(0, 10),
     zeroClickAnalysis: {
