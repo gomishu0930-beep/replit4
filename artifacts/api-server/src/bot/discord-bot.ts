@@ -1388,10 +1388,15 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             const title = result.usedImageFallback
               ? `🖼 静止画キュー追加（動画失敗） — ${result.queueItem.itemTitle ?? 'FANZA'}`
               : `${methodLabel} キュー追加 — ${result.queueItem.itemTitle ?? 'FANZA'}`;
+            const extraFields: { name: string; value: string; inline: boolean }[] = [];
+            if (!result.usedImageFallback && result.clip?.url) {
+              extraFields.push({ name: '動画URL（コピー用）', value: `\`\`\`\n${result.clip.url}\n\`\`\``, inline: false });
+            }
             const embed = buildQueueEmbed(result.queueItem)
               .setTitle(title)
               .addFields(
                 mediaField,
+                ...extraFields,
                 { name: 'メール', value: result.email.ok ? '送信済み' : `未送信: ${result.email.error ?? '不明'}`.slice(0, 900), inline: false },
               )
               .setFooter({ text: '今すぐ投稿すると手動扱いでXへ投稿します' });

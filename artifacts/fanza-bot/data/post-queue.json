@@ -124,5 +124,55 @@
     "createdAt": "2026-05-01T23:21:05.448Z",
     "updatedAt": "2026-05-01T23:21:18.691Z",
     "error": "🛑 ボット停止中につき投稿をブロックしました（理由: critical-failures:1）"
+  },
+  {
+    "type": "fanza",
+    "text": "🔞セールで掘り出し物を見つけました\n\n瀬戸環奈「最強ヒロインが壊れるほどの快楽を！ 禁欲・お…」\n⭐4.3(40件)\n\nこのクオリティでこの価格は珍しい\nリプ欄でご確認ください👇\n\nハイビジョン系を探してる人なら、これは候補に入れていいと思う。",
+    "itemTitle": "最強ヒロインが壊れるほどの快楽を！ 禁欲・おっぱい性感開発・焦らし・媚薬・追撃ピストン・目隠し拘束・大量玩具責め・全部のせ！ やりすぎエクスタシー 瀬戸環奈",
+    "affiliateUrl": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00131&af_id=bigshu0930-990&ch=api",
+    "sourceUrl": "snos00131",
+    "mediaFiles": [
+      {
+        "filename": "snos00131-1777677770058.mp4",
+        "url": "/api/bot/media/snos00131-1777677770058.mp4",
+        "type": "video/mp4"
+      }
+    ],
+    "templateType": "sample-video",
+    "templateCategory": "other",
+    "filterResult": {
+      "safe": true,
+      "blockedWords": []
+    },
+    "safetyScore": 100,
+    "id": "5027a3a8-7778-4bf4-95ca-8975db775a84",
+    "status": "pending",
+    "createdAt": "2026-05-01T23:22:54.373Z",
+    "updatedAt": "2026-05-01T23:22:54.373Z"
+  },
+  {
+    "type": "fanza",
+    "text": "🔞深夜になんとなく開いたら\n\n瀬戸環奈「最強ヒロインが壊れるほどの快楽を！ 禁欲・お…」に出会って\nしばらく時間を忘れてた\n\nレビュー4.3点、本物でした\n同じ夜更かし組はリプ欄へ👇",
+    "itemTitle": "最強ヒロインが壊れるほどの快楽を！ 禁欲・おっぱい性感開発・焦らし・媚薬・追撃ピストン・目隠し拘束・大量玩具責め・全部のせ！ やりすぎエクスタシー 瀬戸環奈",
+    "affiliateUrl": "https://al.fanza.co.jp/?lurl=https%3A%2F%2Fvideo.dmm.co.jp%2Fav%2Fcontent%2F%3Fid%3Dsnos00131&af_id=bigshu0930-990&ch=api",
+    "sourceUrl": "snos00131",
+    "mediaFiles": [
+      {
+        "filename": "snos00131-1777677824755.mp4",
+        "url": "https://9438bc98-2368-4410-834b-d55717b993f1-00-172nu2v2qt3ux.janeway.replit.dev/api/bot/media/snos00131-1777677824755.mp4",
+        "type": "video/mp4"
+      }
+    ],
+    "templateType": "sample-video",
+    "templateCategory": "other",
+    "filterResult": {
+      "safe": true,
+      "blockedWords": []
+    },
+    "safetyScore": 100,
+    "id": "25f9a69c-7dde-418d-a5d9-b3eceea2ad4e",
+    "status": "pending",
+    "createdAt": "2026-05-01T23:23:50.004Z",
+    "updatedAt": "2026-05-01T23:23:50.004Z"
   }
 ]

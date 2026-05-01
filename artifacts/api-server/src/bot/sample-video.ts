@@ -8,6 +8,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
 const VIDEO_DIR = path.join(DATA_DIR, 'sample-videos');
 
+function getMediaBaseUrl(): string {
+  const domain =
+    process.env.REPLIT_DEV_DOMAIN ??
+    process.env.REPLIT_DEPLOYMENT_DOMAIN ??
+    (process.env.REPLIT_DOMAINS ?? '').split(',')[0].trim();
+  if (domain) return `https://${domain}/api/bot/media`;
+  return '/api/bot/media';
+}
+
+function mediaUrl(filename: string): string {
+  return `${getMediaBaseUrl()}/${encodeURIComponent(filename)}`;
+}
+
 export interface SampleVideoPermission {
   allowed: boolean;
   reason: string;
@@ -172,7 +185,7 @@ export async function prepareSampleVideoClip(
       ]);
       const stat = await fsp.stat(filePath);
       if (stat.size > 1024) {
-        return { filename, filePath, url: `/api/bot/media/${encodeURIComponent(filename)}`, sourceUrl, durationSec, method: 'direct' };
+        return { filename, filePath, url: mediaUrl(filename), sourceUrl, durationSec, method: 'direct' };
       }
     } catch {
     }
@@ -250,7 +263,7 @@ export async function createSlideshowVideo(
   return {
     filename,
     filePath,
-    url: `/api/bot/media/${encodeURIComponent(filename)}`,
+    url: mediaUrl(filename),
     sourceUrl: imageUrls[0],
     durationSec,
     method: 'slideshow',
