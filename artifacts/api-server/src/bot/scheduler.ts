@@ -81,12 +81,6 @@ async function autoFillRevenueQueue(label: string): Promise<void> {
 }
 
 async function postFanzaItem(item: any, type: string, label: string) {
-  const validation = validatePost(true);
-  if (!validation.allowed) {
-    console.log(`  [${label}] 安全制限: ${validation.errors.join(', ')}`);
-    return null;
-  }
-
   const topPatterns = getTopPatterns(10);
   const externalPatterns = getExternalTopPatterns(10);
   const rawGenre = item.iteminfo?.genre ?? item.genre ?? [];
@@ -235,12 +229,6 @@ async function postFanzaItem(item: any, type: string, label: string) {
 }
 
 async function postEngagementSlot(label: string) {
-  const validation = validatePost(false);
-  if (!validation.allowed) {
-    console.log(`  [${label}] 安全制限: ${validation.errors.join(', ')}`);
-    return;
-  }
-
   const { text } = generateImpressionTweet(Math.random() < 0.3);
 
   const filterResult = filterContent(text, getRunConfig().safetyStrictness);
@@ -296,12 +284,6 @@ async function postEngagementSlot(label: string) {
 }
 
 async function postMyFansSlot(label: string) {
-  const validation = validatePost(true);
-  if (!validation.allowed) {
-    console.log(`  [${label}] 安全制限: ${validation.errors.join(', ')}`);
-    return;
-  }
-
   const templates = [
     '💕 MyFansで限定コンテンツ配信中！\n無料で覗けるから気軽にチェックしてね✨\n#MyFans #限定コンテンツ',
     '🔥 MyFansならではの特別コンテンツ！\nフォローだけでも見れるものがたくさん📱\n#MyFans',
@@ -335,12 +317,6 @@ async function postMyFansSlot(label: string) {
 }
 
 async function postEroticStorySlot(label: string) {
-  const validation = validatePost(false);
-  if (!validation.allowed) {
-    console.log(`  [${label}] 安全制限: ${validation.errors.join(', ')}`);
-    return;
-  }
-
   const { text, imagePrompt } = generateEroticStoryTweet();
 
   const textFilter = filterContent(text, getRunConfig().safetyStrictness);

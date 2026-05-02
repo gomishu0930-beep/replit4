@@ -40,19 +40,12 @@ async function runJob(type: string, label: string, fetchItems: () => Promise<any
     return { skipped: true, reason: '別の投稿が進行中' };
   }
 
-  const validation = validatePost(true);
-  if (!validation.allowed) {
-    return { skipped: true, reason: '安全制限', validation };
-  }
-
   isPosting = true;
   const results = [];
   try {
     const allItems = await fetchItems();
     const items = allItems.slice(0, 3);
     for (const item of items) {
-      const check = validatePost(true);
-      if (!check.allowed) break;
       const tweetId = await postItem(item, type);
       results.push({ tweetId, title: item.title });
     }

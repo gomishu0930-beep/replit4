@@ -315,9 +315,11 @@
     },
     "safetyScore": 100,
     "id": "08c9f59e-48a6-4104-aa1b-add1e384502a",
-    "status": "pending",
+    "status": "posted",
     "createdAt": "2026-05-02T00:27:37.493Z",
-    "updatedAt": "2026-05-02T00:27:37.493Z"
+    "updatedAt": "2026-05-02T02:55:02.556Z",
+    "tweetId": "2050408694349779277",
+    "postedAt": "2026-05-02T02:55:02.556Z"
   },
   {
     "type": "fanza",
