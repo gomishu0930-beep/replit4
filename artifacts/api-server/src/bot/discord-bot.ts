@@ -1054,7 +1054,13 @@ const commands = [
           o.setName('video').setDescription('切り抜くMP4ファイル').setRequired(true),
         )
         .addStringOption(o =>
-          o.setName('title').setDescription('Twitterポストのタイトル（省略可）'),
+          o.setName('text').setDescription('Xに投稿する本文').setRequired(true),
+        )
+        .addStringOption(o =>
+          o.setName('link').setDescription('FANZAアフィリエイトURL（リプ欄に投稿）'),
+        )
+        .addStringOption(o =>
+          o.setName('title').setDescription('キュー管理用タイトル（省略可）'),
         )
         .addIntegerOption(o =>
           o.setName('start').setDescription('切り抜き開始秒（デフォルト0）').setMinValue(0),
@@ -1375,6 +1381,8 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
 
       if (sub === 'clip') {
         const attachment = i.options.getAttachment('video', true);
+        const tweetText = i.options.getString('text', true).trim();
+        const affiliateLink = i.options.getString('link')?.trim() || undefined;
         const title = i.options.getString('title')?.trim() || attachment.name?.replace(/\.[^.]+$/, '') || 'clip';
         const startSec = i.options.getInteger('start') ?? 0;
         const durationSec = i.options.getInteger('duration') ?? 8;
@@ -1392,25 +1400,32 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             label: title,
           });
 
-          const { addToQueue } = await import('./queue.js');
-          const queueItem = addToQueue({
-            text: title,
-            mediaUrl: clip.url,
-            mediaPath: clip.filePath,
-            mediaType: 'video',
-            source: 'manual-clip',
+          const queueItem = enqueuePost({
+            type: 'fanza',
+            text: tweetText,
+            affiliateUrl: affiliateLink,
+            itemTitle: title,
+            mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
+            templateType: 'manual-clip',
+            templateCategory: 'other',
           });
+
+          const fields: { name: string; value: string; inline: boolean }[] = [
+            { name: 'ファイル', value: clip.filename, inline: false },
+            { name: '長さ', value: `${clip.durationSec}秒`, inline: true },
+            { name: 'キューID', value: `\`${queueItem.id.slice(0, 8)}\``, inline: true },
+            { name: '動画URL', value: `[▶ ブラウザで開く](${clip.url})\n\`${clip.url}\``, inline: false },
+          ];
+          if (affiliateLink) {
+            fields.push({ name: 'リンク（リプ欄）', value: affiliateLink.slice(0, 200), inline: false });
+          }
 
           const embed = new EmbedBuilder()
             .setColor(0x10b981)
             .setTitle(`✂ クリップ完成 — ${title}`)
-            .addFields(
-              { name: 'ファイル', value: clip.filename, inline: false },
-              { name: '長さ', value: `${clip.durationSec}秒`, inline: true },
-              { name: 'キューID', value: `\`${queueItem.id.slice(0, 8)}\``, inline: true },
-              { name: '動画URL', value: `[▶ ブラウザで開く](${clip.url})\n\`${clip.url}\``, inline: false },
-            )
-            .setFooter({ text: '✅ / ❌ ボタンで投稿判断' });
+            .setDescription(`📝 ${tweetText.slice(0, 200)}`)
+            .addFields(...fields)
+            .setFooter({ text: '「今すぐ投稿」→ X本文に動画添付・リプ欄にリンク投稿' });
 
           await i.editReply({
             content: '',

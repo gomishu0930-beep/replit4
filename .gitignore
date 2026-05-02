@@ -58,3 +58,9 @@ app-storage-backup/
 *.log
 .DS_Store
 .pnpm-store/
+
+# ランタイムデータ（Gitに戻さない）
+artifacts/api-server/fanza-bot/
+artifacts/fanza-bot/
+fanza-bot/
+*.mp4
