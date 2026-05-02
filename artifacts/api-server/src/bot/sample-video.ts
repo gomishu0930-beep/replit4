@@ -273,21 +273,47 @@ export async function createSlideshowVideo(
       downloadedPaths.push(tmpPath);
     }
 
+    const fps = 24;
+    // fadeduration: 各画像間のフェードアウト秒数
+    const fadeSec = Math.min(0.5, perImageSec * 0.25);
+
     const ffArgs: string[] = ['-y'];
     for (const imgPath of downloadedPaths) {
-      ffArgs.push('-loop', '1', '-t', String(perImageSec), '-i', imgPath);
+      // 長めに読み込む（xfadeのoverlapのため）
+      ffArgs.push('-loop', '1', '-t', String(perImageSec + fadeSec), '-i', imgPath);
     }
 
     const n = downloadedPaths.length;
     const filterParts: string[] = [];
+
+    // 各画像をスケール＋クロップアニメーション（CPU負荷小さい）
     for (let i = 0; i < n; i++) {
+      // 偶数: 左→右パン, 奇数: 右→左パン（1.2倍スケールからクロップ）
+      const cropX = i % 2 === 0
+        ? `'min(iw-720,iw*0.1*t/${perImageSec})'`
+        : `'max(0,iw*0.1*(1-t/${perImageSec}))'`;
       filterParts.push(
-        `[${i}:v]scale=720:480:force_original_aspect_ratio=decrease,` +
-        `pad=720:480:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}]`,
+        `[${i}:v]scale=864:576:force_original_aspect_ratio=increase,` +
+        `crop=720:480:${cropX}:48,setsar=1,fps=${fps}[v${i}]`,
       );
     }
-    const concatInputs = Array.from({ length: n }, (_, i) => `[v${i}]`).join('');
-    filterParts.push(`${concatInputs}concat=n=${n}:v=1:a=0[outv]`);
+
+    // xfadeでクロスフェードトランジションを連鎖
+    if (n === 1) {
+      filterParts.push(`[v0]copy[outv]`);
+    } else {
+      const transitions = ['fade', 'slideup', 'slideleft', 'dissolve', 'wipeleft', 'wipeup'];
+      let prev = 'v0';
+      for (let i = 1; i < n; i++) {
+        const offset = (perImageSec * i) - fadeSec * i;
+        const tr = transitions[(i - 1) % transitions.length];
+        const out = i === n - 1 ? 'outv' : `xf${i}`;
+        filterParts.push(
+          `[${prev}][v${i}]xfade=transition=${tr}:duration=${fadeSec}:offset=${offset.toFixed(2)}[${out}]`,
+        );
+        prev = out;
+      }
+    }
 
     ffArgs.push(
       '-filter_complex', filterParts.join(';'),
@@ -311,6 +337,84 @@ export async function createSlideshowVideo(
     sourceUrl: imageUrls[0],
     durationSec,
     method: 'slideshow',
+  };
+}
+
+export interface ClipMp4Result {
+  filename: string;
+  filePath: string;
+  url: string;
+  durationSec: number;
+  method: 'clip';
+}
+
+/** Discord添付などのMP4 URLをダウンロードしてffmpegで切り抜き */
+export async function clipMp4FromUrl(
+  sourceUrl: string,
+  opts: {
+    startSec?: number;
+    durationSec?: number;
+    label?: string;
+    filePath?: string;
+  } = {},
+): Promise<ClipMp4Result> {
+  await ensureVideoDir();
+  const startSec = opts.startSec ?? 0;
+  const durationSec = opts.durationSec ?? 8;
+  const label = opts.label ?? `clip-${Date.now()}`;
+  const filename = `${safeFilename(label)}-${Date.now()}.mp4`;
+  const filePath = opts.filePath ?? path.join(VIDEO_DIR, filename);
+
+  // 元動画をDL
+  const tmpInput = path.join(VIDEO_DIR, `tmp-input-${Date.now()}.mp4`);
+  try {
+    const https = await import('https');
+    const http = await import('http');
+    const fileStream = fs.createWriteStream(tmpInput);
+    await new Promise<void>((resolve, reject) => {
+      const mod = sourceUrl.startsWith('https') ? https : http;
+      const dl = (url: string) => {
+        mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            const loc = res.headers.location;
+            if (loc) { dl(loc); return; }
+          }
+          if (res.statusCode !== 200) {
+            reject(new Error(`ダウンロード失敗: HTTP ${res.statusCode} ${sourceUrl}`));
+            return;
+          }
+          res.pipe(fileStream);
+          fileStream.on('finish', () => resolve());
+          fileStream.on('error', reject);
+        }).on('error', reject);
+      };
+      dl(sourceUrl);
+    });
+
+    // ffmpegで切り抜き＋720x480にリサイズ
+    await runFfmpeg([
+      '-y',
+      '-ss', String(startSec),
+      '-i', tmpInput,
+      '-t', String(durationSec),
+      '-vf', 'scale=720:480:force_original_aspect_ratio=decrease,pad=720:480:(ow-iw)/2:(oh-ih)/2,setsar=1',
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-pix_fmt', 'yuv420p',
+      '-an',
+      '-movflags', '+faststart',
+      filePath,
+    ]);
+  } finally {
+    fsp.unlink(tmpInput).catch(() => {});
+  }
+
+  return {
+    filename,
+    filePath,
+    url: await mediaUrl(filename, filePath),
+    durationSec,
+    method: 'clip',
   };
 }
 

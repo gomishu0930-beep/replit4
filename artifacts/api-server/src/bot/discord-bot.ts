@@ -28,7 +28,7 @@ import { getPerformanceByCategory, getAnalyticsStats, getAnalytics } from './pos
 import { getExternalTopPatterns, getTopPatterns } from './storage.js';
 import { refreshExternalPatterns } from './analytics.js';
 import { getRevenueOptimizedItems } from './fanza.js';
-import { getSampleVideoStatus } from './sample-video.js';
+import { getSampleVideoStatus, clipMp4FromUrl } from './sample-video.js';
 import { queueSampleVideoPost } from './sample-video-queue.js';
 import { queueRevenueOptimizedItems } from './revenue-queue.js';
 import { getEmailNotifyStatus } from './email-notifier.js';
@@ -1046,6 +1046,22 @@ const commands = [
         .addIntegerOption(o =>
           o.setName('duration').setDescription('動画秒数（4〜15秒）').setMinValue(4).setMaxValue(15),
         ),
+    )
+    .addSubcommand(s =>
+      s.setName('clip')
+        .setDescription('MP4ファイルを添付→ffmpegで切り抜きキュー追加')
+        .addAttachmentOption(o =>
+          o.setName('video').setDescription('切り抜くMP4ファイル').setRequired(true),
+        )
+        .addStringOption(o =>
+          o.setName('title').setDescription('Twitterポストのタイトル（省略可）'),
+        )
+        .addIntegerOption(o =>
+          o.setName('start').setDescription('切り抜き開始秒（デフォルト0）').setMinValue(0),
+        )
+        .addIntegerOption(o =>
+          o.setName('duration').setDescription('切り抜き秒数（4〜60秒）').setMinValue(4).setMaxValue(60),
+        ),
     ),
   new SlashCommandBuilder()
     .setName('approve')
@@ -1354,6 +1370,56 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
         const sampleVideo = await getSampleVideoStatus();
         const email = getEmailNotifyStatus();
         await i.editReply({ embeds: [formatSampleVideoStatus(sampleVideo, email)] });
+        break;
+      }
+
+      if (sub === 'clip') {
+        const attachment = i.options.getAttachment('video', true);
+        const title = i.options.getString('title')?.trim() || attachment.name?.replace(/\.[^.]+$/, '') || 'clip';
+        const startSec = i.options.getInteger('start') ?? 0;
+        const durationSec = i.options.getInteger('duration') ?? 8;
+
+        if (!attachment.contentType?.startsWith('video/')) {
+          await i.editReply('❌ 動画ファイル（MP4等）を添付してください。');
+          break;
+        }
+        await i.editReply({ content: `⏳ 動画を切り抜き中… ${startSec}秒〜${startSec + durationSec}秒（${durationSec}秒）` });
+
+        try {
+          const clip = await clipMp4FromUrl(attachment.url, {
+            startSec,
+            durationSec,
+            label: title,
+          });
+
+          const { addToQueue } = await import('./queue.js');
+          const queueItem = addToQueue({
+            text: title,
+            mediaUrl: clip.url,
+            mediaPath: clip.filePath,
+            mediaType: 'video',
+            source: 'manual-clip',
+          });
+
+          const embed = new EmbedBuilder()
+            .setColor(0x10b981)
+            .setTitle(`✂ クリップ完成 — ${title}`)
+            .addFields(
+              { name: 'ファイル', value: clip.filename, inline: false },
+              { name: '長さ', value: `${clip.durationSec}秒`, inline: true },
+              { name: 'キューID', value: `\`${queueItem.id.slice(0, 8)}\``, inline: true },
+              { name: '動画URL', value: `[▶ ブラウザで開く](${clip.url})\n\`${clip.url}\``, inline: false },
+            )
+            .setFooter({ text: '✅ / ❌ ボタンで投稿判断' });
+
+          await i.editReply({
+            content: '',
+            embeds: [embed],
+            components: [buildApproveRow(queueItem.id)],
+          });
+        } catch (e: any) {
+          await i.editReply(`❌ クリップ失敗: ${e.message}`);
+        }
         break;
       }
 
