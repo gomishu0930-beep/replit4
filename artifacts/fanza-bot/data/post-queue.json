@@ -346,5 +346,20 @@
     "createdAt": "2026-05-02T00:30:16.041Z",
     "updatedAt": "2026-05-02T00:57:47.664Z",
     "error": "🛑 ボット停止中につき投稿をブロックしました（理由: critical-failures:1）"
+  },
+  {
+    "type": "erotic-story",
+    "text": "🔞これ、リアルな話なんですが\n\n銭湯帰りの彼女が\n「まだ火照ってる」って言いながら\n浴衣の帯をほどいてきた\n\n頭の中が真っ白になった瞬間のこと\n今でも覚えてる",
+    "imagePrompt": "japanese woman, yukata slipping off shoulder, steamy room, soft lighting, wet hair, flushed cheeks",
+    "filterResult": {
+      "safe": true,
+      "blockedWords": []
+    },
+    "id": "ff43b74c-bfb9-4965-9f67-62fd05a11229",
+    "status": "posted",
+    "createdAt": "2026-05-02T08:00:00.009Z",
+    "updatedAt": "2026-05-02T08:04:38.171Z",
+    "tweetId": "2050486607170396441",
+    "postedAt": "2026-05-02T08:04:38.171Z"
   }
 ]

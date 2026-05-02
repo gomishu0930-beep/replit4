@@ -3,22 +3,22 @@
   "followerCount": 178,
   "automationLevel": "FULL_AUTO",
   "dailyPostLimit": 5,
-  "todayPostCount": 3,
+  "todayPostCount": 4,
   "todayAffiliateCount": 3,
-  "todayNonAffiliateCount": 0,
+  "todayNonAffiliateCount": 1,
   "todayFollowCount": 0,
-  "consecutiveAffiliateCount": 3,
-  "lastPostAt": "2026-05-02T05:21:23.794Z",
+  "consecutiveAffiliateCount": 0,
+  "lastPostAt": "2026-05-02T08:04:38.173Z",
   "lastAffiliatePostAt": "2026-05-02T05:21:23.794Z",
   "lastResetDate": "2026-05-02",
   "maxAffiliateRatio": 30,
-  "totalPosts": 3,
+  "totalPosts": 4,
   "totalAffiliatePosts": 3,
-  "riskScore": 60,
+  "riskScore": 45,
   "riskHistory": [
     {
       "date": "2026-05-02",
-      "score": 60
+      "score": 45
     }
   ],
   "config": {
