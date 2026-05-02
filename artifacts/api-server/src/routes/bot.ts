@@ -14,6 +14,8 @@ import { getQueue } from '../bot/post-queue.js';
 import { strengthenFanzaPostText } from '../bot/fanza-templates.js';
 import {
   checkSampleVideoPermission,
+  clipMp4FromFile,
+  clipMp4FromUrl,
   extractSampleMovieUrl,
   getFanzaMakerNames,
   getSampleVideoFilePath,
@@ -245,6 +247,44 @@ router.get('/bot/media/:filename', (req, res) => {
     return;
   }
   res.type('video/mp4').sendFile(filePath);
+});
+
+router.post('/bot/sample-video/clip-upload', requireAdminToken, async (req, res) => {
+  try {
+    const multer = (await import('multer')).default;
+    const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+
+    await new Promise<void>((resolve, reject) => {
+      upload.single('video')(req as any, res as any, (err: any) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) {
+      res.status(400).json({ error: 'video ファイルが見つかりません' });
+      return;
+    }
+
+    const startSec = Number(req.body?.startSec ?? 0);
+    const durationSec = Number(req.body?.durationSec ?? 8);
+    const title = String(req.body?.title ?? `clip-${Date.now()}`);
+
+    const fsp = (await import('fs/promises')).default;
+    const os = (await import('os')).default;
+    const path = (await import('path')).default;
+    const tmpInput = path.join(os.tmpdir(), `upload-${Date.now()}.mp4`);
+
+    try {
+      await fsp.writeFile(tmpInput, file.buffer);
+      const clip = await clipMp4FromFile(tmpInput, { startSec, durationSec, label: title });
+      res.json({ ok: true, clip });
+    } finally {
+      fsp.unlink(tmpInput).catch(() => {});
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message ?? String(e) });
+  }
 });
 
 router.post('/bot/sample-video/queue', requireAdminToken, async (req, res) => {

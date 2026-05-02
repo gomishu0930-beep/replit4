@@ -348,6 +348,46 @@ export interface ClipMp4Result {
   method: 'clip';
 }
 
+/** ローカルファイルパスのMP4をffmpegで切り抜き */
+export async function clipMp4FromFile(
+  inputPath: string,
+  opts: {
+    startSec?: number;
+    durationSec?: number;
+    label?: string;
+    filePath?: string;
+  } = {},
+): Promise<ClipMp4Result> {
+  await fsp.mkdir(VIDEO_DIR, { recursive: true });
+  const startSec = opts.startSec ?? 0;
+  const durationSec = opts.durationSec ?? 8;
+  const label = opts.label ?? `clip-${Date.now()}`;
+  const filename = `${safeFilename(label)}-${Date.now()}.mp4`;
+  const filePath = opts.filePath ?? path.join(VIDEO_DIR, filename);
+
+  await runFfmpeg([
+    '-y',
+    '-ss', String(startSec),
+    '-i', inputPath,
+    '-t', String(durationSec),
+    '-vf', 'scale=720:480:force_original_aspect_ratio=decrease,pad=720:480:(ow-iw)/2:(oh-ih)/2,setsar=1',
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-pix_fmt', 'yuv420p',
+    '-an',
+    '-movflags', '+faststart',
+    filePath,
+  ]);
+
+  return {
+    filename,
+    filePath,
+    url: await mediaUrl(filename, filePath),
+    durationSec,
+    method: 'clip',
+  };
+}
+
 /** Discord添付などのMP4 URLをダウンロードしてffmpegで切り抜き */
 export async function clipMp4FromUrl(
   sourceUrl: string,
@@ -358,7 +398,7 @@ export async function clipMp4FromUrl(
     filePath?: string;
   } = {},
 ): Promise<ClipMp4Result> {
-  await ensureVideoDir();
+  await fsp.mkdir(VIDEO_DIR, { recursive: true });
   const startSec = opts.startSec ?? 0;
   const durationSec = opts.durationSec ?? 8;
   const label = opts.label ?? `clip-${Date.now()}`;

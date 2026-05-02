@@ -1058,7 +1058,7 @@ interface FanzaItem {
 }
 
 function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: () => void; sampleVideoStatus?: SampleVideoStatusResponse }) {
-  const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score">("tweet");
+  const [studioMode, setStudioMode] = useState<"tweet" | "generate" | "score" | "clip">("tweet");
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1073,6 +1073,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const [autoQueueLoading, setAutoQueueLoading] = useState(false);
   const [selectedQueueLoading, setSelectedQueueLoading] = useState(false);
   const [sampleVideoLoading, setSampleVideoLoading] = useState(false);
+  const [sampleVideoClipUrl, setSampleVideoClipUrl] = useState<string | null>(null);
   const [fanzaItems, setFanzaItems] = useState<FanzaItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<FanzaItem | null>(null);
   const [tweetResult, setTweetResult] = useState<{ tweet: string; imagePrompt: string | null; shortUrl: string } | null>(null);
@@ -1082,6 +1083,13 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const [refImages, setRefImages] = useState<string[]>([]);
   const [useRef, setUseRef] = useState(true);
   const [imageEngine, setImageEngine] = useState<string>("auto");
+  // MP4アップロードクリップ
+  const [clipFile, setClipFile] = useState<File | null>(null);
+  const [clipStart, setClipStart] = useState(0);
+  const [clipDuration, setClipDuration] = useState(8);
+  const [clipLoading, setClipLoading] = useState(false);
+  const [clipResult, setClipResult] = useState<{ url: string; filename: string; durationSec: number } | null>(null);
+  const [clipError, setClipError] = useState("");
 
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setQueueMessage(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
@@ -1157,7 +1165,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
 
   const handleSampleVideoQueue = async () => {
     if (!selectedItem || !tweetResult) return;
-    setSampleVideoLoading(true); setError(""); setQueueMessage("");
+    setSampleVideoLoading(true); setSampleVideoClipUrl(null); setError(""); setQueueMessage("");
     try {
       const res = await fetch(`${API}/api/bot/sample-video/queue`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1170,9 +1178,27 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setQueueMessage(`サンプル動画付き投稿をキューに追加しました（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
+      const clipUrl = data.clip?.url ?? null;
+      setSampleVideoClipUrl(clipUrl);
+      setQueueMessage(`🎬 動画キュー追加完了（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
       setTimeout(() => onRevenueQueued?.(), 700);
     } catch (e: any) { setError(e.message); } finally { setSampleVideoLoading(false); }
+  };
+
+  const handleClipUpload = async () => {
+    if (!clipFile) return;
+    setClipLoading(true); setClipError(""); setClipResult(null);
+    try {
+      const form = new FormData();
+      form.append("video", clipFile);
+      form.append("startSec", String(clipStart));
+      form.append("durationSec", String(clipDuration));
+      form.append("title", clipFile.name.replace(/\.[^.]+$/, ""));
+      const res = await fetch(`${API}/api/bot/sample-video/clip-upload`, { method: "POST", body: form });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setClipResult({ url: data.clip.url, filename: data.clip.filename, durationSec: data.clip.durationSec });
+    } catch (e: any) { setClipError(e.message); } finally { setClipLoading(false); }
   };
 
   const copyText = (text: string, key: string) => {
@@ -1249,10 +1275,14 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
         </div>
       )}
 
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         <button onClick={() => setStudioMode("tweet")}
           className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "tweet" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
           ✍️ FANZA投稿
+        </button>
+        <button onClick={() => setStudioMode("clip")}
+          className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "clip" ? "bg-violet-500/20 text-violet-400 border border-violet-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
+          ✂️ 動画クリップ
         </button>
         <button onClick={() => setStudioMode("generate")}
           className={`flex-1 py-2 rounded-xl text-[11px] font-semibold transition-all ${studioMode === "generate" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30" : "bg-zinc-800 text-zinc-500 border border-white/5"}`}>
@@ -1410,27 +1440,45 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
                 </div>
               )}
 
-              {selectedItem?.sampleMovieUrl && (
-                <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-blue-300 uppercase tracking-wider font-bold">サンプル動画</p>
-                      <p className="text-[10px] text-zinc-500 truncate">
-                        {sampleVideoStatus?.sampleVideo.ffmpegAvailable === false
-                          ? "ffmpeg未検出。Replit再起動後に再確認してください"
-                          : selectedItem.sampleVideoAllowed?.allowed ? "許可メーカー一致。短尺化してキュー追加できます" : selectedItem.sampleVideoAllowed?.reason ?? "許可判定待ち"}
-                      </p>
-                    </div>
-                    <button onClick={handleSampleVideoQueue} disabled={sampleVideoLoading || !selectedItem.sampleVideoAllowed?.allowed || sampleVideoStatus?.sampleVideo.ffmpegAvailable === false}
-                      className="px-3 py-2 rounded-lg text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 disabled:opacity-40">
-                      {sampleVideoLoading ? "作成中..." : "動画キュー追加"}
-                    </button>
+              <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-blue-300 uppercase tracking-wider font-bold">🎬 スライドショー動画</p>
+                    <p className="text-[10px] text-zinc-500 truncate">
+                      {sampleVideoStatus?.sampleVideo.ffmpegAvailable === false
+                        ? "ffmpeg未検出。Replit再起動後に再確認してください"
+                        : "サンプル画像からxfadeアニメーション動画を生成しキューに追加します"}
+                    </p>
                   </div>
-                  {selectedItem.makers?.length ? (
-                    <p className="text-[9px] text-zinc-600">メーカー: {selectedItem.makers.join(", ")}</p>
-                  ) : null}
+                  <button onClick={handleSampleVideoQueue}
+                    disabled={sampleVideoLoading || sampleVideoStatus?.sampleVideo.ffmpegAvailable === false}
+                    className="px-3 py-2 rounded-lg text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 disabled:opacity-40 whitespace-nowrap">
+                    {sampleVideoLoading ? "生成中..." : "動画キュー追加"}
+                  </button>
                 </div>
-              )}
+                {selectedItem?.makers?.length ? (
+                  <p className="text-[9px] text-zinc-600">メーカー: {selectedItem.makers.join(", ")}</p>
+                ) : null}
+                {/* 生成された動画のダウンロードリンク */}
+                {sampleVideoClipUrl && (
+                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 space-y-2">
+                    <p className="text-[10px] text-emerald-400 font-semibold">✅ 動画が生成されました</p>
+                    <video
+                      src={sampleVideoClipUrl}
+                      controls
+                      className="w-full rounded-lg max-h-48 bg-black"
+                      playsInline
+                    />
+                    <a
+                      href={sampleVideoClipUrl}
+                      download
+                      className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold hover:bg-emerald-500/30 transition-colors"
+                    >
+                      ⬇ 動画をダウンロード
+                    </a>
+                  </div>
+                )}
+              </div>
 
               {tweetResult.imagePrompt && (
                 <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
@@ -1541,6 +1589,86 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
             </div>
           )}
         </>
+      )}
+
+      {studioMode === "clip" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-violet-500/10 border border-violet-500/20 p-4 space-y-4">
+            <p className="text-[10px] text-violet-300 uppercase tracking-wider font-bold">✂️ MP4動画クリップ</p>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              iPhoneでFANZAからダウンロードした動画をここにアップロードして指定区間を切り抜き、ダウンロードできます。
+            </p>
+
+            {/* ファイル選択 */}
+            <label className="block w-full cursor-pointer">
+              <div className={`w-full rounded-xl border-2 border-dashed p-6 text-center transition-all ${clipFile ? "border-violet-500/40 bg-violet-500/5" : "border-white/10 bg-black/20 hover:border-violet-500/30"}`}>
+                {clipFile ? (
+                  <>
+                    <p className="text-[13px] text-violet-300 font-semibold">📹 {clipFile.name}</p>
+                    <p className="text-[10px] text-zinc-500 mt-1">{(clipFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[24px] mb-1">📁</p>
+                    <p className="text-[12px] text-zinc-400">MP4ファイルを選択</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">最大200MB</p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file" accept="video/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) { setClipFile(f); setClipResult(null); setClipError(""); } }}
+              />
+            </label>
+
+            {/* 切り抜き設定 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-zinc-500 block mb-1">開始（秒）: {clipStart}s</label>
+                <input type="range" min={0} max={120} value={clipStart} onChange={e => setClipStart(Number(e.target.value))}
+                  className="w-full accent-violet-500" />
+              </div>
+              <div>
+                <label className="text-[10px] text-zinc-500 block mb-1">長さ（秒）: {clipDuration}s</label>
+                <input type="range" min={4} max={60} value={clipDuration} onChange={e => setClipDuration(Number(e.target.value))}
+                  className="w-full accent-violet-500" />
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-black/30 px-3 py-2 text-center">
+              <p className="text-[11px] text-zinc-300">{clipStart}秒 〜 {clipStart + clipDuration}秒 をクリップ（{clipDuration}秒）</p>
+            </div>
+
+            <button onClick={handleClipUpload}
+              disabled={!clipFile || clipLoading}
+              className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:brightness-110">
+              {clipLoading ? "✂️ クリップ処理中..." : "✂️ クリップしてダウンロード"}
+            </button>
+          </div>
+
+          {clipError && (
+            <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{clipError}</div>
+          )}
+
+          {clipResult && (
+            <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 space-y-3">
+              <p className="text-[10px] text-emerald-400 font-semibold uppercase">✅ クリップ完成</p>
+              <p className="text-[11px] text-zinc-400">{clipResult.filename} — {clipResult.durationSec}秒</p>
+              <video src={clipResult.url} controls className="w-full rounded-xl max-h-64 bg-black" playsInline />
+              <a href={clipResult.url} download
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[12px] font-bold hover:bg-emerald-500/30 transition-colors">
+                ⬇ 動画をダウンロード
+              </a>
+              <p className="text-[9px] text-zinc-600 text-center break-all">{clipResult.url}</p>
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-3">
+            <p className="text-[10px] text-blue-300 leading-relaxed">
+              💡 FANZAのサンプル動画→iPhoneの「写真」に保存→このページでアップロード→切り抜き→Twitter投稿用MP4をダウンロード
+            </p>
+          </div>
+        </div>
       )}
 
       {studioMode === "score" && (

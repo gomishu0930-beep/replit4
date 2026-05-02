@@ -340,8 +340,9 @@
     },
     "safetyScore": 100,
     "id": "60d19c60-41c5-45f5-9a18-822e2f37291c",
-    "status": "pending",
+    "status": "failed",
     "createdAt": "2026-05-02T00:30:16.041Z",
-    "updatedAt": "2026-05-02T00:30:16.041Z"
+    "updatedAt": "2026-05-02T00:57:47.664Z",
+    "error": "🛑 ボット停止中につき投稿をブロックしました（理由: critical-failures:1）"
   }
 ]
