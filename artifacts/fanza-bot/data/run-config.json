@@ -1,9 +1,9 @@
 {
-  "autoPostEnabled": false,
-  "dryRun": true,
-  "maxPostsPerDay": 3,
+  "autoPostEnabled": true,
+  "dryRun": false,
+  "maxPostsPerDay": 4,
   "maxPostsPerHour": 1,
-  "cooldownMinutes": 60,
+  "cooldownMinutes": 90,
   "categoryWeights": {
     "engagement": 40,
     "eroticStory": 25,

@@ -747,8 +747,11 @@ export function startScheduler() {
   // 10:30 JST — エンゲージメント投稿①
   cron.schedule('30 10 * * *', () => runScheduledSlot('10:30 スロット①'), { timezone: 'Asia/Tokyo' });
 
-  // 17:00 JST — FANZA/MyFans/エンゲージメント投稿②
-  cron.schedule('0 17 * * *', () => runScheduledSlot('17:00 スロット②'), { timezone: 'Asia/Tokyo' });
+  // 13:00 JST — 昼スロット②
+  cron.schedule('0 13 * * *', () => runScheduledSlot('13:00 スロット②'), { timezone: 'Asia/Tokyo' });
+
+  // 17:00 JST — FANZA/MyFans/エンゲージメント投稿③
+  cron.schedule('0 17 * * *', () => runScheduledSlot('17:00 スロット③'), { timezone: 'Asia/Tokyo' });
 
   // 20:00 JST — プライムタイム投稿③
   cron.schedule('0 20 * * *', () => runScheduledSlot('20:00 スロット③'), { timezone: 'Asia/Tokyo' });

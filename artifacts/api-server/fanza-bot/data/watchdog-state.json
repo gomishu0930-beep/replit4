@@ -1,42 +1,12 @@
 {
-  "lastCheckAt": "2026-05-02T01:02:59.496Z",
-  "lastIssueAt": "2026-05-02T01:02:59.496Z",
+  "lastCheckAt": "2026-05-02T01:39:37.759Z",
+  "lastIssueAt": "2026-05-02T01:39:37.759Z",
   "lastRecoveryAt": "2026-04-15T04:03:28.155Z",
   "status": "failed",
-  "issueCount": 306,
+  "issueCount": 308,
   "recoveryCount": 44,
   "consecutiveFailures": 0,
   "recentEvents": [
-    {
-      "at": "2026-05-01T19:35:09.478Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 26.9h 無投稿"
-    },
-    {
-      "at": "2026-05-01T19:35:09.478Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-05-01T20:05:09.485Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
-    {
-      "at": "2026-05-01T20:05:09.485Z",
-      "level": "warn",
-      "detail": "投稿停止を検知: 27.4h 無投稿"
-    },
-    {
-      "at": "2026-05-01T20:05:09.485Z",
-      "level": "info",
-      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
-    },
-    {
-      "at": "2026-05-01T20:35:09.487Z",
-      "level": "info",
-      "detail": "isPosting=false (正常)"
-    },
     {
       "at": "2026-05-01T20:35:09.487Z",
       "level": "warn",
@@ -254,6 +224,36 @@
     },
     {
       "at": "2026-05-02T01:02:59.496Z",
+      "level": "info",
+      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
+    },
+    {
+      "at": "2026-05-02T01:09:37.622Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-05-02T01:09:37.622Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 32.5h 無投稿"
+    },
+    {
+      "at": "2026-05-02T01:09:37.622Z",
+      "level": "info",
+      "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
+    },
+    {
+      "at": "2026-05-02T01:39:37.759Z",
+      "level": "info",
+      "detail": "isPosting=false (正常)"
+    },
+    {
+      "at": "2026-05-02T01:39:37.759Z",
+      "level": "warn",
+      "detail": "投稿停止を検知: 33h 無投稿"
+    },
+    {
+      "at": "2026-05-02T01:39:37.759Z",
       "level": "info",
       "detail": "ボット停止中（凍結/手動停止）→ 回復投稿をスキップ"
     }
