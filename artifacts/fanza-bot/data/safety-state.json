@@ -1,7 +1,7 @@
 {
   "accountCreatedAt": "2026-04-14T13:52:39.813Z",
   "followerCount": 178,
-  "automationLevel": "MANUAL_ONLY",
+  "automationLevel": "FULL_AUTO",
   "dailyPostLimit": 5,
   "todayPostCount": 0,
   "todayAffiliateCount": 0,
@@ -17,9 +17,9 @@
   "riskScore": 10,
   "riskHistory": [],
   "config": {
-    "manualOnlyDays": 30,
-    "semiAutoMinFollowers": 300,
-    "fullAutoMinFollowers": 1000,
+    "manualOnlyDays": 0,
+    "semiAutoMinFollowers": 0,
+    "fullAutoMinFollowers": 0,
     "maxDailyFollows": 50,
     "maxAffiliateRatioPct": 30,
     "maxConsecutiveAffiliate": 1,

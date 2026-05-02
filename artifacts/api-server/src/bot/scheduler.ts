@@ -624,12 +624,6 @@ async function runScheduledSlot(label: string) {
     return;
   }
 
-  const safety = getSafetyStatus();
-  if (safety.automationLevel === 'MANUAL_ONLY') {
-    console.log(`  [${label}] 手動モード中 → 自動投稿スキップ`);
-    return;
-  }
-
   isPosting = true;
   _postingStartedAt = Date.now();
   try {
