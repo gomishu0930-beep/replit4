@@ -1184,7 +1184,7 @@ function buildQueueEmbed(item: QueueItem): EmbedBuilder {
       { name: 'タイプ', value: item.type, inline: true },
       { name: 'ID', value: `\`${shortId(item.id)}\``, inline: true },
       ...(hasVideo ? [{ name: 'メディア', value: '動画付き', inline: true }] : []),
-      ...(item.affiliateUrl ? [{ name: 'アフィリエイトURL', value: item.affiliateUrl.slice(0, 100) }] : []),
+      ...(item.affiliateUrl ? [{ name: 'アフィリエイトURL', value: `[開く](${item.affiliateUrl})` }] : []),
     )
     .setTimestamp();
 }
@@ -1738,8 +1738,8 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             { name: 'タイプ', value: smartType, inline: true },
             { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
             { name: '参照データ', value: `インサイト${insightCount}件 / トレンド${trendCount > 0 ? 'あり' : 'なし'}`, inline: true },
-            ...(result.affiliateUrl ? [{ name: 'URL', value: result.affiliateUrl.slice(0, 100) }] : []),
-            ...(result.imageUrl ? [{ name: '画像', value: result.imageUrl.slice(0, 100) }] : []),
+            ...(result.affiliateUrl ? [{ name: 'URL', value: `[開く](${result.affiliateUrl})` }] : []),
+            ...(result.imageUrl ? [{ name: '画像', value: result.imageUrl.slice(0, 200) }] : []),
           )
           .setFooter({ text: '通常の/postより高品質な生成（インサイト・実績参照済）' })
           .setTimestamp();
@@ -1778,7 +1778,7 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
           .addFields(
             { name: 'タイプ', value: postType, inline: true },
             { name: 'キューID', value: `\`${shortId(result.queueId)}\``, inline: true },
-            ...(result.affiliateUrl ? [{ name: 'URL', value: result.affiliateUrl.slice(0, 100) }] : []),
+            ...(result.affiliateUrl ? [{ name: 'URL', value: `[開く](${result.affiliateUrl})` }] : []),
           )
           .setFooter({ text: '今すぐ投稿すると手動扱いでXへ投稿します' })
           .setTimestamp();
