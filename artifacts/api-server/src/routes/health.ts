@@ -20,6 +20,10 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
+router.get("/ping", (_req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
+
 router.get("/health", (_req, res) => {
   const safety = getSafetyStatus();
   const config = getRunConfig();
