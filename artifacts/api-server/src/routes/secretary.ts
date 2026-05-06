@@ -17,7 +17,9 @@ import { getStats, getAllPosts, getRebrandlyData } from '../bot/storage.js';
 import { getDirectives } from '../bot/meeting.js';
 
 const router = Router();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() { if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'dummy' }); return _openai; }
+const openai = new Proxy({} as OpenAI, { get: (_, p) => (getOpenAI() as any)[p] });
 
 interface ChatMessage {
   role: 'user' | 'assistant';
