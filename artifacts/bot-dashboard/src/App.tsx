@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import {
   Activity, BarChart3, Bot, CheckCircle2, ClipboardCheck, Clock3,
-  FileText, History, PenLine, Play, RefreshCw, ShieldCheck, XCircle,
+  Database, FileText, History, PenLine, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Upload, XCircle,
 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -270,6 +270,38 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
+function parseCsvRows(csv: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let cell = "";
+  let row: string[] = [];
+  let quoted = false;
+  for (let i = 0; i < csv.length; i++) {
+    const char = csv[i];
+    const next = csv[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  const headers = rows.shift()?.map((header) => header.replace(/^\uFEFF/, "").trim()) ?? [];
+  return rows.map((values) => Object.fromEntries(headers.map((header, idx) => [header || `column_${idx + 1}`, values[idx] ?? ""])));
+}
+
 type Tab = "agent" | "senpai" | "studio" | "data" | "poll";
 type AgentView = "market" | "benchmark" | "drafts" | "approval" | "runs";
 
@@ -282,6 +314,7 @@ function Dashboard() {
   const [rebrandlyAutoMessage, setRebrandlyAutoMessage] = useState("");
   const [revenueQueueMessage, setRevenueQueueMessage] = useState("");
   const [revenueBoostMessage, setRevenueBoostMessage] = useState("");
+  const [csvUploading, setCsvUploading] = useState(false);
 
   const { data: status } = useQuery<BotStatus>({
     queryKey: ["botStatus"],
@@ -376,6 +409,31 @@ function Dashboard() {
   const { data: agentRunsData, refetch: refetchAgentRuns } = useQuery<{ ok: boolean; runs: AgentRunSummary[] }>({
     queryKey: ["agentRuns"],
     queryFn: () => fetch(`${API}/api/agent/runs?limit=10`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: revenueSignalsData, refetch: refetchRevenueSignals } = useQuery<{
+    ok: boolean;
+    signals: { sampleSize: number; totalConversions: number; totalRevenue: number; byProduct: Array<{ id: string; conversions: number; revenue: number; clicks: number }> };
+  }>({
+    queryKey: ["revenueReportSignals"],
+    queryFn: () => fetch(`${API}/api/analytics/revenue-report/signals`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: agentWeightsData, refetch: refetchAgentWeights } = useQuery<{
+    ok: boolean;
+    weights: {
+      status: string;
+      updated_at: string;
+      sample_size: number;
+      min_samples: number;
+      pattern_weights: Record<string, number>;
+      cta_weights: Record<string, number>;
+      work_weights: Record<string, number>;
+      reasons: string[];
+    };
+  }>({
+    queryKey: ["agentWeights"],
+    queryFn: () => fetch(`${API}/api/analytics/agent-weights`).then(r => r.json()),
     refetchInterval: 60000,
   });
 
@@ -534,6 +592,51 @@ function Dashboard() {
     setAgentScanMessage(`draft却下: ${data.draft_id?.slice(0, 8) ?? draftId.slice(0, 8)}`);
   };
 
+  const uploadRevenueCsv = async (file: File) => {
+    setCsvUploading(true); setAgentScanMessage("");
+    try {
+      const text = await file.text();
+      const rows = parseCsvRows(text);
+      if (rows.length === 0) throw new Error("CSVに行がありません");
+      const res = await fetch(`${API}/api/analytics/revenue-report/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: `ui-csv:${file.name}`, rows }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const refresh = await fetch(`${API}/api/analytics/agent-weights/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minSamples: 20 }),
+      }).then((r) => r.json());
+      await Promise.all([refetchRevenueSignals(), refetchAgentWeights(), refetchAgentRuns()]);
+      setAgentScanMessage(`成果CSV取込: 新規${data.imported ?? 0}件 / 総${data.total ?? 0}件 / weights ${refresh.weights?.status ?? "updated"}`);
+      setAgentView("benchmark");
+    } catch (e: any) {
+      setAgentScanMessage(`成果CSV取込失敗: ${e.message}`);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  const refreshAdaptiveWeights = async () => {
+    setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/analytics/agent-weights/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minSamples: 20 }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentWeights();
+      setAgentScanMessage(`weights更新: ${data.weights?.status} / samples ${data.weights?.sample_size ?? 0}`);
+    } catch (e: any) {
+      setAgentScanMessage(`weights更新失敗: ${e.message}`);
+    }
+  };
+
   const [countdown, setCountdown] = useState(getNextPostTime().ms);
   useEffect(() => { const id = setInterval(() => setCountdown(getNextPostTime().ms), 1000); return () => clearInterval(id); }, []);
 
@@ -544,6 +647,8 @@ function Dashboard() {
   const jst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   const todayTheme = DAY_THEMES[(jst.getDay() + 6) % 7];
   const latestOutput = latestAgentRun?.output;
+  const revenueSignals = revenueSignalsData?.signals;
+  const agentWeights = agentWeightsData?.weights;
   const pendingAgentDrafts = (queueData?.items ?? []).filter((item: any) =>
     item.status === "pending" && (item.agentRunId || item.templateType === "agent-proposal"),
   );
@@ -826,6 +931,63 @@ function Dashboard() {
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#101522] p-4 lg:col-span-2">
                 <PanelTitle icon={<Activity className="h-4 w-4" />} title="Learning Loop" sub="承認・却下・投稿後結果を次回へ戻す" />
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <AgentMetric label="成果行" value={String(revenueSignals?.sampleSize ?? 0)} tone="green" />
+                  <AgentMetric label="CV" value={String(revenueSignals?.totalConversions ?? 0)} tone="blue" />
+                  <AgentMetric label="Weights" value={agentWeights?.status ?? "none"} tone={agentWeights?.status === "active" ? "green" : "amber"} />
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <label className="flex min-h-[40px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-bold text-emerald-200 hover:bg-emerald-500/15">
+                    {csvUploading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    DMM/FANZA成果CSV取込
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      disabled={csvUploading}
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.currentTarget.files?.[0];
+                        e.currentTarget.value = "";
+                        if (file) uploadRevenueCsv(file);
+                      }}
+                    />
+                  </label>
+                  <button onClick={refreshAdaptiveWeights}
+                    className="flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-blue-500/25 bg-blue-500/10 px-3 text-[11px] font-bold text-blue-200 hover:bg-blue-500/15">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    weights更新
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Database className="h-4 w-4 text-emerald-300" />
+                      <p className="text-[11px] font-bold text-white">成果上位作品</p>
+                    </div>
+                    {(revenueSignals?.byProduct ?? []).slice(0, 4).map((row) => (
+                      <div key={row.id} className="flex items-center gap-2 border-t border-white/5 py-1.5 text-[10px]">
+                        <span className="truncate text-zinc-300">{row.id}</span>
+                        <span className="ml-auto text-emerald-300">CV {row.conversions}</span>
+                        <span className="text-zinc-500">¥{Math.round(row.revenue).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {!revenueSignals?.byProduct?.length && <p className="text-[10px] text-zinc-500">CSV取込後に作品別成果が出ます。</p>}
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                    <p className="mb-2 text-[11px] font-bold text-white">Adaptive Weights</p>
+                    {agentWeights?.reasons?.slice(0, 3).map((reason) => (
+                      <p key={reason} className="text-[10px] text-zinc-500">{reason}</p>
+                    ))}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {Object.entries(agentWeights?.pattern_weights ?? {}).slice(0, 5).map(([key, value]) => (
+                        <span key={key} className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] text-blue-200">{key} x{value}</span>
+                      ))}
+                      {Object.entries(agentWeights?.cta_weights ?? {}).slice(0, 5).map(([key, value]) => (
+                        <span key={key} className="rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">{key} x{value}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {(latestOutput?.learningSignals ?? []).slice(0, 4).map((signal) => (
                     <div key={signal.code} className="rounded-xl bg-black/20 px-3 py-2">

@@ -13,8 +13,9 @@ import {
   buildScheduleRecommendations,
   generateImprovedDraftProposals,
 } from './posting-improvement.js';
+import { getAgentWeights } from './agent-weight-service.js';
 
-export function buildDraftPackage(
+export async function buildDraftPackage(
   input: AgentRunInput,
   marketPosts: ClassifiedMarketPost[],
   ownPosts: OwnPostComparison[],
@@ -23,6 +24,7 @@ export function buildDraftPackage(
   riskFlags: RiskFlag[],
   learningSignals: LearningSignal[],
 ) {
+  const weights = await getAgentWeights().catch(() => null);
   const mediaRecommendations = buildMediaRecommendations(comparison.winningPatterns, works);
   const scheduleRecommendations = buildScheduleRecommendations(comparison);
   const proposals = generateImprovedDraftProposals(
@@ -33,6 +35,7 @@ export function buildDraftPackage(
     works,
     mediaRecommendations,
     scheduleRecommendations,
+    weights,
   );
   const recommendationSchema = buildRecommendationSchema(
     works,

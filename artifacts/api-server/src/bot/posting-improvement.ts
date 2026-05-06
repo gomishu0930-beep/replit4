@@ -18,7 +18,7 @@ import type {
   ScheduleRecommendation,
 } from './agent-types.js';
 import { getProposalFeedback, type AgentProposalFeedback } from './agent-learning-store.js';
-import { getAgentWeights } from './agent-weight-service.js';
+import { getAgentWeights, type AgentWeights } from './agent-weight-service.js';
 import { runComplianceGuard } from './compliance-guard.js';
 import { getRevenueOptimizedItems, getSampleImages, scoreFanzaItem } from './fanza.js';
 
@@ -296,7 +296,37 @@ function isSaleItem(item: any): boolean {
   }));
 }
 
-function mapWorkCandidate(item: any, marketPosts: ClassifiedMarketPost[], fallbackPatterns: PatternSummary[]): FanzaWorkCandidate {
+function normalizeWeightKey(value: string | undefined): string | undefined {
+  return value?.trim().replace(/^cid[:=]/i, '').replace(/[/?#].*$/, '').toLowerCase();
+}
+
+function getWorkWeight(work: Pick<FanzaWorkCandidate, 'content_id' | 'title'>, weights: AgentWeights | null): { weight: number; reason?: string } {
+  if (!weights || weights.status !== 'active') return { weight: 1 };
+  const keys = [
+    work.content_id,
+    normalizeWeightKey(work.content_id),
+    work.title ? `title:${work.title.trim().toLowerCase().slice(0, 80)}` : undefined,
+  ].filter(Boolean) as string[];
+  const matched = keys.find((key) => weights.work_weights[key] !== undefined);
+  if (!matched) return { weight: 1 };
+  return { weight: weights.work_weights[matched] ?? 1, reason: `成果レポート重みx${weights.work_weights[matched]}` };
+}
+
+function getPatternWeight(pattern: MarketPatternType, weights: AgentWeights | null): number {
+  return weights?.status === 'active' ? weights.pattern_weights[pattern] ?? 1 : 1;
+}
+
+function getCtaWeight(cta: string, weights: AgentWeights | null): number {
+  if (!weights || weights.status !== 'active') return 1;
+  const key = /リプ/.test(cta) ? 'reply_link'
+    : /プロフィール|プロフ/.test(cta) ? 'profile_redirect'
+      : /詳細/.test(cta) ? 'detail_cta'
+        : /セール|OFF|割引/.test(cta) ? 'sale_cta'
+          : 'generic_cta';
+  return weights.cta_weights[key] ?? 1;
+}
+
+function mapWorkCandidate(item: any, marketPosts: ClassifiedMarketPost[], fallbackPatterns: PatternSummary[], weights: AgentWeights | null): FanzaWorkCandidate {
   const base = scoreFanzaItem(item);
   const genres = itemGenres(item);
   const actresses = itemActresses(item);
@@ -315,10 +345,14 @@ function mapWorkCandidate(item: any, marketPosts: ClassifiedMarketPost[], fallba
   const patterns = matchedMarket.length
     ? [...new Set(matchedMarket.flatMap((post) => post.pattern_types))].slice(0, 4)
     : fallbackPatterns.slice(0, 3).map((pattern) => pattern.pattern);
-  const score = Number((base.score + marketBoost + (rightsConfirmed ? 0.4 : -0.8)).toFixed(3));
+  const draftWork = { content_id: String(item.content_id ?? item.cid ?? ''), title };
+  const workWeight = getWorkWeight(draftWork, weights);
+  const weightedBaseScore = base.score * workWeight.weight;
+  const score = Number((weightedBaseScore + marketBoost + (rightsConfirmed ? 0.4 : -0.8)).toFixed(3));
   const reasons = [
     ...base.reasons,
     marketBoost > 0 ? `X市場反応補正+${marketBoost.toFixed(2)}` : 'X市場一致は弱め',
+    workWeight.reason,
     rightsConfirmed ? '公式サンプル素材あり' : '投稿に使える公式素材が未確認',
   ];
 
@@ -339,8 +373,8 @@ function mapWorkCandidate(item: any, marketPosts: ClassifiedMarketPost[], fallba
     sample_video_url: videoUrl,
     rights_confirmed: rightsConfirmed,
     score,
-    score_detail: { ...base.detail, x_market: Number(marketBoost.toFixed(3)), rights: rightsConfirmed ? 0.4 : -0.8 },
-    reasons: reasons.filter(Boolean).slice(0, 8),
+    score_detail: { ...base.detail, adaptive_work_weight: workWeight.weight, x_market: Number(marketBoost.toFixed(3)), rights: rightsConfirmed ? 0.4 : -0.8 },
+    reasons: reasons.filter((reason): reason is string => Boolean(reason)).slice(0, 8),
     matched_market_patterns: patterns,
   };
 }
@@ -353,10 +387,11 @@ export async function scoreFanzaWorkCandidates(
   const risks: RiskFlag[] = [];
   const topGenre = marketPosts.find((post) => post.inferred_genre !== 'general')?.inferred_genre ?? input.genres[0];
   try {
+    const weights = await getAgentWeights().catch(() => null);
     const items = await getRevenueOptimizedItems(Math.max(input.proposalCount * 3, 9), topGenre);
     const dedup = new Map<string, FanzaWorkCandidate>();
     for (const item of items) {
-      const candidate = mapWorkCandidate(item, marketPosts, winningPatterns);
+      const candidate = mapWorkCandidate(item, marketPosts, winningPatterns, weights);
       if (!candidate.content_id && !candidate.title) continue;
       dedup.set(candidate.content_id || candidate.title, candidate);
     }
@@ -454,6 +489,7 @@ export function generateImprovedDraftProposals(
   works: FanzaWorkCandidate[],
   mediaRecommendations: MediaRecommendation[],
   scheduleRecommendations: ScheduleRecommendation[],
+  weights: AgentWeights | null = null,
 ): DraftProposal[] {
   const recentTexts = ownPosts.slice(0, 30).map((post) => post.textPreview);
   const winning = comparison.winningPatterns.length
@@ -496,6 +532,10 @@ export function generateImprovedDraftProposals(
       if (work && !work.rights_confirmed) {
         riskFlags.push({ code: 'work_media_rights_unconfirmed', severity: 'critical', message: '作品素材の権利確認ができないためメディア添付不可' });
       }
+      const patternWeight = getPatternWeight(patternSummary.pattern, weights);
+      const ctaWeight = getCtaWeight(copy.cta, weights);
+      const workWeight = work ? getWorkWeight(work, weights).weight : 1;
+      const adaptiveConfidence = patternWeight * ctaWeight * workWeight;
       proposals.push({
         id: randomUUID(),
         work,
@@ -516,9 +556,10 @@ export function generateImprovedDraftProposals(
         reason: [
           `${patternSummary.label}が市場で強い`,
           work ? `作品スコア${work.score}: ${work.reasons.slice(0, 3).join(' / ')}` : '作品候補不足のためジャンル仮説で生成',
+          weights?.status === 'active' ? `投稿後学習: pattern x${patternWeight}, CTA x${ctaWeight}, work x${workWeight}` : undefined,
           comparison.ownAccountGaps[0]?.recommended_action,
         ].filter(Boolean).join('。'),
-        confidence: Number(Math.min(0.92, 0.48 + (patternSummary.avgGrowthScore / 450) + ((work?.score ?? 0) / 25)).toFixed(2)),
+        confidence: Number(Math.min(0.95, (0.48 + (patternSummary.avgGrowthScore / 450) + ((work?.score ?? 0) / 25)) * adaptiveConfidence).toFixed(2)),
         expected_effect: copy.expected,
         risk_flags: riskFlags,
         market_evidence: [

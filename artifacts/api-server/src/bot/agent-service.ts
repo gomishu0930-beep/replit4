@@ -112,7 +112,7 @@ export async function runMarketAnalysis(
       ...fanzaCandidates.risks,
       ...comparison.gaps.map((gap) => ({ code: 'comparison_gap', severity: 'warning' as const, message: gap })),
     ];
-    const draftPackage = buildDraftPackage(
+    const draftPackage = await buildDraftPackage(
       input,
       classifiedMarketPosts,
       ownPosts,
