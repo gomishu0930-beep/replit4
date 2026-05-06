@@ -22,12 +22,13 @@ import { fileURLToPath } from 'url';
 
 // ─── クライアント初期化 ──────────────────────────────────────────────────────
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() { if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'dummy' }); return _openai; }
+const openai = new Proxy({} as OpenAI, { get: (_, p) => (getOpenAI() as any)[p] });
 
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy',
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
+let _anthropic: Anthropic | null = null;
+function getAnthropic() { if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy', baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL }); return _anthropic; }
+const anthropic = new Proxy({} as Anthropic, { get: (_, p) => (getAnthropic() as any)[p] });
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
