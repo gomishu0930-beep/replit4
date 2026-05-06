@@ -29,23 +29,24 @@ import { getExternalTopPatterns, getTopPatterns } from './storage.js';
 import { refreshExternalPatterns } from './analytics.js';
 import { getRevenueOptimizedItems } from './fanza.js';
 import { getSampleVideoStatus, clipMp4FromUrl } from './sample-video.js';
-import { queueSampleVideoPost } from './sample-video-queue.js';
-import { queueRevenueOptimizedItems } from './revenue-queue.js';
+import { queueManualClipPost, queueSampleVideoPost } from './sample-video-queue.js';
+import { queueRevenueBoosterPack, queueRevenueOptimizedItems } from './revenue-queue.js';
 import { getEmailNotifyStatus } from './email-notifier.js';
 import {
   saveInsight, getInsights, getInsightSummary, deleteInsight, buildInsightContext,
   type InsightRecord,
 } from './insight-memory.js';
+import { getAgentRun, runMarketAnalysis } from './agent-service.js';
+import { approveDraft, createDraftRun, materializeDraft, rejectDraft } from './draft-service.js';
 
 const TOKEN      = process.env.DISCORD_BOT_TOKEN ?? '';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID ?? '';
 const GUILD_ID   = process.env.DISCORD_GUILD_ID ?? '';
 
 // ── GPT-5.4 クライアント（タイムライン分析用）─────────────────────────────
-const gptClient = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey:  process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? 'dummy',
-});
+let _gptClient: OpenAI | null = null;
+function getGptClient() { if (!_gptClient) _gptClient = new OpenAI({ baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL, apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? 'dummy' }); return _gptClient; }
+const gptClient = new Proxy({} as OpenAI, { get: (_, p) => (getGptClient() as any)[p] });
 
 async function analyzeTimelineWithGPT(
   username: string,
@@ -115,10 +116,9 @@ ${hourSummary}
 
 let client: Client | null = null;
 
-const anthropic = new Anthropic({
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  apiKey:  process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-});
+let _anthropic: Anthropic | null = null;
+function getAnthropic() { if (!_anthropic) _anthropic = new Anthropic({ baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL, apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy' }); return _anthropic; }
+const anthropic = new Proxy({} as Anthropic, { get: (_, p) => (getAnthropic() as any)[p] });
 
 // ─── 会話履歴（チャンネルごと、最大20往復） ───────────────────────────────────
 
@@ -1031,6 +1031,15 @@ const commands = [
       o.setName('keyword').setDescription('任意キーワード'),
     ),
   new SlashCommandBuilder()
+    .setName('revenue-boost')
+    .setDescription('低インプ対策: 導入投稿+FANZA投稿をセットでキュー追加')
+    .addIntegerOption(o =>
+      o.setName('count').setDescription('作品数（1〜3、各2投稿）').setMinValue(1).setMaxValue(3),
+    )
+    .addStringOption(o =>
+      o.setName('keyword').setDescription('任意キーワード'),
+    ),
+  new SlashCommandBuilder()
     .setName('sample-video')
     .setDescription('FANZAサンプル動画の状態確認・キュー追加')
     .addSubcommand(s =>
@@ -1071,15 +1080,21 @@ const commands = [
     ),
   new SlashCommandBuilder()
     .setName('approve')
-    .setDescription('キューアイテムを今すぐ投稿')
+    .setDescription('draft/キューアイテムを承認')
     .addStringOption(o =>
-      o.setName('id').setDescription('queue_id（先頭8文字でもOK）').setRequired(true),
+      o.setName('id').setDescription('draft_id または queue_id（先頭8文字でもOK）').setRequired(true),
+    )
+    .addStringOption(o =>
+      o.setName('reason').setDescription('承認理由（任意）'),
     ),
   new SlashCommandBuilder()
     .setName('reject')
-    .setDescription('キューアイテムを却下')
+    .setDescription('draft/キューアイテムを却下')
     .addStringOption(o =>
-      o.setName('id').setDescription('queue_id（先頭8文字でもOK）').setRequired(true),
+      o.setName('id').setDescription('draft_id または queue_id（先頭8文字でもOK）').setRequired(true),
+    )
+    .addStringOption(o =>
+      o.setName('reason').setDescription('却下理由（任意）'),
     ),
   new SlashCommandBuilder()
     .setName('dryrun')
@@ -1093,6 +1108,45 @@ const commands = [
   new SlashCommandBuilder()
     .setName('clear')
     .setDescription('このチャンネルの会話履歴をリセット'),
+  new SlashCommandBuilder()
+    .setName('market_scan')
+    .setDescription('X市場スキャンを実行し、伸びている投稿と改善提案を作成')
+    .addStringOption(o =>
+      o.setName('keywords').setDescription('検索キーワード（カンマ区切り）'),
+    )
+    .addStringOption(o =>
+      o.setName('genres').setDescription('ジャンル（カンマ区切り）'),
+    )
+    .addStringOption(o =>
+      o.setName('accounts').setDescription('競合アカウント（カンマ区切り、@なし可）'),
+    )
+    .addIntegerOption(o =>
+      o.setName('count').setDescription('最大取得件数（10〜500）').setMinValue(10).setMaxValue(500),
+    ),
+  new SlashCommandBuilder()
+    .setName('compare_own')
+    .setDescription('市場投稿と自分の投稿を比較')
+    .addIntegerOption(o =>
+      o.setName('days').setDescription('自分の投稿を見る日数').setMinValue(1).setMaxValue(180),
+    )
+    .addIntegerOption(o =>
+      o.setName('count').setDescription('市場投稿の最大取得件数').setMinValue(10).setMaxValue(500),
+    ),
+  new SlashCommandBuilder()
+    .setName('draft')
+    .setDescription('市場スキャンを元に投稿改善案をJSON生成')
+    .addIntegerOption(o =>
+      o.setName('count').setDescription('市場投稿の最大取得件数').setMinValue(10).setMaxValue(500),
+    )
+    .addIntegerOption(o =>
+      o.setName('proposals').setDescription('提案数').setMinValue(1).setMaxValue(10),
+    ),
+  new SlashCommandBuilder()
+    .setName('report')
+    .setDescription('Agent Runの要約を表示')
+    .addStringOption(o =>
+      o.setName('run_id').setDescription('run_id').setRequired(true),
+    ),
   new SlashCommandBuilder()
     .setName('analyze-user')
     .setDescription('🔍 ユーザー名でXを直接検索して全投稿（手動含む）を分析')
@@ -1235,13 +1289,85 @@ function buildApproveRow(itemId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`approve:${itemId}`)
-      .setLabel('🚀 今すぐ投稿')
+      .setLabel('✅ 承認のみ')
       .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`postnow:${itemId}`)
+      .setLabel('🚀 今すぐ投稿')
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`reject:${itemId}`)
       .setLabel('❌ 却下')
       .setStyle(ButtonStyle.Danger),
   );
+}
+
+function splitCsv(value: string | null): string[] {
+  return (value ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function buildAgentRunEmbed(run: Awaited<ReturnType<typeof runMarketAnalysis>>): EmbedBuilder {
+  const output = run.output;
+  const top = output?.marketPosts?.[0];
+  const proposal = output?.proposals?.[0];
+  const risks = run.risk_flags.filter((r) => r.severity !== 'info').slice(0, 4);
+  const fields: { name: string; value: string; inline: boolean }[] = [
+    { name: 'run_id', value: `\`${run.run_id}\``, inline: false },
+    { name: 'status', value: run.status, inline: true },
+    { name: 'data_count', value: String(run.data_count), inline: true },
+  ];
+  if (output) {
+    fields.push(
+      { name: '市場投稿', value: String(output.marketPosts.length), inline: true },
+      { name: '自分投稿', value: String(output.ownPosts.length), inline: true },
+      { name: '市場ER平均', value: `${(output.comparison.avgMarketEngagementRate * 100).toFixed(2)}%`, inline: true },
+      { name: '自分ER平均', value: `${(output.comparison.avgOwnEngagementRate * 100).toFixed(2)}%`, inline: true },
+    );
+    if (top) {
+      fields.push({
+        name: `伸び投稿 TOP growth_score=${top.growth_score}`,
+        value: `${top.username || top.source}: ${top.text.slice(0, 180)}\n理由: ${top.growth_reason.slice(0, 3).join(' / ')}`,
+        inline: false,
+      });
+    }
+    if (proposal) {
+      fields.push({
+        name: `改善提案 confidence=${proposal.confidence.toFixed(2)}`,
+        value: `${proposal.draft_text.slice(0, 220)}\n投稿時間: ${proposal.recommended_post_time_jst} / media=${proposal.media_format}\n期待: ${proposal.expected_effect}`,
+        inline: false,
+      });
+    }
+    if (output.comparison.winningPatterns.length) {
+      fields.push({
+        name: '競合の勝ち型',
+        value: output.comparison.winningPatterns.slice(0, 4).map((p) => `${p.label}: score ${p.avgGrowthScore.toFixed(0)} / ${p.count}件`).join('\n'),
+        inline: false,
+      });
+    }
+    if (output.recommendedWorks.length) {
+      fields.push({
+        name: '推奨作品',
+        value: output.recommendedWorks.slice(0, 3).map((w) => `${w.title.slice(0, 50)}\nscore ${w.score} / ${w.reasons.slice(0, 3).join(' / ')}`).join('\n'),
+        inline: false,
+      });
+    }
+    if (output.comparison.gaps.length) {
+      fields.push({ name: '比較ギャップ', value: output.comparison.gaps.slice(0, 4).join('\n').slice(0, 900), inline: false });
+    }
+    if (output.learningSignals.length) {
+      fields.push({ name: '学習ループ', value: output.learningSignals.slice(0, 3).map((s) => s.message).join('\n').slice(0, 900), inline: false });
+    }
+  }
+  if (risks.length) {
+    fields.push({ name: 'risk_flags', value: risks.map((r) => `[${r.severity}] ${r.message}`).join('\n').slice(0, 900), inline: false });
+  }
+  if (run.error) fields.push({ name: 'error', value: run.error.slice(0, 900), inline: false });
+  return new EmbedBuilder()
+    .setColor(run.status === 'failed' ? 0xef4444 : 0x10b981)
+    .setTitle('📡 Codex Agent Market Scan')
+    .addFields(...fields)
+    .setFooter({ text: '詳細はUIの分析タブ、または /report run_id で確認できます' })
+    .setTimestamp();
 }
 
 // ─── キュー通知 ───────────────────────────────────────────────────────────────
@@ -1370,6 +1496,36 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
       break;
     }
 
+    case 'revenue-boost': {
+      const count = i.options.getInteger('count') ?? 2;
+      const keyword = i.options.getString('keyword')?.trim() || undefined;
+      await i.editReply({ content: `⏳ 導入投稿+収益投稿を${count}作品分キュー投入中...${keyword ? ` keyword=${keyword}` : ''}` });
+      try {
+        const result = await queueRevenueBoosterPack({
+          count,
+          keyword,
+          withImage: true,
+          source: 'discord',
+        });
+        const success = result.items.filter(item => item.ok);
+        const failed = result.items.filter(item => !item.ok).slice(0, 3);
+        const embed = new EmbedBuilder()
+          .setColor(success.length > 0 ? 0x57f287 : 0xf59e0b)
+          .setTitle('📈 インプ導入パック')
+          .addFields(
+            { name: '追加', value: `${result.queuedCount}投稿 / ${result.requested}作品`, inline: true },
+            ...(success.length ? [{ name: '追加作品', value: success.map(item => `導入 \`${shortId(item.engagementQueueId ?? '')}\` / 収益 \`${shortId(item.revenueQueueId ?? '')}\` ${item.title?.slice(0, 50) ?? ''}`).join('\n').slice(0, 900), inline: false }] : []),
+            ...(failed.length ? [{ name: 'スキップ', value: failed.map(item => `${item.title?.slice(0, 40) ?? item.content_id}: ${item.error}`).join('\n').slice(0, 900), inline: false }] : []),
+          )
+          .setFooter({ text: '先に導入投稿、反応後に収益投稿を今すぐ投稿してください' })
+          .setTimestamp();
+        await i.editReply({ content: '', embeds: [embed] });
+      } catch (e: any) {
+        await i.editReply(`❌ インプ導入パック失敗: ${e.message}`);
+      }
+      break;
+    }
+
     case 'sample-video': {
       const sub = i.options.getSubcommand();
       if (sub === 'status') {
@@ -1391,6 +1547,10 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
           await i.editReply('❌ 動画ファイル（MP4等）を添付してください。');
           break;
         }
+        if (affiliateLink && !/^https?:\/\/\S+$/i.test(affiliateLink)) {
+          await i.editReply('❌ link には http または https で始まるURLを指定してください。');
+          break;
+        }
         await i.editReply({ content: `⏳ 動画を切り抜き中… ${startSec}秒〜${startSec + durationSec}秒（${durationSec}秒）` });
 
         try {
@@ -1400,14 +1560,12 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             label: title,
           });
 
-          const queueItem = enqueuePost({
-            type: 'fanza',
+          const queueItem = queueManualClipPost(clip, {
+            title,
             text: tweetText,
             affiliateUrl: affiliateLink,
-            itemTitle: title,
-            mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
-            templateType: 'manual-clip',
-            templateCategory: 'other',
+            sourceUrl: affiliateLink || attachment.url,
+            source: 'discord',
           });
 
           const fields: { name: string; value: string; inline: boolean }[] = [
@@ -1456,7 +1614,7 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
             const result = await queueSampleVideoPost(candidate, {
               durationSec,
               notifyEmail: 'gomishu0930@icloud.com',
-              fallbackToImages: true,
+              fallbackToImages: false,
             });
             const methodLabel = result.usedImageFallback
               ? '🖼 静止画'
@@ -1505,28 +1663,25 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
 
     case 'approve': {
       const input = i.options.getString('id', true).trim();
-      const all = getQueue();
-      const item = all.find(q => q.id === input || q.id.startsWith(input));
-      if (!item) { await i.editReply(`❌ ID \`${input}\` が見つかりません。`); return; }
-      const result = await approveAndPostQueueItem(item.id, {
-        forceLive: true,
-        bypassSafetyLimits: true,
-        source: 'discord',
-      });
-      if (!result.ok) { await i.editReply(`❌ 投稿失敗: ${result.error ?? '不明なエラー'}`); return; }
-      await i.editReply(result.dryRun
-        ? `🧪 DRY_RUN完了 — \`${shortId(item.id)}\` (${item.type})`
-        : `✅ 投稿完了 — \`${shortId(item.id)}\` tweetId=${result.tweetId}${result.replyId ? ` / replyId=${result.replyId}` : ''}`);
+      const reason = i.options.getString('reason') ?? `Discord /approve by @${i.user.username}`;
+      try {
+        const result = await approveDraft(input, reason);
+        await i.editReply(`✅ 承認しました — draft_id=\`${shortId(result.draft_id)}\` run_id=\`${result.run?.run_id?.slice(0, 8) ?? '-'}\``);
+      } catch (e: any) {
+        await i.editReply(`❌ 承認失敗: ${e.message ?? String(e)}`);
+      }
       break;
     }
 
     case 'reject': {
       const input = i.options.getString('id', true).trim();
-      const all = getQueue();
-      const item = all.find(q => q.id === input || q.id.startsWith(input));
-      if (!item) { await i.editReply(`❌ ID \`${input}\` が見つかりません。`); return; }
-      rejectQueueItem(item.id);
-      await i.editReply(`🚫 却下しました — \`${shortId(item.id)}\``);
+      const reason = i.options.getString('reason') ?? `Discord /reject by @${i.user.username}`;
+      try {
+        const result = await rejectDraft(input, reason);
+        await i.editReply(`🚫 却下しました — draft_id=\`${shortId(result.draft_id)}\` run_id=\`${result.run?.run_id?.slice(0, 8) ?? '-'}\``);
+      } catch (e: any) {
+        await i.editReply(`❌ 却下失敗: ${e.message ?? String(e)}`);
+      }
       break;
     }
 
@@ -1555,6 +1710,51 @@ async function handleSlash(i: ChatInputCommandInteraction): Promise<void> {
     case 'clear': {
       conversationHistory.delete(i.channelId);
       await i.editReply('🗑 会話履歴をリセットしました。');
+      break;
+    }
+
+    case 'market_scan': {
+      const keywords = splitCsv(i.options.getString('keywords'));
+      const genres = splitCsv(i.options.getString('genres'));
+      const accounts = splitCsv(i.options.getString('accounts')).map((s) => s.replace(/^@/, ''));
+      const maxResults = i.options.getInteger('count') ?? 200;
+      await i.editReply({ content: `⏳ X市場スキャンを実行中... 最大${maxResults}件` });
+      const run = await runMarketAnalysis({ keywords, genres, accounts, maxResults }, 'discord', 'market_scan');
+      await i.editReply({ content: '', embeds: [buildAgentRunEmbed(run)] });
+      break;
+    }
+
+    case 'compare_own': {
+      const ownDays = i.options.getInteger('days') ?? 30;
+      const maxResults = i.options.getInteger('count') ?? 200;
+      await i.editReply({ content: `⏳ 市場投稿と自分の過去${ownDays}日投稿を比較中...` });
+      const run = await runMarketAnalysis({ ownDays, maxResults }, 'discord', 'compare_own');
+      await i.editReply({ content: '', embeds: [buildAgentRunEmbed(run)] });
+      break;
+    }
+
+    case 'draft': {
+      const maxResults = i.options.getInteger('count') ?? 200;
+      const proposalCount = i.options.getInteger('proposals') ?? 5;
+      await i.editReply({ content: `⏳ 改善提案を生成中... 市場最大${maxResults}件 / 提案${proposalCount}件` });
+      const run = await createDraftRun({ maxResults, proposalCount }, 'discord');
+      const firstDraft = run.output?.proposals?.[0];
+      await i.editReply({
+        content: '',
+        embeds: [buildAgentRunEmbed(run)],
+        components: firstDraft ? [buildApproveRow(firstDraft.id)] : [],
+      });
+      break;
+    }
+
+    case 'report': {
+      const runId = i.options.getString('run_id', true).trim();
+      const run = await getAgentRun(runId);
+      if (!run) {
+        await i.editReply(`❌ run_id \`${runId}\` が見つかりません。`);
+        return;
+      }
+      await i.editReply({ embeds: [buildAgentRunEmbed(run)] });
       break;
     }
 
@@ -1943,7 +2143,30 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
 
   // ── 既存: キュー承認 / 却下 ──
   if (action === 'approve') {
-    const result = await approveAndPostQueueItem(payload, {
+    const result = await approveDraft(payload, `Discord button approve by @${i.user.username}`).catch((e: any) => ({ error: e.message ?? String(e) }));
+    await i.editReply({
+      content: 'error' in result
+        ? `❌ 承認失敗: ${result.error}`
+        : `✅ **@${i.user.username}** が承認しました — draft_id=\`${shortId(result.draft_id)}\``,
+      embeds: [], components: [],
+    });
+
+  } else if (action === 'reject') {
+    const result = await rejectDraft(payload, `Discord button reject by @${i.user.username}`).catch((e: any) => ({ error: e.message ?? String(e) }));
+    await i.editReply({
+      content: 'error' in result
+        ? `❌ 却下失敗: ${result.error}`
+        : `🚫 **@${i.user.username}** が却下しました — draft_id=\`${shortId(result.draft_id)}\``,
+      embeds: [], components: [],
+    });
+
+  } else if (action === 'postnow') {
+    const resolved = await materializeDraft(payload, `Discord button post now by @${i.user.username}`).catch((e: any) => ({ error: e.message ?? String(e) }));
+    if ('error' in resolved) {
+      await i.editReply({ content: `❌ 投稿準備失敗: ${resolved.error}`, embeds: [], components: [] });
+      return;
+    }
+    const result = await approveAndPostQueueItem(resolved.queueItem!.id, {
       forceLive: true,
       bypassSafetyLimits: true,
       source: 'discord',
@@ -1951,16 +2174,9 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
     await i.editReply({
       content: result.ok
         ? (result.dryRun
-            ? `🧪 **@${i.user.username}** がDRY_RUN確認しました — \`${shortId(payload)}\``
-            : `✅ **@${i.user.username}** が投稿しました — \`${shortId(payload)}\` tweetId=${result.tweetId}${result.replyId ? ` / replyId=${result.replyId}` : ''}`)
-        : `❌ 投稿失敗: ${result.error ?? '既に処理済み？'}`,
-      embeds: [], components: [],
-    });
-
-  } else if (action === 'reject') {
-    rejectQueueItem(payload);
-    await i.editReply({
-      content: `🚫 **@${i.user.username}** が却下しました — \`${shortId(payload)}\``,
+            ? `🧪 **@${i.user.username}** がDRY_RUN確認しました — draft_id=\`${shortId(resolved.draft_id)}\``
+            : `✅ **@${i.user.username}** が今すぐ投稿しました — draft_id=\`${shortId(resolved.draft_id)}\` tweetId=${result.tweetId}${result.replyId ? ` / replyId=${result.replyId}` : ''}`)
+        : `❌ 投稿失敗: ${result.error ?? '既に処理済みまたは期限切れ'}`,
       embeds: [], components: [],
     });
 
