@@ -55,7 +55,7 @@ router.post('/bot/queue/:id/approve', async (req, res) => {
 });
 
 router.post('/bot/queue/:id/reject', (req, res) => {
-  const item = rejectQueueItem(req.params.id);
+  const item = rejectQueueItem(req.params.id, typeof req.body?.reason === 'string' ? req.body.reason : undefined);
   if (!item) { res.status(404).json({ error: 'キューアイテムが見つかりません' }); return; }
   res.json({ ok: true, item });
 });
