@@ -7,6 +7,8 @@ import { refreshRecentMetrics } from '../bot/analytics.js';
 import { syncRebrandlyClicks } from '../bot/rebrandly.js';
 import { getOwnRecentTweets } from '../bot/twitter.js';
 import { recordPostManual, getRebrandlyData } from '../bot/storage.js';
+import { getAgentWeights, refreshAgentWeights } from '../bot/agent-weight-service.js';
+import { getRevenueWeightSignals, importRevenueReportRows, loadRevenueReports } from '../bot/revenue-report-store.js';
 
 const router = Router();
 
@@ -64,6 +66,49 @@ router.post('/revenue-sync', async (_req, res) => {
     res.json({ ok: true, rebrandly, metrics, timeline, revenue: getRevenueSummary(30) });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/analytics/revenue-report/import
+// DMM/FANZA成果レポートのJSON行を取り込み、post_id/product_id/content_id単位のCVR/revenue信号にする。
+router.post('/revenue-report/import', async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body?.rows)
+      ? req.body.rows
+      : Array.isArray(req.body)
+        ? req.body
+        : [];
+    if (rows.length === 0) {
+      res.status(400).json({ ok: false, error: 'rows array is required' });
+      return;
+    }
+    const source = String(req.body?.source ?? 'manual');
+    const result = await importRevenueReportRows(rows, source);
+    res.json({ ok: true, ...result, signals: getRevenueWeightSignals() });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message ?? String(e) });
+  }
+});
+
+// GET /api/analytics/revenue-report/signals
+router.get('/revenue-report/signals', async (_req, res) => {
+  await loadRevenueReports();
+  res.json({ ok: true, signals: getRevenueWeightSignals() });
+});
+
+// GET /api/analytics/agent-weights
+router.get('/agent-weights', async (_req, res) => {
+  res.json({ ok: true, weights: await getAgentWeights() });
+});
+
+// POST /api/analytics/agent-weights/refresh
+router.post('/agent-weights/refresh', async (req, res) => {
+  try {
+    const minSamples = req.body?.minSamples !== undefined ? Number(req.body.minSamples) : undefined;
+    const weights = await refreshAgentWeights({ minSamples });
+    res.json({ ok: true, weights });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message ?? String(e) });
   }
 });
 

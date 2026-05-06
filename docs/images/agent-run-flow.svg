@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="720" viewBox="0 0 1180 720" role="img" aria-labelledby="title desc">
+  <title id="title">Agent Run Flow</title>
+  <desc id="desc">market scanから分析、作品スコア、draft生成、JSON Schema出力までの流れ</desc>
+  <defs>
+    <style>
+      .bg { fill: #0b1020; }
+      .step { fill: #172033; stroke: #475569; stroke-width: 2; rx: 18; }
+      .core { fill: #123127; stroke: #22c55e; stroke-width: 2; rx: 18; }
+      .guard { fill: #321827; stroke: #fb7185; stroke-width: 2; rx: 18; }
+      .out { fill: #34231b; stroke: #f59e0b; stroke-width: 2; rx: 18; }
+      .title { fill: #f8fafc; font: 700 25px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .label { fill: #f8fafc; font: 700 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .small { fill: #cbd5e1; font: 500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .tiny { fill: #94a3b8; font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .arrow { stroke: #94a3b8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1180" height="720"/>
+  <text x="48" y="52" class="title">Agent Runの処理フロー</text>
+  <text x="48" y="78" class="small">市場データ、自分の投稿、FANZA作品を統合して、説明可能な投稿案を作ります。</text>
+
+  <rect x="56" y="126" width="236" height="112" class="step"/>
+  <text x="82" y="160" class="label">1. 入力</text>
+  <text x="82" y="190" class="small">keywords / genres / accounts</text>
+  <text x="82" y="214" class="tiny">DiscordまたはUIから実行</text>
+
+  <rect x="344" y="126" width="236" height="112" class="core"/>
+  <text x="370" y="160" class="label">2. X市場スキャン</text>
+  <text x="370" y="190" class="small">最大500件 / pagination</text>
+  <text x="370" y="214" class="tiny">growth_scoreでランキング</text>
+
+  <rect x="632" y="126" width="236" height="112" class="step"/>
+  <text x="658" y="160" class="label">3. 競合分類</text>
+  <text x="658" y="190" class="small">セール / ランキング / 動画</text>
+  <text x="658" y="214" class="tiny">勝ち型を抽出</text>
+
+  <rect x="920" y="126" width="204" height="112" class="step"/>
+  <text x="946" y="160" class="label">4. 自投稿比較</text>
+  <text x="946" y="190" class="small">ER / CTR / 時間 / 媒体</text>
+  <text x="946" y="214" class="tiny">差分を説明</text>
+
+  <path class="arrow" d="M 292 182 L 336 182"/>
+  <path class="arrow" d="M 580 182 L 624 182"/>
+  <path class="arrow" d="M 868 182 L 912 182"/>
+
+  <rect x="80" y="332" width="248" height="132" class="out"/>
+  <text x="108" y="368" class="label">5. FANZA作品スコア</text>
+  <text x="108" y="400" class="small">レビュー / セール / 発売日</text>
+  <text x="108" y="424" class="small">サンプル画像/動画 / 過去成果</text>
+  <text x="108" y="448" class="tiny">権利確認できる素材だけ候補にする</text>
+
+  <rect x="466" y="332" width="248" height="132" class="core"/>
+  <text x="494" y="368" class="label">6. Draft生成</text>
+  <text x="494" y="400" class="small">作品 / 文面 / CTA</text>
+  <text x="494" y="424" class="small">画像/動画 / 投稿時間</text>
+  <text x="494" y="448" class="tiny">reason / confidence / expected_effect</text>
+
+  <rect x="852" y="332" width="248" height="132" class="guard"/>
+  <text x="880" y="368" class="label">7. ComplianceGuard</text>
+  <text x="880" y="400" class="small">PR表記 / 成人向け</text>
+  <text x="880" y="424" class="small">未成年 / 非同意 / 権利 / 重複</text>
+  <text x="880" y="448" class="tiny">criticalは承認不可</text>
+
+  <path class="arrow" d="M 1022 238 C 1022 286 204 286 204 324"/>
+  <path class="arrow" d="M 328 398 L 458 398"/>
+  <path class="arrow" d="M 714 398 L 844 398"/>
+
+  <rect x="260" y="560" width="660" height="92" class="out"/>
+  <text x="292" y="596" class="label">出力: Recommendation JSON Schema</text>
+  <text x="292" y="626" class="small">summary / recommended_works / winning_patterns / own_account_gaps / drafts / risk_flags / confidence / reasons</text>
+</svg>

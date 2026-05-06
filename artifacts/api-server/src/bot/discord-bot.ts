@@ -37,7 +37,7 @@ import {
   type InsightRecord,
 } from './insight-memory.js';
 import { getAgentRun, runMarketAnalysis } from './agent-service.js';
-import { approveDraft, createDraftRun, rejectDraft } from './draft-service.js';
+import { approveDraft, createDraftRun, materializeDraft, rejectDraft } from './draft-service.js';
 
 const TOKEN      = process.env.DISCORD_BOT_TOKEN ?? '';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID ?? '';
@@ -1291,8 +1291,12 @@ function buildApproveRow(itemId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`approve:${itemId}`)
-      .setLabel('✅ 承認')
+      .setLabel('✅ 承認のみ')
       .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`postnow:${itemId}`)
+      .setLabel('🚀 今すぐ投稿')
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`reject:${itemId}`)
       .setLabel('❌ 却下')
@@ -2155,6 +2159,26 @@ async function handleButton(i: ButtonInteraction): Promise<void> {
       content: 'error' in result
         ? `❌ 却下失敗: ${result.error}`
         : `🚫 **@${i.user.username}** が却下しました — draft_id=\`${shortId(result.draft_id)}\``,
+      embeds: [], components: [],
+    });
+
+  } else if (action === 'postnow') {
+    const resolved = await materializeDraft(payload, `Discord button post now by @${i.user.username}`).catch((e: any) => ({ error: e.message ?? String(e) }));
+    if ('error' in resolved) {
+      await i.editReply({ content: `❌ 投稿準備失敗: ${resolved.error}`, embeds: [], components: [] });
+      return;
+    }
+    const result = await approveAndPostQueueItem(resolved.queueItem!.id, {
+      forceLive: true,
+      bypassSafetyLimits: true,
+      source: 'discord',
+    });
+    await i.editReply({
+      content: result.ok
+        ? (result.dryRun
+            ? `🧪 **@${i.user.username}** がDRY_RUN確認しました — draft_id=\`${shortId(resolved.draft_id)}\``
+            : `✅ **@${i.user.username}** が今すぐ投稿しました — draft_id=\`${shortId(resolved.draft_id)}\` tweetId=${result.tweetId}${result.replyId ? ` / replyId=${result.replyId}` : ''}`)
+        : `❌ 投稿失敗: ${result.error ?? '既に処理済みまたは期限切れ'}`,
       embeds: [], components: [],
     });
 

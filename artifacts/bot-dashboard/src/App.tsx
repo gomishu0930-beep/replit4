@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie,
 } from "recharts";
+import {
+  Activity, BarChart3, Bot, CheckCircle2, ClipboardCheck, Clock3,
+  FileText, History, PenLine, Play, RefreshCw, ShieldCheck, XCircle,
+} from "lucide-react";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -266,10 +270,12 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
-type Tab = "poll" | "senpai" | "studio" | "data";
+type Tab = "agent" | "senpai" | "studio" | "data" | "poll";
+type AgentView = "market" | "benchmark" | "drafts" | "approval" | "runs";
 
 function Dashboard() {
-  const [tab, setTab] = useState<Tab>("poll");
+  const [tab, setTab] = useState<Tab>("agent");
+  const [agentView, setAgentView] = useState<AgentView>("market");
   const [copied, setCopied] = useState<string | null>(null);
   const [syncingRevenue, setSyncingRevenue] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
@@ -465,6 +471,45 @@ function Dashboard() {
     }
   };
 
+  const runAgentCompareOwn = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/agent/runs/compare-own`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 5, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`compare-own完了: run_id ${data.run?.run_id?.slice(0, 8) ?? ""} / data ${data.run?.data_count ?? 0}件`);
+    } catch (e: any) {
+      setAgentScanMessage(`compare-own失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
+  const runAgentDrafts = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 6, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`draft生成完了: run_id ${data.run_id?.slice(0, 8) ?? ""} / drafts ${data.drafts?.length ?? 0}件`);
+      setAgentView("drafts");
+    } catch (e: any) {
+      setAgentScanMessage(`draft生成失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
   const approveAgentDraft = async (draftId: string) => {
     const res = await fetch(`${API}/api/drafts/${draftId}/approve`, {
       method: "POST",
@@ -498,12 +543,20 @@ function Dashboard() {
 
   const jst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   const todayTheme = DAY_THEMES[(jst.getDay() + 6) % 7];
+  const latestOutput = latestAgentRun?.output;
+  const pendingAgentDrafts = (queueData?.items ?? []).filter((item: any) =>
+    item.status === "pending" && (item.agentRunId || item.templateType === "agent-proposal"),
+  );
+  const criticalRiskCount = latestAgentRun?.risk_flags?.filter((risk) => risk.severity === "critical").length ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white pb-20">
-      <div className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-[15px] font-bold tracking-tight">FANZA Revenue Ops</h1>
+    <div className="min-h-screen bg-[#080b12] text-white pb-24">
+      <div className="sticky top-0 z-50 bg-[#080b12]/95 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-[15px] font-bold tracking-tight">FANZA Revenue Ops</h1>
+            <p className="text-[10px] text-zinc-500">Agent-driven affiliate operations</p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }} />
             <span className="text-[11px] font-semibold" style={{ color: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }}>
@@ -513,7 +566,279 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-6xl mx-auto px-4 py-4">
+
+        {tab === "agent" && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-emerald-500/20 bg-[#0d1518] p-4 sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-emerald-300" />
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">Codex Agent Command Center</p>
+                  </div>
+                  <h2 className="mt-2 text-[24px] font-black tracking-tight text-white sm:text-[30px]">市場、作品、Draft、承認を一画面で見る</h2>
+                  <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-zinc-400">
+                    DiscordとWeb UIは同じAgent APIを使います。ここで作ったdraftはDiscordでも承認でき、Discordで作ったdraftもここに表示されます。
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 lg:w-[360px]">
+                  <AgentMetric label="Run" value={latestAgentRun?.run_id?.slice(0, 8) ?? "-"} tone="white" />
+                  <AgentMetric label="Draft" value={String(latestOutput?.proposalCount ?? 0)} tone="blue" />
+                  <AgentMetric label="Risk" value={criticalRiskCount > 0 ? String(criticalRiskCount) : String(riskScore)} tone={criticalRiskCount > 0 || riskScore > 60 ? "red" : riskScore > 30 ? "amber" : "green"} />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button onClick={runAgentMarketScan} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-[12px] font-bold text-emerald-200 transition-colors hover:bg-emerald-500/15 disabled:opacity-50">
+                  {agentScanLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Market Scan
+                </button>
+                <button onClick={runAgentCompareOwn} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-blue-500/25 bg-blue-500/10 px-3 text-[12px] font-bold text-blue-200 transition-colors hover:bg-blue-500/15 disabled:opacity-50">
+                  <BarChart3 className="h-4 w-4" />
+                  Own Benchmark
+                </button>
+                <button onClick={runAgentDrafts} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 text-[12px] font-bold text-amber-200 transition-colors hover:bg-amber-500/15 disabled:opacity-50">
+                  <PenLine className="h-4 w-4" />
+                  Draft Lab
+                </button>
+              </div>
+              {agentScanMessage && (
+                <p className={`mt-3 rounded-lg px-3 py-2 text-[11px] ${agentScanMessage.includes("失敗") ? "bg-red-500/10 text-red-300" : "bg-emerald-500/10 text-emerald-300"}`}>{agentScanMessage}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {([
+                { key: "market" as AgentView, label: "Market Scan", icon: Activity },
+                { key: "benchmark" as AgentView, label: "Benchmark", icon: BarChart3 },
+                { key: "drafts" as AgentView, label: "Draft Lab", icon: PenLine },
+                { key: "approval" as AgentView, label: "Approval", icon: ClipboardCheck },
+                { key: "runs" as AgentView, label: "Run Logs", icon: History },
+              ]).map(({ key, label, icon: Icon }) => (
+                <button key={key} onClick={() => setAgentView(key)}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition-colors ${agentView === key ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-200" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.06]"}`}>
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {agentView === "market" && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<Activity className="h-4 w-4" />} title="Market Scan" sub="伸びている投稿と勝ち型" />
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <AgentMetric label="市場投稿" value={String(latestOutput?.marketCount ?? 0)} tone="green" />
+                    <AgentMetric label="市場ER" value={latestOutput?.comparison ? `${(latestOutput.comparison.avgMarketEngagementRate * 100).toFixed(2)}%` : "-"} tone="blue" />
+                    <AgentMetric label="勝ち型" value={String(latestOutput?.winningPatterns?.length ?? 0)} tone="amber" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(latestOutput?.topMarketPosts ?? []).slice(0, 5).map((post, idx) => (
+                      <div key={post.post_id} className="rounded-xl border border-white/8 bg-black/20 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="text-[10px] font-black text-emerald-300">#{idx + 1}</span>
+                          <span className="text-[10px] font-bold text-white">score {Math.round(post.growth_score)}</span>
+                          <span className="truncate text-[10px] text-zinc-500">{post.username || post.source}</span>
+                          <span className="ml-auto text-[10px] text-zinc-500">{post.media_type}{post.has_url ? " / URL" : ""}</span>
+                        </div>
+                        <p className="line-clamp-2 text-[11px] leading-relaxed text-zinc-300">{post.text}</p>
+                        <p className="mt-1 text-[10px] text-zinc-500">{post.growth_reason.slice(0, 2).join(" / ")}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.topMarketPosts?.length && <EmptyState text="Market Scanを実行するとランキングが表示されます。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<FileText className="h-4 w-4" />} title="Winning Patterns" sub="競合で伸びている型" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.winningPatterns ?? []).slice(0, 6).map((pattern) => (
+                      <div key={pattern.pattern} className="rounded-xl bg-black/20 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[12px] font-bold text-white">{pattern.label}</p>
+                          <span className="text-[10px] text-emerald-300">score {pattern.avgGrowthScore.toFixed(0)}</span>
+                        </div>
+                        <p className="mt-1 text-[10px] text-zinc-500">{pattern.reason}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.winningPatterns?.length && <EmptyState text="勝ち型はまだありません。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "benchmark" && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<BarChart3 className="h-4 w-4" />} title="Own Benchmark" sub="自分の投稿との差分" />
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <AgentMetric label="自分投稿" value={String(latestOutput?.ownCount ?? 0)} tone="white" />
+                    <AgentMetric label="自分ER" value={latestOutput?.comparison ? `${(latestOutput.comparison.avgOwnEngagementRate * 100).toFixed(2)}%` : "-"} tone="blue" />
+                    <AgentMetric label="市場文字数" value={String(latestOutput?.comparison?.avgMarketTextLength ?? "-")} tone="green" />
+                    <AgentMetric label="自分文字数" value={String(latestOutput?.comparison?.avgOwnTextLength ?? "-")} tone="amber" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(latestOutput?.ownAccountGaps ?? latestOutput?.comparison?.gaps?.map((g, i) => ({ code: String(i), axis: "gap", message: g, recommended_action: "", evidence: [] })) ?? []).slice(0, 8).map((gap) => (
+                      <div key={`${gap.code}-${gap.message}`} className="rounded-xl border border-amber-500/15 bg-amber-500/5 px-3 py-2">
+                        <p className="text-[11px] font-semibold text-amber-200">{gap.message}</p>
+                        {gap.recommended_action && <p className="mt-1 text-[10px] text-zinc-400">{gap.recommended_action}</p>}
+                      </div>
+                    ))}
+                    {!latestOutput?.comparison?.gaps?.length && <EmptyState text="比較ギャップはまだありません。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<Clock3 className="h-4 w-4" />} title="Schedule & Media" sub="時間と媒体の推奨" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.scheduleRecommendations ?? []).slice(0, 4).map((slot) => (
+                      <div key={slot.time_jst} className="rounded-xl bg-black/20 px-3 py-2">
+                        <p className="text-[14px] font-black text-blue-300">{slot.time_jst}</p>
+                        <p className="text-[10px] text-zinc-500">{slot.reason}</p>
+                      </div>
+                    ))}
+                    {(latestOutput?.mediaRecommendations ?? []).slice(0, 3).map((media) => (
+                      <div key={media.format} className="rounded-xl bg-black/20 px-3 py-2">
+                        <p className="text-[12px] font-bold text-white">{media.format}</p>
+                        <p className="text-[10px] text-zinc-500">{media.reason}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.scheduleRecommendations?.length && !latestOutput?.mediaRecommendations?.length && <EmptyState text="推奨時間と媒体はまだありません。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "drafts" && (
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<FileText className="h-4 w-4" />} title="Recommended Works" sub="作品選定の理由" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.recommendedWorks ?? []).slice(0, 6).map((work) => (
+                      <div key={work.content_id || work.title} className="rounded-xl border border-amber-500/15 bg-amber-500/5 px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <span className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-black text-amber-200">{work.score.toFixed(1)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-[11px] font-semibold text-white">{work.title}</p>
+                            <p className="mt-1 text-[10px] text-zinc-500">{work.reasons.slice(0, 3).join(" / ")}</p>
+                          </div>
+                          <span className="text-[10px] text-zinc-500">{work.has_sample_video ? "video" : work.has_sample_images ? "image" : "none"}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {!latestOutput?.recommendedWorks?.length && <EmptyState text="Draft生成後に作品候補が表示されます。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<PenLine className="h-4 w-4" />} title="Draft Lab" sub="投稿文、CTA、媒体、時間" />
+                  <div className="mt-3 space-y-3">
+                    {(latestOutput?.proposals ?? []).slice(0, 6).map((draft) => (
+                      <div key={draft.id} className="rounded-xl border border-blue-500/15 bg-blue-500/5 p-3">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-bold text-blue-200">{draft.recommended_genre}</span>
+                          <span className="text-[10px] text-zinc-500">conf {(draft.confidence * 100).toFixed(0)}%</span>
+                          <span className="ml-auto text-[10px] text-zinc-500">{draft.recommended_post_time_jst} / {draft.media_format}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-zinc-200">{draft.draft_text}</p>
+                        {draft.expected_effect && <p className="mt-2 text-[10px] text-blue-200">Expected: {draft.expected_effect}</p>}
+                        <p className="mt-1 text-[10px] text-zinc-500">{draft.reason}</p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button onClick={() => approveAgentDraft(draft.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 text-[10px] font-bold text-emerald-200">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            承認
+                          </button>
+                          <button onClick={() => rejectAgentDraft(draft.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 text-[10px] font-bold text-red-200">
+                            <XCircle className="h-3.5 w-3.5" />
+                            却下
+                          </button>
+                          <span className="ml-auto text-[10px] text-zinc-600">draft_id {draft.id.slice(0, 8)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {!latestOutput?.proposals?.length && <EmptyState text="Draft Labを実行すると候補が表示されます。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "approval" && (
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<ClipboardCheck className="h-4 w-4" />} title="Approval Queue" sub="DiscordとUIで共有される承認待ちdraft" />
+                <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {pendingAgentDrafts.slice(0, 8).map((item: any) => (
+                    <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-bold text-amber-200">pending</span>
+                        <span className="truncate text-[10px] text-zinc-500">{item.itemTitle || item.type}</span>
+                        <span className="ml-auto text-[10px] text-zinc-600">{item.id.slice(0, 8)}</span>
+                      </div>
+                      <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-300">{item.text}</p>
+                      {item.expectedEffect && <p className="mt-2 text-[10px] text-blue-200">{item.expectedEffect}</p>}
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => approveAgentDraft(item.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                          className="flex-1 rounded-lg border border-emerald-500/25 bg-emerald-500/10 py-2 text-[10px] font-bold text-emerald-200">承認</button>
+                        <button onClick={() => rejectAgentDraft(item.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                          className="flex-1 rounded-lg border border-red-500/25 bg-red-500/10 py-2 text-[10px] font-bold text-red-200">却下</button>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingAgentDrafts.length === 0 && <EmptyState text="Agent由来の承認待ちdraftはありません。" />}
+                </div>
+              </div>
+            )}
+
+            {agentView === "runs" && (
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<History className="h-4 w-4" />} title="Agent Run Logs" sub="Discord/UI共通の実行履歴" />
+                <div className="mt-3 space-y-2">
+                  {(agentRunsData?.runs ?? []).slice(0, 10).map((run) => (
+                    <div key={run.run_id} className="rounded-xl border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${run.status === "completed" ? "bg-emerald-400" : run.status === "failed" ? "bg-red-400" : "bg-amber-400"}`} />
+                        <p className="text-[11px] font-bold text-white">{run.run_id.slice(0, 8)}</p>
+                        <span className="text-[10px] text-zinc-500">{fmtDate(run.started_at)}</span>
+                        <span className="ml-auto text-[10px] text-zinc-500">data {run.data_count}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-zinc-500">{run.output?.recommendationSchema?.summary ?? run.error ?? "running"}</p>
+                    </div>
+                  ))}
+                  {!agentRunsData?.runs?.length && <EmptyState text="Agent Runはまだありません。" />}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<ShieldCheck className="h-4 w-4" />} title="Compliance" sub="criticalは承認不可" />
+                <div className="mt-3 space-y-2">
+                  {(latestAgentRun?.risk_flags ?? []).slice(0, 5).map((risk) => (
+                    <div key={`${risk.code}-${risk.message}`} className={`rounded-lg px-3 py-2 ${risk.severity === "critical" ? "bg-red-500/10 text-red-200" : risk.severity === "warning" ? "bg-amber-500/10 text-amber-200" : "bg-white/[0.03] text-zinc-400"}`}>
+                      <p className="text-[10px] font-bold">{risk.code}</p>
+                      <p className="text-[10px] opacity-80">{risk.message}</p>
+                    </div>
+                  ))}
+                  {!latestAgentRun?.risk_flags?.length && <EmptyState text="risk_flagsはありません。" />}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4 lg:col-span-2">
+                <PanelTitle icon={<Activity className="h-4 w-4" />} title="Learning Loop" sub="承認・却下・投稿後結果を次回へ戻す" />
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(latestOutput?.learningSignals ?? []).slice(0, 4).map((signal) => (
+                    <div key={signal.code} className="rounded-xl bg-black/20 px-3 py-2">
+                      <p className="text-[11px] font-bold text-white">{signal.message}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">{signal.evidence.slice(0, 2).join(" / ")}</p>
+                    </div>
+                  ))}
+                  {!latestOutput?.learningSignals?.length && <EmptyState text="学習信号はまだ不足しています。" />}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === "poll" && (
           <div className="space-y-4">
@@ -1305,16 +1630,17 @@ function Dashboard() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/5 safe-area-inset-bottom z-50">
-        <div className="max-w-lg mx-auto flex">
+        <div className="max-w-6xl mx-auto flex">
           {([
-            { key: "poll" as Tab, label: "Poll", icon: "🗳️" },
-            { key: "senpai" as Tab, label: "運用", icon: "💎" },
-            { key: "studio" as Tab, label: "投稿", icon: "🎨" },
-            { key: "data" as Tab, label: "分析", icon: "📊" },
-          ]).map(({ key, label, icon }) => (
+            { key: "agent" as Tab, label: "Agent", icon: Bot },
+            { key: "senpai" as Tab, label: "運用", icon: ShieldCheck },
+            { key: "studio" as Tab, label: "投稿", icon: PenLine },
+            { key: "data" as Tab, label: "分析", icon: BarChart3 },
+            { key: "poll" as Tab, label: "Poll", icon: Activity },
+          ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-blue-400" : "text-zinc-600"}`}>
-              <span className="text-[16px]">{icon}</span>
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-emerald-300" : "text-zinc-600"}`}>
+              <Icon className="h-4 w-4" />
               <span className="text-[9px] font-medium">{label}</span>
             </button>
           ))}
@@ -2094,6 +2420,39 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="bg-black/20 rounded-lg p-2 text-center">
       <p className="text-[16px] font-bold">{value}</p>
       <p className="text-[9px] text-zinc-500">{label}</p>
+    </div>
+  );
+}
+function AgentMetric({ label, value, tone }: { label: string; value: string; tone: "white" | "green" | "blue" | "amber" | "red" }) {
+  const toneClass: Record<typeof tone, string> = {
+    white: "text-white",
+    green: "text-emerald-300",
+    blue: "text-blue-300",
+    amber: "text-amber-300",
+    red: "text-red-300",
+  };
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+      <p className={`truncate text-[17px] font-black ${toneClass[tone]}`}>{value}</p>
+      <p className="mt-0.5 text-[9px] text-zinc-500">{label}</p>
+    </div>
+  );
+}
+function PanelTitle({ icon, title, sub }: { icon: ReactNode; title: string; sub: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-emerald-200">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold text-white">{title}</p>
+        <p className="text-[10px] text-zinc-500">{sub}</p>
+      </div>
+    </div>
+  );
+}
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-white/10 bg-black/10 px-3 py-5 text-center">
+      <p className="text-[11px] text-zinc-500">{text}</p>
     </div>
   );
 }

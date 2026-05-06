@@ -6,6 +6,7 @@ export interface AnalysisAdapterStatus {
   kind: AnalysisAdapterKind;
   enabled: boolean;
   reason: string;
+  legacyEntryPoints?: string[];
 }
 
 export interface AnalysisAdapter {
@@ -47,6 +48,13 @@ class ClaudeAnalysisAdapter implements AnalysisAdapter {
       reason: configured
         ? '既存Claude実装は残存。Phase 1では共通AnalysisAdapter境界から状態診断し、生成本線はrule_basedを使用します'
         : 'AI_INTEGRATIONS_ANTHROPIC_API_KEY / AI_INTEGRATIONS_ANTHROPIC_BASE_URL が未設定です',
+      legacyEntryPoints: [
+        'bot/discord-bot.ts: mention resident Claude agent',
+        'bot/meeting.ts: Claude meeting flow',
+        'bot/weekly-review.ts: weekly AI review',
+        'routes/meeting.ts: UI meeting endpoints',
+        'bot/scheduler.ts: FANZA generation path still template-first',
+      ],
     };
   }
 

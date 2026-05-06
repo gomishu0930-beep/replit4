@@ -231,7 +231,7 @@ export interface ClaudeFlowDiagnostic {
   adapterStatus: {
     claudeConfigured: boolean;
     commonAnalysisService: boolean;
-    adapters: Array<{ kind: string; enabled: boolean; reason: string }>;
+    adapters: Array<{ kind: string; enabled: boolean; reason: string; legacyEntryPoints?: string[] }>;
   };
 }
 

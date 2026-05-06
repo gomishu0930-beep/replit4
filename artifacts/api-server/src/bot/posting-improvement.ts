@@ -18,6 +18,7 @@ import type {
   ScheduleRecommendation,
 } from './agent-types.js';
 import { getProposalFeedback, type AgentProposalFeedback } from './agent-learning-store.js';
+import { getAgentWeights } from './agent-weight-service.js';
 import { runComplianceGuard } from './compliance-guard.js';
 import { getRevenueOptimizedItems, getSampleImages, scoreFanzaItem } from './fanza.js';
 
@@ -538,9 +539,22 @@ export function generateImprovedDraftProposals(
 
 export async function buildLearningSignals(ownPosts: OwnPostComparison[]): Promise<LearningSignal[]> {
   const feedback: AgentProposalFeedback[] = await getProposalFeedback(80).catch(() => [] as AgentProposalFeedback[]);
+  const weights = await getAgentWeights().catch(() => null);
   const approvals = feedback.filter((row) => row.decision === 'queued' || row.decision === 'approved' || row.decision === 'posted');
   const rejections = feedback.filter((row) => row.decision === 'rejected');
   const signals: LearningSignal[] = [];
+  if (weights?.status === 'active') {
+    signals.push({
+      code: 'adaptive_weights_active',
+      message: '投稿後メトリクスから勝ち型・CTA・作品スコアの重みを更新済みです',
+      evidence: [
+        `sample_size=${weights.sample_size}`,
+        `patterns=${Object.keys(weights.pattern_weights).slice(0, 5).join(',') || 'none'}`,
+        `ctas=${Object.keys(weights.cta_weights).slice(0, 5).join(',') || 'none'}`,
+      ],
+      weight: 1,
+    });
+  }
   if (approvals.length > 0 || rejections.length > 0) {
     signals.push({
       code: 'proposal_feedback_available',
