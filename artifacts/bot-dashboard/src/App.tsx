@@ -1,14 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import MyfansAdmin from "@/pages/myfans-admin";
+import OpsConsole from "./OpsConsole";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie,
 } from "recharts";
+import {
+  Activity, BarChart3, Bot, CheckCircle2, ClipboardCheck, Clock3,
+  Database, FileText, History, PenLine, Play, RefreshCw, ShieldCheck, SlidersHorizontal, Upload, XCircle,
+} from "lucide-react";
 
 const queryClient = new QueryClient();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -90,6 +95,72 @@ interface SampleVideoStatusResponse {
   email: {
     configured: boolean;
     missing: string[];
+  };
+}
+
+interface AgentRunSummary {
+  run_id: string;
+  status: string;
+  started_at: string;
+  finished_at?: string;
+  error?: string;
+  data_count: number;
+  risk_flags: Array<{ code: string; severity: string; message: string }>;
+  output?: {
+    marketCount: number;
+    ownCount: number;
+    proposalCount: number;
+    topMarketPosts: Array<{
+      post_id: string;
+      username: string;
+      source: string;
+      text: string;
+      growth_score: number;
+      growth_reason: string[];
+      media_type: string;
+      has_url: boolean;
+      engagement_rate: number;
+    }>;
+    comparison: {
+      avgOwnEngagementRate: number;
+      avgMarketEngagementRate: number;
+      avgOwnTextLength: number;
+      avgMarketTextLength: number;
+      bestMarketHours: Array<{ hour: number; avgGrowthScore: number; count: number }>;
+      gaps: string[];
+    };
+    winningPatterns?: Array<{ pattern: string; label: string; count: number; avgGrowthScore: number; reason: string }>;
+    ownAccountGaps?: Array<{ code: string; axis: string; message: string; recommended_action: string; evidence: string[] }>;
+    recommendedWorks?: Array<{
+      content_id: string;
+      title: string;
+      genres: string[];
+      actresses: string[];
+      score: number;
+      reasons: string[];
+      has_sample_images: boolean;
+      has_sample_video: boolean;
+      rights_confirmed: boolean;
+    }>;
+    proposals: Array<{
+      id: string;
+      draft_text: string;
+      reason: string;
+      confidence: number;
+      expected_effect?: string;
+      risk_flags: Array<{ code: string; severity: string; message: string }>;
+      media_format: string;
+      attached_media?: { format: string; source: string; reason: string; sample_url?: string };
+      recommended_post_time_jst: string;
+      recommended_genre: string;
+    }>;
+    mediaRecommendations?: Array<{ format: string; reason: string; confidence: number }>;
+    scheduleRecommendations?: Array<{ time_jst: string; reason: string; confidence: number }>;
+    learningSignals?: Array<{ code: string; message: string; evidence: string[]; weight: number }>;
+    recommendationSchema?: { summary: string; confidence: number; reasons: string[] };
+    diagnostics: {
+      issues: Array<{ code: string; message: string; evidence: string }>;
+    };
   };
 }
 
@@ -200,15 +271,51 @@ function formatCountdown(ms: number) {
   return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
-type Tab = "poll" | "senpai" | "studio" | "data";
+function parseCsvRows(csv: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let cell = "";
+  let row: string[] = [];
+  let quoted = false;
+  for (let i = 0; i < csv.length; i++) {
+    const char = csv[i];
+    const next = csv[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  const headers = rows.shift()?.map((header) => header.replace(/^\uFEFF/, "").trim()) ?? [];
+  return rows.map((values) => Object.fromEntries(headers.map((header, idx) => [header || `column_${idx + 1}`, values[idx] ?? ""])));
+}
+
+type Tab = "agent" | "senpai" | "studio" | "data" | "poll";
+type AgentView = "market" | "benchmark" | "drafts" | "approval" | "runs";
 
 function Dashboard() {
-  const [tab, setTab] = useState<Tab>("poll");
+  const [tab, setTab] = useState<Tab>("agent");
+  const [agentView, setAgentView] = useState<AgentView>("market");
   const [copied, setCopied] = useState<string | null>(null);
   const [syncingRevenue, setSyncingRevenue] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [rebrandlyAutoMessage, setRebrandlyAutoMessage] = useState("");
   const [revenueQueueMessage, setRevenueQueueMessage] = useState("");
+  const [revenueBoostMessage, setRevenueBoostMessage] = useState("");
+  const [csvUploading, setCsvUploading] = useState(false);
 
   const { data: status } = useQuery<BotStatus>({
     queryKey: ["botStatus"],
@@ -300,6 +407,36 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/run-config`).then(r => r.json()),
     refetchInterval: 30000,
   });
+  const { data: agentRunsData, refetch: refetchAgentRuns } = useQuery<{ ok: boolean; runs: AgentRunSummary[] }>({
+    queryKey: ["agentRuns"],
+    queryFn: () => fetch(`${API}/api/agent/runs?limit=10`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: revenueSignalsData, refetch: refetchRevenueSignals } = useQuery<{
+    ok: boolean;
+    signals: { sampleSize: number; totalConversions: number; totalRevenue: number; byProduct: Array<{ id: string; conversions: number; revenue: number; clicks: number }> };
+  }>({
+    queryKey: ["revenueReportSignals"],
+    queryFn: () => fetch(`${API}/api/analytics/revenue-report/signals`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+  const { data: agentWeightsData, refetch: refetchAgentWeights } = useQuery<{
+    ok: boolean;
+    weights: {
+      status: string;
+      updated_at: string;
+      sample_size: number;
+      min_samples: number;
+      pattern_weights: Record<string, number>;
+      cta_weights: Record<string, number>;
+      work_weights: Record<string, number>;
+      reasons: string[];
+    };
+  }>({
+    queryKey: ["agentWeights"],
+    queryFn: () => fetch(`${API}/api/analytics/agent-weights`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
 
   const riskScore = safetyData?.riskScore ?? 0;
   const posts = postsData?.posts ?? [];
@@ -308,6 +445,9 @@ function Dashboard() {
   const totalClicks = rebrandlyData?.links?.reduce((s, l) => s + l.clicks, 0) ?? 0;
   const sampleVideo = sampleVideoStatusData?.sampleVideo;
   const sampleVideoEmail = sampleVideoStatusData?.email;
+  const latestAgentRun = agentRunsData?.runs?.[0];
+  const [agentScanLoading, setAgentScanLoading] = useState(false);
+  const [agentScanMessage, setAgentScanMessage] = useState("");
 
   const runRevenueSync = async () => {
     setSyncingRevenue(true); setSyncMessage("");
@@ -354,6 +494,150 @@ function Dashboard() {
     }
   };
 
+  const runRevenueBoostPack = async () => {
+    setRevenueBoostMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/revenue-booster-pack`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 2, withImage: true }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await Promise.all([refetchQueue(), refetchRevenue()]);
+      setRevenueBoostMessage(`導入パック: ${data.queuedCount ?? 0}投稿をキューに追加しました`);
+    } catch (e: any) {
+      setRevenueBoostMessage(`導入パック失敗: ${e.message}`);
+    }
+  };
+
+  const runAgentMarketScan = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/agent/runs/market-scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 5, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`market_scan完了: run_id ${data.run?.run_id?.slice(0, 8) ?? ""} / data ${data.run?.data_count ?? 0}件`);
+    } catch (e: any) {
+      setAgentScanMessage(`market_scan失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
+  const runAgentCompareOwn = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/agent/runs/compare-own`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 5, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`compare-own完了: run_id ${data.run?.run_id?.slice(0, 8) ?? ""} / data ${data.run?.data_count ?? 0}件`);
+    } catch (e: any) {
+      setAgentScanMessage(`compare-own失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
+  const runAgentDrafts = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 6, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`draft生成完了: run_id ${data.run_id?.slice(0, 8) ?? ""} / drafts ${data.drafts?.length ?? 0}件`);
+      setAgentView("drafts");
+    } catch (e: any) {
+      setAgentScanMessage(`draft生成失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
+  const approveAgentDraft = async (draftId: string) => {
+    const res = await fetch(`${API}/api/drafts/${draftId}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "UI approval" }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await Promise.all([refetchAgentRuns(), refetchQueue()]);
+    setAgentScanMessage(`draft承認: ${data.draft_id?.slice(0, 8) ?? draftId.slice(0, 8)}`);
+  };
+
+  const rejectAgentDraft = async (draftId: string) => {
+    const res = await fetch(`${API}/api/drafts/${draftId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "UI rejection" }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await Promise.all([refetchAgentRuns(), refetchQueue()]);
+    setAgentScanMessage(`draft却下: ${data.draft_id?.slice(0, 8) ?? draftId.slice(0, 8)}`);
+  };
+
+  const uploadRevenueCsv = async (file: File) => {
+    setCsvUploading(true); setAgentScanMessage("");
+    try {
+      const text = await file.text();
+      const rows = parseCsvRows(text);
+      if (rows.length === 0) throw new Error("CSVに行がありません");
+      const res = await fetch(`${API}/api/analytics/revenue-report/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: `ui-csv:${file.name}`, rows }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const refresh = await fetch(`${API}/api/analytics/agent-weights/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minSamples: 20 }),
+      }).then((r) => r.json());
+      await Promise.all([refetchRevenueSignals(), refetchAgentWeights(), refetchAgentRuns()]);
+      setAgentScanMessage(`成果CSV取込: 新規${data.imported ?? 0}件 / 総${data.total ?? 0}件 / weights ${refresh.weights?.status ?? "updated"}`);
+      setAgentView("benchmark");
+    } catch (e: any) {
+      setAgentScanMessage(`成果CSV取込失敗: ${e.message}`);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
+  const refreshAdaptiveWeights = async () => {
+    setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/analytics/agent-weights/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minSamples: 20 }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentWeights();
+      setAgentScanMessage(`weights更新: ${data.weights?.status} / samples ${data.weights?.sample_size ?? 0}`);
+    } catch (e: any) {
+      setAgentScanMessage(`weights更新失敗: ${e.message}`);
+    }
+  };
+
   const [countdown, setCountdown] = useState(getNextPostTime().ms);
   useEffect(() => { const id = setInterval(() => setCountdown(getNextPostTime().ms), 1000); return () => clearInterval(id); }, []);
 
@@ -363,12 +647,22 @@ function Dashboard() {
 
   const jst = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   const todayTheme = DAY_THEMES[(jst.getDay() + 6) % 7];
+  const latestOutput = latestAgentRun?.output;
+  const revenueSignals = revenueSignalsData?.signals;
+  const agentWeights = agentWeightsData?.weights;
+  const pendingAgentDrafts = (queueData?.items ?? []).filter((item: any) =>
+    item.status === "pending" && (item.agentRunId || item.templateType === "agent-proposal"),
+  );
+  const criticalRiskCount = latestAgentRun?.risk_flags?.filter((risk) => risk.severity === "critical").length ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white pb-20">
-      <div className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-[15px] font-bold tracking-tight">FANZA Revenue Ops</h1>
+    <div className="min-h-screen bg-[#080b12] text-white pb-24">
+      <div className="sticky top-0 z-50 bg-[#080b12]/95 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-[15px] font-bold tracking-tight">FANZA Revenue Ops</h1>
+            <p className="text-[10px] text-zinc-500">Agent-driven affiliate operations</p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }} />
             <span className="text-[11px] font-semibold" style={{ color: riskScore <= 30 ? "#22c55e" : riskScore <= 60 ? "#f59e0b" : "#ef4444" }}>
@@ -378,7 +672,336 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-6xl mx-auto px-4 py-4">
+
+        {tab === "agent" && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-emerald-500/20 bg-[#0d1518] p-4 sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-emerald-300" />
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">Codex Agent Command Center</p>
+                  </div>
+                  <h2 className="mt-2 text-[24px] font-black tracking-tight text-white sm:text-[30px]">市場、作品、Draft、承認を一画面で見る</h2>
+                  <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-zinc-400">
+                    DiscordとWeb UIは同じAgent APIを使います。ここで作ったdraftはDiscordでも承認でき、Discordで作ったdraftもここに表示されます。
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 lg:w-[360px]">
+                  <AgentMetric label="Run" value={latestAgentRun?.run_id?.slice(0, 8) ?? "-"} tone="white" />
+                  <AgentMetric label="Draft" value={String(latestOutput?.proposalCount ?? 0)} tone="blue" />
+                  <AgentMetric label="Risk" value={criticalRiskCount > 0 ? String(criticalRiskCount) : String(riskScore)} tone={criticalRiskCount > 0 || riskScore > 60 ? "red" : riskScore > 30 ? "amber" : "green"} />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button onClick={runAgentMarketScan} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-[12px] font-bold text-emerald-200 transition-colors hover:bg-emerald-500/15 disabled:opacity-50">
+                  {agentScanLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Market Scan
+                </button>
+                <button onClick={runAgentCompareOwn} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-blue-500/25 bg-blue-500/10 px-3 text-[12px] font-bold text-blue-200 transition-colors hover:bg-blue-500/15 disabled:opacity-50">
+                  <BarChart3 className="h-4 w-4" />
+                  Own Benchmark
+                </button>
+                <button onClick={runAgentDrafts} disabled={agentScanLoading}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 text-[12px] font-bold text-amber-200 transition-colors hover:bg-amber-500/15 disabled:opacity-50">
+                  <PenLine className="h-4 w-4" />
+                  Draft Lab
+                </button>
+              </div>
+              {agentScanMessage && (
+                <p className={`mt-3 rounded-lg px-3 py-2 text-[11px] ${agentScanMessage.includes("失敗") ? "bg-red-500/10 text-red-300" : "bg-emerald-500/10 text-emerald-300"}`}>{agentScanMessage}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {([
+                { key: "market" as AgentView, label: "Market Scan", icon: Activity },
+                { key: "benchmark" as AgentView, label: "Benchmark", icon: BarChart3 },
+                { key: "drafts" as AgentView, label: "Draft Lab", icon: PenLine },
+                { key: "approval" as AgentView, label: "Approval", icon: ClipboardCheck },
+                { key: "runs" as AgentView, label: "Run Logs", icon: History },
+              ]).map(({ key, label, icon: Icon }) => (
+                <button key={key} onClick={() => setAgentView(key)}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition-colors ${agentView === key ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-200" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.06]"}`}>
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {agentView === "market" && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<Activity className="h-4 w-4" />} title="Market Scan" sub="伸びている投稿と勝ち型" />
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <AgentMetric label="市場投稿" value={String(latestOutput?.marketCount ?? 0)} tone="green" />
+                    <AgentMetric label="市場ER" value={latestOutput?.comparison ? `${(latestOutput.comparison.avgMarketEngagementRate * 100).toFixed(2)}%` : "-"} tone="blue" />
+                    <AgentMetric label="勝ち型" value={String(latestOutput?.winningPatterns?.length ?? 0)} tone="amber" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(latestOutput?.topMarketPosts ?? []).slice(0, 5).map((post, idx) => (
+                      <div key={post.post_id} className="rounded-xl border border-white/8 bg-black/20 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="text-[10px] font-black text-emerald-300">#{idx + 1}</span>
+                          <span className="text-[10px] font-bold text-white">score {Math.round(post.growth_score)}</span>
+                          <span className="truncate text-[10px] text-zinc-500">{post.username || post.source}</span>
+                          <span className="ml-auto text-[10px] text-zinc-500">{post.media_type}{post.has_url ? " / URL" : ""}</span>
+                        </div>
+                        <p className="line-clamp-2 text-[11px] leading-relaxed text-zinc-300">{post.text}</p>
+                        <p className="mt-1 text-[10px] text-zinc-500">{post.growth_reason.slice(0, 2).join(" / ")}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.topMarketPosts?.length && <EmptyState text="Market Scanを実行するとランキングが表示されます。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<FileText className="h-4 w-4" />} title="Winning Patterns" sub="競合で伸びている型" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.winningPatterns ?? []).slice(0, 6).map((pattern) => (
+                      <div key={pattern.pattern} className="rounded-xl bg-black/20 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[12px] font-bold text-white">{pattern.label}</p>
+                          <span className="text-[10px] text-emerald-300">score {pattern.avgGrowthScore.toFixed(0)}</span>
+                        </div>
+                        <p className="mt-1 text-[10px] text-zinc-500">{pattern.reason}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.winningPatterns?.length && <EmptyState text="勝ち型はまだありません。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "benchmark" && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<BarChart3 className="h-4 w-4" />} title="Own Benchmark" sub="自分の投稿との差分" />
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <AgentMetric label="自分投稿" value={String(latestOutput?.ownCount ?? 0)} tone="white" />
+                    <AgentMetric label="自分ER" value={latestOutput?.comparison ? `${(latestOutput.comparison.avgOwnEngagementRate * 100).toFixed(2)}%` : "-"} tone="blue" />
+                    <AgentMetric label="市場文字数" value={String(latestOutput?.comparison?.avgMarketTextLength ?? "-")} tone="green" />
+                    <AgentMetric label="自分文字数" value={String(latestOutput?.comparison?.avgOwnTextLength ?? "-")} tone="amber" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(latestOutput?.ownAccountGaps ?? latestOutput?.comparison?.gaps?.map((g, i) => ({ code: String(i), axis: "gap", message: g, recommended_action: "", evidence: [] })) ?? []).slice(0, 8).map((gap) => (
+                      <div key={`${gap.code}-${gap.message}`} className="rounded-xl border border-amber-500/15 bg-amber-500/5 px-3 py-2">
+                        <p className="text-[11px] font-semibold text-amber-200">{gap.message}</p>
+                        {gap.recommended_action && <p className="mt-1 text-[10px] text-zinc-400">{gap.recommended_action}</p>}
+                      </div>
+                    ))}
+                    {!latestOutput?.comparison?.gaps?.length && <EmptyState text="比較ギャップはまだありません。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<Clock3 className="h-4 w-4" />} title="Schedule & Media" sub="時間と媒体の推奨" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.scheduleRecommendations ?? []).slice(0, 4).map((slot) => (
+                      <div key={slot.time_jst} className="rounded-xl bg-black/20 px-3 py-2">
+                        <p className="text-[14px] font-black text-blue-300">{slot.time_jst}</p>
+                        <p className="text-[10px] text-zinc-500">{slot.reason}</p>
+                      </div>
+                    ))}
+                    {(latestOutput?.mediaRecommendations ?? []).slice(0, 3).map((media) => (
+                      <div key={media.format} className="rounded-xl bg-black/20 px-3 py-2">
+                        <p className="text-[12px] font-bold text-white">{media.format}</p>
+                        <p className="text-[10px] text-zinc-500">{media.reason}</p>
+                      </div>
+                    ))}
+                    {!latestOutput?.scheduleRecommendations?.length && !latestOutput?.mediaRecommendations?.length && <EmptyState text="推奨時間と媒体はまだありません。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "drafts" && (
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<FileText className="h-4 w-4" />} title="Recommended Works" sub="作品選定の理由" />
+                  <div className="mt-3 space-y-2">
+                    {(latestOutput?.recommendedWorks ?? []).slice(0, 6).map((work) => (
+                      <div key={work.content_id || work.title} className="rounded-xl border border-amber-500/15 bg-amber-500/5 px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <span className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-black text-amber-200">{work.score.toFixed(1)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-[11px] font-semibold text-white">{work.title}</p>
+                            <p className="mt-1 text-[10px] text-zinc-500">{work.reasons.slice(0, 3).join(" / ")}</p>
+                          </div>
+                          <span className="text-[10px] text-zinc-500">{work.has_sample_video ? "video" : work.has_sample_images ? "image" : "none"}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {!latestOutput?.recommendedWorks?.length && <EmptyState text="Draft生成後に作品候補が表示されます。" />}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                  <PanelTitle icon={<PenLine className="h-4 w-4" />} title="Draft Lab" sub="投稿文、CTA、媒体、時間" />
+                  <div className="mt-3 space-y-3">
+                    {(latestOutput?.proposals ?? []).slice(0, 6).map((draft) => (
+                      <div key={draft.id} className="rounded-xl border border-blue-500/15 bg-blue-500/5 p-3">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-bold text-blue-200">{draft.recommended_genre}</span>
+                          <span className="text-[10px] text-zinc-500">conf {(draft.confidence * 100).toFixed(0)}%</span>
+                          <span className="ml-auto text-[10px] text-zinc-500">{draft.recommended_post_time_jst} / {draft.media_format}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-zinc-200">{draft.draft_text}</p>
+                        {draft.expected_effect && <p className="mt-2 text-[10px] text-blue-200">Expected: {draft.expected_effect}</p>}
+                        <p className="mt-1 text-[10px] text-zinc-500">{draft.reason}</p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button onClick={() => approveAgentDraft(draft.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 text-[10px] font-bold text-emerald-200">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            承認
+                          </button>
+                          <button onClick={() => rejectAgentDraft(draft.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                            className="flex min-h-[34px] items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 text-[10px] font-bold text-red-200">
+                            <XCircle className="h-3.5 w-3.5" />
+                            却下
+                          </button>
+                          <span className="ml-auto text-[10px] text-zinc-600">draft_id {draft.id.slice(0, 8)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {!latestOutput?.proposals?.length && <EmptyState text="Draft Labを実行すると候補が表示されます。" />}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {agentView === "approval" && (
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<ClipboardCheck className="h-4 w-4" />} title="Approval Queue" sub="DiscordとUIで共有される承認待ちdraft" />
+                <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {pendingAgentDrafts.slice(0, 8).map((item: any) => (
+                    <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="rounded-lg bg-amber-500/15 px-2 py-1 text-[10px] font-bold text-amber-200">pending</span>
+                        <span className="truncate text-[10px] text-zinc-500">{item.itemTitle || item.type}</span>
+                        <span className="ml-auto text-[10px] text-zinc-600">{item.id.slice(0, 8)}</span>
+                      </div>
+                      <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-300">{item.text}</p>
+                      {item.expectedEffect && <p className="mt-2 text-[10px] text-blue-200">{item.expectedEffect}</p>}
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => approveAgentDraft(item.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                          className="flex-1 rounded-lg border border-emerald-500/25 bg-emerald-500/10 py-2 text-[10px] font-bold text-emerald-200">承認</button>
+                        <button onClick={() => rejectAgentDraft(item.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                          className="flex-1 rounded-lg border border-red-500/25 bg-red-500/10 py-2 text-[10px] font-bold text-red-200">却下</button>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingAgentDrafts.length === 0 && <EmptyState text="Agent由来の承認待ちdraftはありません。" />}
+                </div>
+              </div>
+            )}
+
+            {agentView === "runs" && (
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<History className="h-4 w-4" />} title="Agent Run Logs" sub="Discord/UI共通の実行履歴" />
+                <div className="mt-3 space-y-2">
+                  {(agentRunsData?.runs ?? []).slice(0, 10).map((run) => (
+                    <div key={run.run_id} className="rounded-xl border border-white/8 bg-black/20 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${run.status === "completed" ? "bg-emerald-400" : run.status === "failed" ? "bg-red-400" : "bg-amber-400"}`} />
+                        <p className="text-[11px] font-bold text-white">{run.run_id.slice(0, 8)}</p>
+                        <span className="text-[10px] text-zinc-500">{fmtDate(run.started_at)}</span>
+                        <span className="ml-auto text-[10px] text-zinc-500">data {run.data_count}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-zinc-500">{run.output?.recommendationSchema?.summary ?? run.error ?? "running"}</p>
+                    </div>
+                  ))}
+                  {!agentRunsData?.runs?.length && <EmptyState text="Agent Runはまだありません。" />}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4">
+                <PanelTitle icon={<ShieldCheck className="h-4 w-4" />} title="Compliance" sub="criticalは承認不可" />
+                <div className="mt-3 space-y-2">
+                  {(latestAgentRun?.risk_flags ?? []).slice(0, 5).map((risk) => (
+                    <div key={`${risk.code}-${risk.message}`} className={`rounded-lg px-3 py-2 ${risk.severity === "critical" ? "bg-red-500/10 text-red-200" : risk.severity === "warning" ? "bg-amber-500/10 text-amber-200" : "bg-white/[0.03] text-zinc-400"}`}>
+                      <p className="text-[10px] font-bold">{risk.code}</p>
+                      <p className="text-[10px] opacity-80">{risk.message}</p>
+                    </div>
+                  ))}
+                  {!latestAgentRun?.risk_flags?.length && <EmptyState text="risk_flagsはありません。" />}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#101522] p-4 lg:col-span-2">
+                <PanelTitle icon={<Activity className="h-4 w-4" />} title="Learning Loop" sub="承認・却下・投稿後結果を次回へ戻す" />
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <AgentMetric label="成果行" value={String(revenueSignals?.sampleSize ?? 0)} tone="green" />
+                  <AgentMetric label="CV" value={String(revenueSignals?.totalConversions ?? 0)} tone="blue" />
+                  <AgentMetric label="Weights" value={agentWeights?.status ?? "none"} tone={agentWeights?.status === "active" ? "green" : "amber"} />
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <label className="flex min-h-[40px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-[11px] font-bold text-emerald-200 hover:bg-emerald-500/15">
+                    {csvUploading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    DMM/FANZA成果CSV取込
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      disabled={csvUploading}
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.currentTarget.files?.[0];
+                        e.currentTarget.value = "";
+                        if (file) uploadRevenueCsv(file);
+                      }}
+                    />
+                  </label>
+                  <button onClick={refreshAdaptiveWeights}
+                    className="flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-blue-500/25 bg-blue-500/10 px-3 text-[11px] font-bold text-blue-200 hover:bg-blue-500/15">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    weights更新
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Database className="h-4 w-4 text-emerald-300" />
+                      <p className="text-[11px] font-bold text-white">成果上位作品</p>
+                    </div>
+                    {(revenueSignals?.byProduct ?? []).slice(0, 4).map((row) => (
+                      <div key={row.id} className="flex items-center gap-2 border-t border-white/5 py-1.5 text-[10px]">
+                        <span className="truncate text-zinc-300">{row.id}</span>
+                        <span className="ml-auto text-emerald-300">CV {row.conversions}</span>
+                        <span className="text-zinc-500">¥{Math.round(row.revenue).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {!revenueSignals?.byProduct?.length && <p className="text-[10px] text-zinc-500">CSV取込後に作品別成果が出ます。</p>}
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                    <p className="mb-2 text-[11px] font-bold text-white">Adaptive Weights</p>
+                    {agentWeights?.reasons?.slice(0, 3).map((reason) => (
+                      <p key={reason} className="text-[10px] text-zinc-500">{reason}</p>
+                    ))}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {Object.entries(agentWeights?.pattern_weights ?? {}).slice(0, 5).map(([key, value]) => (
+                        <span key={key} className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] text-blue-200">{key} x{value}</span>
+                      ))}
+                      {Object.entries(agentWeights?.cta_weights ?? {}).slice(0, 5).map(([key, value]) => (
+                        <span key={key} className="rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">{key} x{value}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(latestOutput?.learningSignals ?? []).slice(0, 4).map((signal) => (
+                    <div key={signal.code} className="rounded-xl bg-black/20 px-3 py-2">
+                      <p className="text-[11px] font-bold text-white">{signal.message}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">{signal.evidence.slice(0, 2).join(" / ")}</p>
+                    </div>
+                  ))}
+                  {!latestOutput?.learningSignals?.length && <EmptyState text="学習信号はまだ不足しています。" />}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === "poll" && (
           <div className="space-y-4">
@@ -495,6 +1118,7 @@ function Dashboard() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <ActionBtn label="収益候補を補充" icon="📬" action={runRevenueQueue} />
+                <ActionBtn label="導入パック" icon="📈" action={runRevenueBoostPack} />
                 <ActionBtn label="リンク同期" icon="🔗" action={async () => { await fetch(`${API}/api/bot/rebrandly/sync`, { method: "POST" }); refetchRebrandly(); }} />
                 <ActionBtn label="TL同期" icon="🔄" action={async () => { await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" }); refetchPosts(); }} />
                 <ActionBtn label="リンク作成" icon="✨" action={runRebrandlyAutoCreate} />
@@ -503,6 +1127,9 @@ function Dashboard() {
               </div>
               {revenueQueueMessage && (
                 <p className={`text-[10px] mt-2 ${revenueQueueMessage.startsWith("収益候補失敗") ? "text-red-400" : "text-emerald-300"}`}>{revenueQueueMessage}</p>
+              )}
+              {revenueBoostMessage && (
+                <p className={`text-[10px] mt-2 ${revenueBoostMessage.startsWith("導入パック失敗") ? "text-red-400" : "text-blue-300"}`}>{revenueBoostMessage}</p>
               )}
             </div>
 
@@ -682,6 +1309,145 @@ function Dashboard() {
         {tab === "data" && (
           <div className="space-y-4">
             <SectionHeader icon="📊" title="データ分析" sub="投稿履歴・推移・クリック計測" color="text-zinc-400" />
+
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Codex Agent Market Scan</p>
+                  <p className="text-[10px] text-zinc-600">Market Scan / Own Benchmark / Draft Lab / Approval / Agent Runログ</p>
+                </div>
+                <button onClick={runAgentMarketScan} disabled={agentScanLoading}
+                  className="px-3 py-2 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 disabled:opacity-50">
+                  {agentScanLoading ? "実行中..." : "market_scan"}
+                </button>
+              </div>
+              {agentScanMessage && (
+                <p className={`text-[10px] ${agentScanMessage.startsWith("market_scan失敗") ? "text-red-400" : "text-emerald-300"}`}>{agentScanMessage}</p>
+              )}
+              {latestAgentRun ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <MiniStat label="run" value={latestAgentRun.run_id.slice(0, 8)} />
+                    <MiniStat label="市場投稿" value={String(latestAgentRun.output?.marketCount ?? 0)} />
+                    <MiniStat label="自分投稿" value={String(latestAgentRun.output?.ownCount ?? 0)} />
+                  </div>
+                  {latestAgentRun.output?.comparison && (
+                    <div className="grid grid-cols-2 gap-1.5 text-center">
+                      <div className="rounded-lg bg-black/30 py-2">
+                        <p className="text-[9px] text-zinc-500">市場ER平均</p>
+                        <p className="text-[14px] font-bold text-emerald-400">{(latestAgentRun.output.comparison.avgMarketEngagementRate * 100).toFixed(2)}%</p>
+                      </div>
+                      <div className="rounded-lg bg-black/30 py-2">
+                        <p className="text-[9px] text-zinc-500">自分ER平均</p>
+                        <p className="text-[14px] font-bold text-blue-400">{(latestAgentRun.output.comparison.avgOwnEngagementRate * 100).toFixed(2)}%</p>
+                      </div>
+                    </div>
+                  )}
+                  {latestAgentRun.output?.topMarketPosts?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">伸びている投稿ランキング</p>
+                      {latestAgentRun.output.topMarketPosts.slice(0, 3).map((p) => (
+                        <div key={p.post_id} className="rounded-lg bg-black/30 px-3 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-emerald-400">score {Math.round(p.growth_score)}</span>
+                            <span className="text-[9px] text-zinc-500 truncate">{p.username || p.source}</span>
+                            <span className="text-[9px] text-zinc-600 ml-auto">{p.media_type}{p.has_url ? " / URL" : ""}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-300 line-clamp-2">{p.text}</p>
+                          <p className="text-[9px] text-zinc-500 mt-1">{p.growth_reason.slice(0, 2).join(" / ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.winningPatterns?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">競合の勝ち型</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {latestAgentRun.output.winningPatterns.slice(0, 4).map((p) => (
+                          <div key={p.pattern} className="rounded-lg bg-black/30 px-3 py-2">
+                            <p className="text-[10px] font-bold text-emerald-300">{p.label}</p>
+                            <p className="text-[9px] text-zinc-500">score {p.avgGrowthScore.toFixed(0)} / {p.count}件</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.recommendedWorks?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">推奨作品候補</p>
+                      {latestAgentRun.output.recommendedWorks.slice(0, 3).map((w) => (
+                        <div key={w.content_id || w.title} className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-amber-300">work {w.score.toFixed(1)}</span>
+                            <span className="text-[9px] text-zinc-500 ml-auto">{w.has_sample_video ? "video" : w.has_sample_images ? "image" : "no media"}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-200 line-clamp-2">{w.title}</p>
+                          <p className="text-[9px] text-zinc-500 mt-1">{w.reasons.slice(0, 3).join(" / ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.proposals?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">改善提案 / draft候補</p>
+                      {latestAgentRun.output.proposals.slice(0, 2).map((p) => (
+                        <div key={p.id} className="rounded-lg bg-blue-500/5 border border-blue-500/15 px-3 py-2.5">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">{p.recommended_genre}</span>
+                            <span className="text-[9px] text-zinc-500">conf {(p.confidence * 100).toFixed(0)}%</span>
+                            <span className="text-[9px] text-zinc-500 ml-auto">{p.recommended_post_time_jst} / {p.media_format}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-200 whitespace-pre-wrap leading-relaxed">{p.draft_text}</p>
+                          {p.expected_effect && <p className="text-[9px] text-blue-300 mt-1">expected: {p.expected_effect}</p>}
+                          {p.attached_media && <p className="text-[9px] text-zinc-500 mt-1">media: {p.attached_media.format} / {p.attached_media.reason}</p>}
+                          <p className="text-[9px] text-zinc-500 mt-1">{p.reason}</p>
+                          {p.risk_flags.length > 0 && (
+                            <p className="text-[9px] text-amber-300 mt-1">risk: {p.risk_flags.map(r => r.code).join(", ")}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <button onClick={() => approveAgentDraft(p.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                              className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                              承認
+                            </button>
+                            <button onClick={() => rejectAgentDraft(p.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                              className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-red-500/10 text-red-300 border border-red-500/20">
+                              却下
+                            </button>
+                            <span className="text-[9px] text-zinc-600 ml-auto">draft_id {p.id.slice(0, 8)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.comparison?.gaps?.length ? (
+                    <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                      <p className="text-[9px] text-amber-300 font-semibold mb-1">比較ギャップ</p>
+                      {latestAgentRun.output.comparison.gaps.slice(0, 4).map((g, i) => (
+                        <p key={i} className="text-[9px] text-zinc-400">・{g}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.learningSignals?.length ? (
+                    <div className="rounded-lg bg-zinc-800/70 border border-white/5 px-3 py-2">
+                      <p className="text-[9px] text-zinc-400 font-semibold mb-1">学習ループ</p>
+                      {latestAgentRun.output.learningSignals.slice(0, 3).map((signal) => (
+                        <p key={signal.code} className="text-[9px] text-zinc-500">・{signal.message}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.diagnostics?.issues?.length ? (
+                    <div className="rounded-lg bg-zinc-800/70 border border-white/5 px-3 py-2">
+                      <p className="text-[9px] text-zinc-400 font-semibold mb-1">Claudeフロー診断</p>
+                      {latestAgentRun.output.diagnostics.issues.slice(0, 3).map((issue) => (
+                        <p key={issue.code} className="text-[9px] text-zinc-500">・{issue.message}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-[11px] text-zinc-600 text-center py-3">まだAgent Runはありません。</p>
+              )}
+            </div>
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -1027,16 +1793,17 @@ function Dashboard() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/5 safe-area-inset-bottom z-50">
-        <div className="max-w-lg mx-auto flex">
+        <div className="max-w-6xl mx-auto flex">
           {([
-            { key: "poll" as Tab, label: "Poll", icon: "🗳️" },
-            { key: "senpai" as Tab, label: "運用", icon: "💎" },
-            { key: "studio" as Tab, label: "投稿", icon: "🎨" },
-            { key: "data" as Tab, label: "分析", icon: "📊" },
-          ]).map(({ key, label, icon }) => (
+            { key: "agent" as Tab, label: "Agent", icon: Bot },
+            { key: "senpai" as Tab, label: "運用", icon: ShieldCheck },
+            { key: "studio" as Tab, label: "投稿", icon: PenLine },
+            { key: "data" as Tab, label: "分析", icon: BarChart3 },
+            { key: "poll" as Tab, label: "Poll", icon: Activity },
+          ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-blue-400" : "text-zinc-600"}`}>
-              <span className="text-[16px]">{icon}</span>
+              className={`flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors ${tab === key ? "text-emerald-300" : "text-zinc-600"}`}>
+              <Icon className="h-4 w-4" />
               <span className="text-[9px] font-medium">{label}</span>
             </button>
           ))}
@@ -1054,7 +1821,7 @@ interface FanzaItem {
   sampleMovieUrl?: string | null;
   makers?: string[];
   sampleVideoAllowed?: { allowed: boolean; reason: string; makers: string[]; allowedMakers: string[] };
-  revenueScore?: { score: number; qualityScore: number; clickBoost: number; reasons: string[] };
+  revenueScore?: { score: number; qualityScore: number; clickBoost: number; impressionBoost?: number; reasons: string[] };
 }
 
 function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: () => void; sampleVideoStatus?: SampleVideoStatusResponse }) {
@@ -1085,16 +1852,20 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const [imageEngine, setImageEngine] = useState<string>("auto");
   // MP4アップロードクリップ
   const [clipFile, setClipFile] = useState<File | null>(null);
+  const [clipText, setClipText] = useState("");
+  const [clipLink, setClipLink] = useState("");
   const [clipStart, setClipStart] = useState(0);
   const [clipDuration, setClipDuration] = useState(8);
   const [clipLoading, setClipLoading] = useState(false);
+  const [clipQueueLoading, setClipQueueLoading] = useState(false);
   const [clipResult, setClipResult] = useState<{ url: string; filename: string; durationSec: number } | null>(null);
   const [clipError, setClipError] = useState("");
+  const [clipQueueMessage, setClipQueueMessage] = useState("");
 
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setQueueMessage(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
     try {
-      const params = new URLSearchParams({ type: searchType, count: "10" });
+      const params = new URLSearchParams({ type: searchType, count: "5" });
       if ((searchType === "keyword" || searchType === "revenue") && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
       const res = await fetch(`${API}/api/bot/fanza-search?${params}`);
       const data = await res.json();
@@ -1185,20 +1956,33 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
     } catch (e: any) { setError(e.message); } finally { setSampleVideoLoading(false); }
   };
 
-  const handleClipUpload = async () => {
+  const handleClipUpload = async (queue = false) => {
     if (!clipFile) return;
-    setClipLoading(true); setClipError(""); setClipResult(null);
+    if (queue) setClipQueueLoading(true); else setClipLoading(true);
+    setClipError(""); setClipQueueMessage(""); setClipResult(null);
     try {
+      if (clipLink.trim() && !/^https?:\/\/\S+$/i.test(clipLink.trim())) {
+        throw new Error("リプ欄リンクは http または https で始まるURLを入力してください");
+      }
       const form = new FormData();
       form.append("video", clipFile);
       form.append("startSec", String(clipStart));
       form.append("durationSec", String(clipDuration));
       form.append("title", clipFile.name.replace(/\.[^.]+$/, ""));
+      if (queue) {
+        form.append("queue", "true");
+        form.append("text", clipText.trim());
+        form.append("affiliateUrl", clipLink.trim());
+      }
       const res = await fetch(`${API}/api/bot/sample-video/clip-upload`, { method: "POST", body: form });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setClipResult({ url: data.clip.url, filename: data.clip.filename, durationSec: data.clip.durationSec });
-    } catch (e: any) { setClipError(e.message); } finally { setClipLoading(false); }
+      if (queue) {
+        setClipQueueMessage(`動画付き投稿をキューに追加しました（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
+        setTimeout(() => onRevenueQueued?.(), 800);
+      }
+    } catch (e: any) { setClipError(e.message); } finally { setClipLoading(false); setClipQueueLoading(false); }
   };
 
   const copyText = (text: string, key: string) => {
@@ -1256,7 +2040,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const barColor = (s: number) => s >= 9 ? "bg-amber-400" : s >= 7 ? "bg-emerald-400" : s >= 5 ? "bg-yellow-400" : "bg-red-400";
 
   const QUALITY = "(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo";
-  const FACE_BASE = "cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips";
+  const FACE_BASE = "beautiful japanese woman in her 20s, adult model, round soft cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, mature warm glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips";
   const SEXY = "(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, skin-tight clothing, alluring pose, glistening skin";
   const LIGHTING = "soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze";
   const NEGATIVE = "(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped";
@@ -1297,7 +2081,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
       {studioMode === "tweet" && (
         <>
           <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → 投稿文生成 → キュー投入</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → 根拠付き上位5件 → 投稿文生成 → キュー投入</p>
 
             <div className="flex gap-1 flex-wrap mb-2">
               {[
@@ -1325,7 +2109,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
 
             <button onClick={handleSearch} disabled={searchLoading || (searchType === "keyword" && !searchKeyword.trim())}
               className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110">
-              {searchLoading ? "検索中..." : searchType === "revenue" ? "収益候補を検索" : "FANZA作品を検索"}
+              {searchLoading ? "検索中..." : searchType === "revenue" ? "収益候補上位5件を検索" : "インプ期待上位5件を検索"}
             </button>
             {searchType === "revenue" && (
               <button onClick={handleRevenueQueue} disabled={autoQueueLoading}
@@ -1340,7 +2124,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
 
           {fanzaItems.length > 0 && genStep === "search" && (
             <div className="space-y-2">
-              <p className="text-[10px] text-zinc-500 font-medium">{fanzaItems.length}件の作品 — タップで投稿文を自動生成</p>
+              <p className="text-[10px] text-zinc-500 font-medium">{fanzaItems.length}件の作品 — スコアと根拠順。タップで投稿文を自動生成</p>
               {fanzaItems.map((item) => (
                 <button key={item.content_id} onClick={() => handleSelectAndGenerate(item)} disabled={loading && selectedItem?.content_id === item.content_id}
                   className={`w-full text-left rounded-2xl border p-3 transition-all ${
@@ -1359,8 +2143,11 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
                       )}
                       <div className="flex items-center gap-2 mt-1">
                         {item.revenueScore && (
-                          <span className="text-[10px] text-emerald-400 font-bold">収益{item.revenueScore.score}</span>
+                          <span className="text-[10px] text-emerald-400 font-bold">期待{item.revenueScore.score}</span>
                         )}
+                        {item.revenueScore?.impressionBoost ? (
+                          <span className="text-[10px] text-blue-400">IP補正+{item.revenueScore.impressionBoost}</span>
+                        ) : null}
                         {item.reviewAvg && (
                           <span className="text-[10px] text-amber-400">★{item.reviewAvg}</span>
                         )}
@@ -1517,7 +2304,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none" />
 
             <div className="flex gap-2 mt-2 flex-wrap">
-              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a japanese high-school classroom with afternoon sunlight, wearing micro mini sailor uniform with unbuttoned blouse showing cleavage and thigh-high socks, with seductive upward gaze biting lip, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
+              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman in her 20s, adult cosplay model, soft feminine features, natural skin texture, " + SEXY + ", in a clean studio set, wearing adult uniform cosplay blazer outfit with pleated skirt, confident mature expression, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
               <MiniBtn label="OL" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman, soft feminine features, almond-shaped sophisticated eyes, elegant smile, side-swept bangs, layered dark brown hair, natural skin texture, " + SEXY + ", in a modern office at night with city view, wearing unbuttoned white blouse with visible bra straps and ultra-tight pencil skirt, with seductive lean forward showing deep cleavage, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
               <MiniBtn label="彼女" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a cozy bedroom with warm lamp light, wearing sheer lace camisole with bare shoulders and short shorts, with inviting smile lying on bed, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
               <MiniBtn label="水着" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", at tropical beach with crystal water and golden hour, wearing string bikini micro triangle top high-cut bottom wet glistening skin, with arching back wet body playful smile, " + LIGHTING + ", shot on Sony A7IV 85mm f/1.4. Negative: " + NEGATIVE)} />
@@ -1639,15 +2426,34 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
               <p className="text-[11px] text-zinc-300">{clipStart}秒 〜 {clipStart + clipDuration}秒 をクリップ（{clipDuration}秒）</p>
             </div>
 
-            <button onClick={handleClipUpload}
-              disabled={!clipFile || clipLoading}
-              className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:brightness-110">
-              {clipLoading ? "✂️ クリップ処理中..." : "✂️ クリップしてダウンロード"}
-            </button>
+            <div className="space-y-2">
+              <textarea value={clipText} onChange={e => setClipText(e.target.value)} rows={3}
+                placeholder="投稿本文（空ならファイル名を使います）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-violet-500/50 focus:outline-none resize-none" />
+              <input type="url" value={clipLink} onChange={e => setClipLink(e.target.value)}
+                placeholder="リプ欄リンク（FANZA/アフィリエイトURL）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleClipUpload(false)}
+                disabled={!clipFile || clipLoading || clipQueueLoading}
+                className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-zinc-800 text-zinc-300 border border-white/10 hover:bg-zinc-700">
+                {clipLoading ? "処理中..." : "クリップ作成"}
+              </button>
+              <button onClick={() => handleClipUpload(true)}
+                disabled={!clipFile || clipLoading || clipQueueLoading}
+                className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:brightness-110">
+                {clipQueueLoading ? "追加中..." : "キュー追加"}
+              </button>
+            </div>
           </div>
 
           {clipError && (
             <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{clipError}</div>
+          )}
+          {clipQueueMessage && (
+            <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-[12px] text-blue-300">{clipQueueMessage}</div>
           )}
 
           {clipResult && (
@@ -1783,6 +2589,39 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+function AgentMetric({ label, value, tone }: { label: string; value: string; tone: "white" | "green" | "blue" | "amber" | "red" }) {
+  const toneClass: Record<typeof tone, string> = {
+    white: "text-white",
+    green: "text-emerald-300",
+    blue: "text-blue-300",
+    amber: "text-amber-300",
+    red: "text-red-300",
+  };
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+      <p className={`truncate text-[17px] font-black ${toneClass[tone]}`}>{value}</p>
+      <p className="mt-0.5 text-[9px] text-zinc-500">{label}</p>
+    </div>
+  );
+}
+function PanelTitle({ icon, title, sub }: { icon: ReactNode; title: string; sub: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-emerald-200">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold text-white">{title}</p>
+        <p className="text-[10px] text-zinc-500">{sub}</p>
+      </div>
+    </div>
+  );
+}
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-white/10 bg-black/10 px-3 py-5 text-center">
+      <p className="text-[11px] text-zinc-500">{text}</p>
+    </div>
+  );
+}
 function InfoCard({ icon, text }: { icon: string; text: string }) {
   return (
     <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-4 flex items-start gap-2">
@@ -1836,7 +2675,8 @@ export default function App() {
         <Toaster />
         <WouterRouter base={BASE}>
           <Switch>
-            <Route path="/" component={Dashboard} />
+            <Route path="/" component={OpsConsole} />
+            <Route path="/legacy" component={Dashboard} />
             <Route path="/admin/myfans" component={MyfansAdmin} />
             <Route component={NotFound} />
           </Switch>
