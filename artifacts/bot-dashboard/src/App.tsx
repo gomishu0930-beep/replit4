@@ -93,6 +93,72 @@ interface SampleVideoStatusResponse {
   };
 }
 
+interface AgentRunSummary {
+  run_id: string;
+  status: string;
+  started_at: string;
+  finished_at?: string;
+  error?: string;
+  data_count: number;
+  risk_flags: Array<{ code: string; severity: string; message: string }>;
+  output?: {
+    marketCount: number;
+    ownCount: number;
+    proposalCount: number;
+    topMarketPosts: Array<{
+      post_id: string;
+      username: string;
+      source: string;
+      text: string;
+      growth_score: number;
+      growth_reason: string[];
+      media_type: string;
+      has_url: boolean;
+      engagement_rate: number;
+    }>;
+    comparison: {
+      avgOwnEngagementRate: number;
+      avgMarketEngagementRate: number;
+      avgOwnTextLength: number;
+      avgMarketTextLength: number;
+      bestMarketHours: Array<{ hour: number; avgGrowthScore: number; count: number }>;
+      gaps: string[];
+    };
+    winningPatterns?: Array<{ pattern: string; label: string; count: number; avgGrowthScore: number; reason: string }>;
+    ownAccountGaps?: Array<{ code: string; axis: string; message: string; recommended_action: string; evidence: string[] }>;
+    recommendedWorks?: Array<{
+      content_id: string;
+      title: string;
+      genres: string[];
+      actresses: string[];
+      score: number;
+      reasons: string[];
+      has_sample_images: boolean;
+      has_sample_video: boolean;
+      rights_confirmed: boolean;
+    }>;
+    proposals: Array<{
+      id: string;
+      draft_text: string;
+      reason: string;
+      confidence: number;
+      expected_effect?: string;
+      risk_flags: Array<{ code: string; severity: string; message: string }>;
+      media_format: string;
+      attached_media?: { format: string; source: string; reason: string; sample_url?: string };
+      recommended_post_time_jst: string;
+      recommended_genre: string;
+    }>;
+    mediaRecommendations?: Array<{ format: string; reason: string; confidence: number }>;
+    scheduleRecommendations?: Array<{ time_jst: string; reason: string; confidence: number }>;
+    learningSignals?: Array<{ code: string; message: string; evidence: string[]; weight: number }>;
+    recommendationSchema?: { summary: string; confidence: number; reasons: string[] };
+    diagnostics: {
+      issues: Array<{ code: string; message: string; evidence: string }>;
+    };
+  };
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
     timeZone: "Asia/Tokyo", hour12: false,
@@ -209,6 +275,7 @@ function Dashboard() {
   const [syncMessage, setSyncMessage] = useState("");
   const [rebrandlyAutoMessage, setRebrandlyAutoMessage] = useState("");
   const [revenueQueueMessage, setRevenueQueueMessage] = useState("");
+  const [revenueBoostMessage, setRevenueBoostMessage] = useState("");
 
   const { data: status } = useQuery<BotStatus>({
     queryKey: ["botStatus"],
@@ -300,6 +367,11 @@ function Dashboard() {
     queryFn: () => fetch(`${API}/api/run-config`).then(r => r.json()),
     refetchInterval: 30000,
   });
+  const { data: agentRunsData, refetch: refetchAgentRuns } = useQuery<{ ok: boolean; runs: AgentRunSummary[] }>({
+    queryKey: ["agentRuns"],
+    queryFn: () => fetch(`${API}/api/agent/runs?limit=10`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
 
   const riskScore = safetyData?.riskScore ?? 0;
   const posts = postsData?.posts ?? [];
@@ -308,6 +380,9 @@ function Dashboard() {
   const totalClicks = rebrandlyData?.links?.reduce((s, l) => s + l.clicks, 0) ?? 0;
   const sampleVideo = sampleVideoStatusData?.sampleVideo;
   const sampleVideoEmail = sampleVideoStatusData?.email;
+  const latestAgentRun = agentRunsData?.runs?.[0];
+  const [agentScanLoading, setAgentScanLoading] = useState(false);
+  const [agentScanMessage, setAgentScanMessage] = useState("");
 
   const runRevenueSync = async () => {
     setSyncingRevenue(true); setSyncMessage("");
@@ -352,6 +427,66 @@ function Dashboard() {
     } catch (e: any) {
       setRevenueQueueMessage(`収益候補失敗: ${e.message}`);
     }
+  };
+
+  const runRevenueBoostPack = async () => {
+    setRevenueBoostMessage("");
+    try {
+      const res = await fetch(`${API}/api/bot/revenue-booster-pack`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 2, withImage: true }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await Promise.all([refetchQueue(), refetchRevenue()]);
+      setRevenueBoostMessage(`導入パック: ${data.queuedCount ?? 0}投稿をキューに追加しました`);
+    } catch (e: any) {
+      setRevenueBoostMessage(`導入パック失敗: ${e.message}`);
+    }
+  };
+
+  const runAgentMarketScan = async () => {
+    setAgentScanLoading(true); setAgentScanMessage("");
+    try {
+      const res = await fetch(`${API}/api/agent/runs/market-scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 200, ownDays: 30, proposalCount: 5, source: "ui" }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      await refetchAgentRuns();
+      setAgentScanMessage(`market_scan完了: run_id ${data.run?.run_id?.slice(0, 8) ?? ""} / data ${data.run?.data_count ?? 0}件`);
+    } catch (e: any) {
+      setAgentScanMessage(`market_scan失敗: ${e.message}`);
+    } finally {
+      setAgentScanLoading(false);
+    }
+  };
+
+  const approveAgentDraft = async (draftId: string) => {
+    const res = await fetch(`${API}/api/drafts/${draftId}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "UI approval" }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await Promise.all([refetchAgentRuns(), refetchQueue()]);
+    setAgentScanMessage(`draft承認: ${data.draft_id?.slice(0, 8) ?? draftId.slice(0, 8)}`);
+  };
+
+  const rejectAgentDraft = async (draftId: string) => {
+    const res = await fetch(`${API}/api/drafts/${draftId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "UI rejection" }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    await Promise.all([refetchAgentRuns(), refetchQueue()]);
+    setAgentScanMessage(`draft却下: ${data.draft_id?.slice(0, 8) ?? draftId.slice(0, 8)}`);
   };
 
   const [countdown, setCountdown] = useState(getNextPostTime().ms);
@@ -495,6 +630,7 @@ function Dashboard() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <ActionBtn label="収益候補を補充" icon="📬" action={runRevenueQueue} />
+                <ActionBtn label="導入パック" icon="📈" action={runRevenueBoostPack} />
                 <ActionBtn label="リンク同期" icon="🔗" action={async () => { await fetch(`${API}/api/bot/rebrandly/sync`, { method: "POST" }); refetchRebrandly(); }} />
                 <ActionBtn label="TL同期" icon="🔄" action={async () => { await fetch(`${API}/api/bot/posts/sync-timeline`, { method: "POST" }); refetchPosts(); }} />
                 <ActionBtn label="リンク作成" icon="✨" action={runRebrandlyAutoCreate} />
@@ -503,6 +639,9 @@ function Dashboard() {
               </div>
               {revenueQueueMessage && (
                 <p className={`text-[10px] mt-2 ${revenueQueueMessage.startsWith("収益候補失敗") ? "text-red-400" : "text-emerald-300"}`}>{revenueQueueMessage}</p>
+              )}
+              {revenueBoostMessage && (
+                <p className={`text-[10px] mt-2 ${revenueBoostMessage.startsWith("導入パック失敗") ? "text-red-400" : "text-blue-300"}`}>{revenueBoostMessage}</p>
               )}
             </div>
 
@@ -682,6 +821,145 @@ function Dashboard() {
         {tab === "data" && (
           <div className="space-y-4">
             <SectionHeader icon="📊" title="データ分析" sub="投稿履歴・推移・クリック計測" color="text-zinc-400" />
+
+            <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Codex Agent Market Scan</p>
+                  <p className="text-[10px] text-zinc-600">Market Scan / Own Benchmark / Draft Lab / Approval / Agent Runログ</p>
+                </div>
+                <button onClick={runAgentMarketScan} disabled={agentScanLoading}
+                  className="px-3 py-2 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 disabled:opacity-50">
+                  {agentScanLoading ? "実行中..." : "market_scan"}
+                </button>
+              </div>
+              {agentScanMessage && (
+                <p className={`text-[10px] ${agentScanMessage.startsWith("market_scan失敗") ? "text-red-400" : "text-emerald-300"}`}>{agentScanMessage}</p>
+              )}
+              {latestAgentRun ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <MiniStat label="run" value={latestAgentRun.run_id.slice(0, 8)} />
+                    <MiniStat label="市場投稿" value={String(latestAgentRun.output?.marketCount ?? 0)} />
+                    <MiniStat label="自分投稿" value={String(latestAgentRun.output?.ownCount ?? 0)} />
+                  </div>
+                  {latestAgentRun.output?.comparison && (
+                    <div className="grid grid-cols-2 gap-1.5 text-center">
+                      <div className="rounded-lg bg-black/30 py-2">
+                        <p className="text-[9px] text-zinc-500">市場ER平均</p>
+                        <p className="text-[14px] font-bold text-emerald-400">{(latestAgentRun.output.comparison.avgMarketEngagementRate * 100).toFixed(2)}%</p>
+                      </div>
+                      <div className="rounded-lg bg-black/30 py-2">
+                        <p className="text-[9px] text-zinc-500">自分ER平均</p>
+                        <p className="text-[14px] font-bold text-blue-400">{(latestAgentRun.output.comparison.avgOwnEngagementRate * 100).toFixed(2)}%</p>
+                      </div>
+                    </div>
+                  )}
+                  {latestAgentRun.output?.topMarketPosts?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">伸びている投稿ランキング</p>
+                      {latestAgentRun.output.topMarketPosts.slice(0, 3).map((p) => (
+                        <div key={p.post_id} className="rounded-lg bg-black/30 px-3 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-emerald-400">score {Math.round(p.growth_score)}</span>
+                            <span className="text-[9px] text-zinc-500 truncate">{p.username || p.source}</span>
+                            <span className="text-[9px] text-zinc-600 ml-auto">{p.media_type}{p.has_url ? " / URL" : ""}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-300 line-clamp-2">{p.text}</p>
+                          <p className="text-[9px] text-zinc-500 mt-1">{p.growth_reason.slice(0, 2).join(" / ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.winningPatterns?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">競合の勝ち型</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {latestAgentRun.output.winningPatterns.slice(0, 4).map((p) => (
+                          <div key={p.pattern} className="rounded-lg bg-black/30 px-3 py-2">
+                            <p className="text-[10px] font-bold text-emerald-300">{p.label}</p>
+                            <p className="text-[9px] text-zinc-500">score {p.avgGrowthScore.toFixed(0)} / {p.count}件</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.recommendedWorks?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">推奨作品候補</p>
+                      {latestAgentRun.output.recommendedWorks.slice(0, 3).map((w) => (
+                        <div key={w.content_id || w.title} className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold text-amber-300">work {w.score.toFixed(1)}</span>
+                            <span className="text-[9px] text-zinc-500 ml-auto">{w.has_sample_video ? "video" : w.has_sample_images ? "image" : "no media"}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-200 line-clamp-2">{w.title}</p>
+                          <p className="text-[9px] text-zinc-500 mt-1">{w.reasons.slice(0, 3).join(" / ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.proposals?.length ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider">改善提案 / draft候補</p>
+                      {latestAgentRun.output.proposals.slice(0, 2).map((p) => (
+                        <div key={p.id} className="rounded-lg bg-blue-500/5 border border-blue-500/15 px-3 py-2.5">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300">{p.recommended_genre}</span>
+                            <span className="text-[9px] text-zinc-500">conf {(p.confidence * 100).toFixed(0)}%</span>
+                            <span className="text-[9px] text-zinc-500 ml-auto">{p.recommended_post_time_jst} / {p.media_format}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-200 whitespace-pre-wrap leading-relaxed">{p.draft_text}</p>
+                          {p.expected_effect && <p className="text-[9px] text-blue-300 mt-1">expected: {p.expected_effect}</p>}
+                          {p.attached_media && <p className="text-[9px] text-zinc-500 mt-1">media: {p.attached_media.format} / {p.attached_media.reason}</p>}
+                          <p className="text-[9px] text-zinc-500 mt-1">{p.reason}</p>
+                          {p.risk_flags.length > 0 && (
+                            <p className="text-[9px] text-amber-300 mt-1">risk: {p.risk_flags.map(r => r.code).join(", ")}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <button onClick={() => approveAgentDraft(p.id).catch((e) => setAgentScanMessage(`draft承認失敗: ${e.message}`))}
+                              className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                              承認
+                            </button>
+                            <button onClick={() => rejectAgentDraft(p.id).catch((e) => setAgentScanMessage(`draft却下失敗: ${e.message}`))}
+                              className="px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-red-500/10 text-red-300 border border-red-500/20">
+                              却下
+                            </button>
+                            <span className="text-[9px] text-zinc-600 ml-auto">draft_id {p.id.slice(0, 8)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.comparison?.gaps?.length ? (
+                    <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                      <p className="text-[9px] text-amber-300 font-semibold mb-1">比較ギャップ</p>
+                      {latestAgentRun.output.comparison.gaps.slice(0, 4).map((g, i) => (
+                        <p key={i} className="text-[9px] text-zinc-400">・{g}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.learningSignals?.length ? (
+                    <div className="rounded-lg bg-zinc-800/70 border border-white/5 px-3 py-2">
+                      <p className="text-[9px] text-zinc-400 font-semibold mb-1">学習ループ</p>
+                      {latestAgentRun.output.learningSignals.slice(0, 3).map((signal) => (
+                        <p key={signal.code} className="text-[9px] text-zinc-500">・{signal.message}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {latestAgentRun.output?.diagnostics?.issues?.length ? (
+                    <div className="rounded-lg bg-zinc-800/70 border border-white/5 px-3 py-2">
+                      <p className="text-[9px] text-zinc-400 font-semibold mb-1">Claudeフロー診断</p>
+                      {latestAgentRun.output.diagnostics.issues.slice(0, 3).map((issue) => (
+                        <p key={issue.code} className="text-[9px] text-zinc-500">・{issue.message}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-[11px] text-zinc-600 text-center py-3">まだAgent Runはありません。</p>
+              )}
+            </div>
 
             <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4 space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -1085,11 +1363,15 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const [imageEngine, setImageEngine] = useState<string>("auto");
   // MP4アップロードクリップ
   const [clipFile, setClipFile] = useState<File | null>(null);
+  const [clipText, setClipText] = useState("");
+  const [clipLink, setClipLink] = useState("");
   const [clipStart, setClipStart] = useState(0);
   const [clipDuration, setClipDuration] = useState(8);
   const [clipLoading, setClipLoading] = useState(false);
+  const [clipQueueLoading, setClipQueueLoading] = useState(false);
   const [clipResult, setClipResult] = useState<{ url: string; filename: string; durationSec: number } | null>(null);
   const [clipError, setClipError] = useState("");
+  const [clipQueueMessage, setClipQueueMessage] = useState("");
 
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setQueueMessage(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
@@ -1185,20 +1467,33 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
     } catch (e: any) { setError(e.message); } finally { setSampleVideoLoading(false); }
   };
 
-  const handleClipUpload = async () => {
+  const handleClipUpload = async (queue = false) => {
     if (!clipFile) return;
-    setClipLoading(true); setClipError(""); setClipResult(null);
+    if (queue) setClipQueueLoading(true); else setClipLoading(true);
+    setClipError(""); setClipQueueMessage(""); setClipResult(null);
     try {
+      if (clipLink.trim() && !/^https?:\/\/\S+$/i.test(clipLink.trim())) {
+        throw new Error("リプ欄リンクは http または https で始まるURLを入力してください");
+      }
       const form = new FormData();
       form.append("video", clipFile);
       form.append("startSec", String(clipStart));
       form.append("durationSec", String(clipDuration));
       form.append("title", clipFile.name.replace(/\.[^.]+$/, ""));
+      if (queue) {
+        form.append("queue", "true");
+        form.append("text", clipText.trim());
+        form.append("affiliateUrl", clipLink.trim());
+      }
       const res = await fetch(`${API}/api/bot/sample-video/clip-upload`, { method: "POST", body: form });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setClipResult({ url: data.clip.url, filename: data.clip.filename, durationSec: data.clip.durationSec });
-    } catch (e: any) { setClipError(e.message); } finally { setClipLoading(false); }
+      if (queue) {
+        setClipQueueMessage(`動画付き投稿をキューに追加しました（${data.queueItem?.id?.slice(0, 8) ?? ""}）`);
+        setTimeout(() => onRevenueQueued?.(), 800);
+      }
+    } catch (e: any) { setClipError(e.message); } finally { setClipLoading(false); setClipQueueLoading(false); }
   };
 
   const copyText = (text: string, key: string) => {
@@ -1256,7 +1551,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const barColor = (s: number) => s >= 9 ? "bg-amber-400" : s >= 7 ? "bg-emerald-400" : s >= 5 ? "bg-yellow-400" : "bg-red-400";
 
   const QUALITY = "(photorealistic:1.3), (masterpiece:1.2), (best quality:1.2), RAW photo";
-  const FACE_BASE = "cute japanese idol girl, baby face, round chubby cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, warm youthful glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips";
+  const FACE_BASE = "beautiful japanese woman in her 20s, adult model, round soft cheeks, small cute button nose, large round sparkling eyes with aegyo sal, soft rounded facial features, gentle smile, see-through bangs, straight medium-length dark brown hair, mature warm glow, subtle glossy lips, light blush, natural skin texture with visible pores, fine peach fuzz on cheeks, subsurface scattering on ear tips";
   const SEXY = "(cleavage:1.2), deep neckline, bare shoulders, exposed midriff, skin-tight clothing, alluring pose, glistening skin";
   const LIGHTING = "soft diffused golden-hour sunlight, creamy cinematic bokeh, film grain, volumetric haze";
   const NEGATIVE = "(worst quality:1.4), (low quality:1.4), plastic skin, airbrushed skin, overly smooth skin, wax figure, mannequin, CGI, digital art, illustration, painting, 3d render, deformed iris, deformed pupils, semi-realistic, overexposed, underexposed, watermark, text, logo, cropped";
@@ -1517,7 +1812,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-pink-500/50 focus:outline-none resize-none" />
 
             <div className="flex gap-2 mt-2 flex-wrap">
-              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a japanese high-school classroom with afternoon sunlight, wearing micro mini sailor uniform with unbuttoned blouse showing cleavage and thigh-high socks, with seductive upward gaze biting lip, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
+              <MiniBtn label="制服" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman in her 20s, adult cosplay model, soft feminine features, natural skin texture, " + SEXY + ", in a clean studio set, wearing adult uniform cosplay blazer outfit with pleated skirt, confident mature expression, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
               <MiniBtn label="OL" onClick={() => setPrompt(QUALITY + ", beautiful japanese woman, soft feminine features, almond-shaped sophisticated eyes, elegant smile, side-swept bangs, layered dark brown hair, natural skin texture, " + SEXY + ", in a modern office at night with city view, wearing unbuttoned white blouse with visible bra straps and ultra-tight pencil skirt, with seductive lean forward showing deep cleavage, " + LIGHTING + ", shot on Sony A7IV 50mm f/2.0. Negative: " + NEGATIVE)} />
               <MiniBtn label="彼女" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", in a cozy bedroom with warm lamp light, wearing sheer lace camisole with bare shoulders and short shorts, with inviting smile lying on bed, " + LIGHTING + ", shot on Sony A7IV 35mm f/1.8. Negative: " + NEGATIVE)} />
               <MiniBtn label="水着" onClick={() => setPrompt(QUALITY + ", " + FACE_BASE + ", " + SEXY + ", at tropical beach with crystal water and golden hour, wearing string bikini micro triangle top high-cut bottom wet glistening skin, with arching back wet body playful smile, " + LIGHTING + ", shot on Sony A7IV 85mm f/1.4. Negative: " + NEGATIVE)} />
@@ -1639,15 +1934,34 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
               <p className="text-[11px] text-zinc-300">{clipStart}秒 〜 {clipStart + clipDuration}秒 をクリップ（{clipDuration}秒）</p>
             </div>
 
-            <button onClick={handleClipUpload}
-              disabled={!clipFile || clipLoading}
-              className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:brightness-110">
-              {clipLoading ? "✂️ クリップ処理中..." : "✂️ クリップしてダウンロード"}
-            </button>
+            <div className="space-y-2">
+              <textarea value={clipText} onChange={e => setClipText(e.target.value)} rows={3}
+                placeholder="投稿本文（空ならファイル名を使います）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-violet-500/50 focus:outline-none resize-none" />
+              <input type="url" value={clipLink} onChange={e => setClipLink(e.target.value)}
+                placeholder="リプ欄リンク（FANZA/アフィリエイトURL）"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white placeholder-zinc-600 focus:border-violet-500/50 focus:outline-none" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleClipUpload(false)}
+                disabled={!clipFile || clipLoading || clipQueueLoading}
+                className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-zinc-800 text-zinc-300 border border-white/10 hover:bg-zinc-700">
+                {clipLoading ? "処理中..." : "クリップ作成"}
+              </button>
+              <button onClick={() => handleClipUpload(true)}
+                disabled={!clipFile || clipLoading || clipQueueLoading}
+                className="w-full py-3 rounded-xl text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:brightness-110">
+                {clipQueueLoading ? "追加中..." : "キュー追加"}
+              </button>
+            </div>
           </div>
 
           {clipError && (
             <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-3 text-[12px] text-red-400">{clipError}</div>
+          )}
+          {clipQueueMessage && (
+            <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 text-[12px] text-blue-300">{clipQueueMessage}</div>
           )}
 
           {clipResult && (

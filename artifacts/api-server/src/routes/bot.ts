@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getStats, getAllPosts, getAccountSnapshots, recordAccountSnapshot, getObservations, addObservation, deleteObservation, ManualObservation, getRebrandlyData, recordPostManual } from '../bot/storage.js';
 import { autoCreateRebrandlyLinks, getRebrandlyStatus, resolveShortUrl, syncRebrandlyClicks } from '../bot/rebrandly.js';
-import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet } from '../bot/twitter.js';
+import { getMyUsername, getAccountInfo, getTweetById, getOwnRecentTweets, uploadImages, postTweet, replyToTweet, checkTwitterApiAccess } from '../bot/twitter.js';
 import { generateImage, getImageGenStatus, type ImageEngine } from '../bot/imageGen.js';
 import { scoreImage, generateAndScore, generateUntilPass } from '../bot/imageScorer.js';
 import { getStrategySummary } from '../bot/strategy.js';
@@ -15,15 +15,15 @@ import { strengthenFanzaPostText } from '../bot/fanza-templates.js';
 import {
   checkSampleVideoPermission,
   clipMp4FromFile,
-  clipMp4FromUrl,
   extractSampleMovieUrl,
   getFanzaMakerNames,
   getSampleVideoFilePath,
   getSampleVideoStatus,
 } from '../bot/sample-video.js';
-import { queueSampleVideoPost } from '../bot/sample-video-queue.js';
-import { queueRevenueOptimizedItems, queueSingleFanzaItem } from '../bot/revenue-queue.js';
+import { queueManualClipPost, queueSampleVideoPost } from '../bot/sample-video-queue.js';
+import { queueRevenueBoosterPack, queueRevenueOptimizedItems, queueSingleFanzaItem } from '../bot/revenue-queue.js';
 import { getEmailNotifyStatus } from '../bot/email-notifier.js';
+import { getRunConfig } from '../bot/run-config.js';
 
 const router = Router();
 
@@ -191,6 +191,39 @@ router.get('/bot/api-check', async (_req, res) => {
   res.json({ results });
 });
 
+router.get('/bot/integration-status', async (_req, res) => {
+  const twitter = await checkTwitterApiAccess().catch((e: any) => ({ ok: false, error: e.message ?? String(e) }));
+  const sampleVideo = await getSampleVideoStatus();
+  const runConfig = getRunConfig();
+  res.json({
+    ok: true,
+    replit: {
+      domain: process.env.REPLIT_DEPLOYMENT_DOMAIN ?? process.env.REPLIT_DEV_DOMAIN ?? process.env.REPLIT_DOMAINS ?? null,
+      objectStorage: Boolean(process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID),
+    },
+    x: twitter,
+    fanza: {
+      apiIdConfigured: Boolean(process.env.DMM_API_ID),
+      affiliateIdConfigured: Boolean(process.env.DMM_AFFILIATE_ID),
+    },
+    rebrandly: getRebrandlyStatus(),
+    discord: {
+      botTokenConfigured: Boolean(process.env.DISCORD_BOT_TOKEN),
+      channelConfigured: Boolean(process.env.DISCORD_CHANNEL_ID),
+      guildConfigured: Boolean(process.env.DISCORD_GUILD_ID),
+    },
+    sampleVideo,
+    runConfig: {
+      autoPostEnabled: runConfig.autoPostEnabled,
+      dryRun: runConfig.dryRun,
+      maxPostsPerDay: runConfig.maxPostsPerDay,
+      maxPostsPerHour: runConfig.maxPostsPerHour,
+      cooldownMinutes: runConfig.cooldownMinutes,
+      safetyStrictness: runConfig.safetyStrictness,
+    },
+  });
+});
+
 router.get('/bot/snapshots', (_req, res) => {
   res.json({ snapshots: getAccountSnapshots() });
 });
@@ -269,6 +302,14 @@ router.post('/bot/sample-video/clip-upload', requireAdminToken, async (req, res)
     const startSec = Number(req.body?.startSec ?? 0);
     const durationSec = Number(req.body?.durationSec ?? 8);
     const title = String(req.body?.title ?? `clip-${Date.now()}`);
+    const shouldQueue = req.body?.queue === 'true' || req.body?.queue === true;
+    const text = String(req.body?.text ?? '').trim();
+    const affiliateUrl = String(req.body?.affiliateUrl ?? req.body?.link ?? '').trim();
+
+    if (affiliateUrl && !/^https?:\/\/\S+$/i.test(affiliateUrl)) {
+      res.status(400).json({ error: 'affiliateUrl は http または https で始まるURLを指定してください' });
+      return;
+    }
 
     const fsp = (await import('fs/promises')).default;
     const os = (await import('os')).default;
@@ -278,6 +319,17 @@ router.post('/bot/sample-video/clip-upload', requireAdminToken, async (req, res)
     try {
       await fsp.writeFile(tmpInput, file.buffer);
       const clip = await clipMp4FromFile(tmpInput, { startSec, durationSec, label: title });
+      if (shouldQueue) {
+        const queueItem = queueManualClipPost(clip, {
+          title,
+          text,
+          affiliateUrl,
+          sourceUrl: affiliateUrl || file.originalname,
+          source: 'dashboard',
+        });
+        res.json({ ok: true, clip, queueItem });
+        return;
+      }
       res.json({ ok: true, clip });
     } finally {
       fsp.unlink(tmpInput).catch(() => {});
@@ -300,6 +352,7 @@ router.post('/bot/sample-video/queue', requireAdminToken, async (req, res) => {
       startSec: Number(req.body?.startSec ?? 3),
       durationSec: Number(req.body?.durationSec ?? 8),
       notifyEmail: String(req.body?.notifyEmail ?? ''),
+      fallbackToImages: req.body?.fallbackToImages === true,
     });
     res.json({ ok: true, ...result });
   } catch (e: any) {
@@ -503,6 +556,20 @@ router.post('/bot/fanza-revenue-queue', requireAdminToken, async (req, res) => {
   try {
     const result = await queueRevenueOptimizedItems({
       count: Number(req.body?.count) || 3,
+      keyword: String(req.body?.keyword || ''),
+      withImage: req.body?.withImage !== false,
+      source: 'dashboard',
+    });
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/bot/revenue-booster-pack', requireAdminToken, async (req, res) => {
+  try {
+    const result = await queueRevenueBoosterPack({
+      count: Number(req.body?.count) || 2,
       keyword: String(req.body?.keyword || ''),
       withImage: req.body?.withImage !== false,
       source: 'dashboard',

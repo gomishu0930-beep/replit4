@@ -11,6 +11,7 @@ import safetyRouter from "./safety";
 import queueRouter from "./queue";
 import analyticsRouter from "./analytics";
 import myfansRouter from "./myfans";
+import agentRouter from "./agent";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(safetyRouter);
 router.use(queueRouter);
 router.use('/analytics', analyticsRouter);
 router.use(myfansRouter);
+router.use(agentRouter);
 
 export default router;

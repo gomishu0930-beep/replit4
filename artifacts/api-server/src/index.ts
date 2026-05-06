@@ -9,6 +9,8 @@ import { loadSafetyState } from "./bot/safety-engine";
 import { loadRunConfig } from "./bot/run-config";
 import { loadQueue, setQueueNotifier } from "./bot/post-queue";
 import { initDiscordBot, notifyQueue } from "./bot/discord-bot";
+import { loadAgentRuns } from "./bot/agent-run-store";
+import { loadAgentLearning } from "./bot/agent-learning-store";
 
 const rawPort = process.env["PORT"];
 
@@ -39,6 +41,8 @@ const server = app.listen(port, async (err) => {
   loadSafetyState();
   loadRunConfig();
   loadQueue();
+  await loadAgentRuns();
+  await loadAgentLearning();
   startScheduler();
   setQueueNotifier(notifyQueue);
   await initDiscordBot();

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { isAutoPostEnabled, isDryRun } from './run-config.js';
 import type { TemplateCategory } from './fanza-templates.js';
+import { recordProposalFeedback } from './agent-learning-store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
@@ -31,6 +32,11 @@ export interface QueueItem {
   sourceUrl?: string;
   templateType?: string;
   templateCategory?: TemplateCategory | 'engagement' | 'erotic-story' | 'other';
+  agentRunId?: string;
+  agentProposalId?: string;
+  expectedEffect?: string;
+  approvalReason?: string;
+  rejectionReason?: string;
   safetyScore?: number;
   mediaFiles?: Array<{ filename: string; url?: string; type: string }>;
   status: QueueItemStatus;
@@ -113,24 +119,66 @@ export function getQueueItem(id: string): QueueItem | undefined {
   return queue.find(i => i.id === id);
 }
 
-export function approveQueueItem(id: string): QueueItem | null {
+export function approveQueueItem(id: string, reason?: string): QueueItem | null {
   const item = queue.find(i => i.id === id);
   if (!item) return null;
   if (item.status !== 'pending') return item;
   item.status = 'approved';
+  item.approvalReason = reason;
   item.updatedAt = new Date().toISOString();
   save();
+  if (item.agentRunId && item.agentProposalId) {
+    recordProposalFeedback({
+      run_id: item.agentRunId,
+      proposal_id: item.agentProposalId,
+      decision: 'approved',
+      reason,
+      queue_item_id: item.id,
+    }).catch(() => {});
+  }
   console.log(`  ✅ [Queue] 承認: id=${id}`);
   return item;
 }
 
-export function rejectQueueItem(id: string): QueueItem | null {
+export function rejectQueueItem(id: string, reason?: string): QueueItem | null {
   const item = queue.find(i => i.id === id);
   if (!item) return null;
   item.status = 'rejected';
+  item.rejectionReason = reason;
   item.updatedAt = new Date().toISOString();
   save();
+  if (item.agentRunId && item.agentProposalId) {
+    recordProposalFeedback({
+      run_id: item.agentRunId,
+      proposal_id: item.agentProposalId,
+      decision: 'rejected',
+      reason,
+      queue_item_id: item.id,
+    }).catch(() => {});
+  }
   console.log(`  ❌ [Queue] 却下: id=${id}`);
+  return item;
+}
+
+export function scheduleQueueItem(id: string, scheduledFor: string, reason?: string): QueueItem | null {
+  const item = queue.find(i => i.id === id);
+  if (!item) return null;
+  if (item.status === 'rejected' || item.status === 'posted' || item.status === 'failed' || item.status === 'dry_run') return item;
+  item.status = 'approved';
+  item.scheduledFor = scheduledFor;
+  item.approvalReason = reason;
+  item.updatedAt = new Date().toISOString();
+  save();
+  if (item.agentRunId && item.agentProposalId) {
+    recordProposalFeedback({
+      run_id: item.agentRunId,
+      proposal_id: item.agentProposalId,
+      decision: 'approved',
+      reason: reason ? `scheduled: ${reason}` : `scheduled: ${scheduledFor}`,
+      queue_item_id: item.id,
+    }).catch(() => {});
+  }
+  console.log(`  🗓 [Queue] 予約承認: id=${id} scheduledFor=${scheduledFor}`);
   return item;
 }
 
@@ -142,6 +190,15 @@ export function markPosted(id: string, tweetId: string, status?: 'posted' | 'dry
   item.postedAt = new Date().toISOString();
   item.updatedAt = new Date().toISOString();
   save();
+  if (item.agentRunId && item.agentProposalId) {
+    recordProposalFeedback({
+      run_id: item.agentRunId,
+      proposal_id: item.agentProposalId,
+      decision: status === 'dry_run' ? 'queued' : 'posted',
+      reason: status === 'dry_run' ? 'dry_run' : undefined,
+      queue_item_id: item.id,
+    }).catch(() => {});
+  }
 }
 
 export function markFailed(id: string, error: string): void {
@@ -151,6 +208,15 @@ export function markFailed(id: string, error: string): void {
   item.error = error;
   item.updatedAt = new Date().toISOString();
   save();
+  if (item.agentRunId && item.agentProposalId) {
+    recordProposalFeedback({
+      run_id: item.agentRunId,
+      proposal_id: item.agentProposalId,
+      decision: 'failed',
+      reason: error,
+      queue_item_id: item.id,
+    }).catch(() => {});
+  }
   console.error(`  ❌ [Queue] 投稿失敗: id=${id} error=${error}`);
 }
 

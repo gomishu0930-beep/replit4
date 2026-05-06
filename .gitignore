@@ -60,7 +60,7 @@ app-storage-backup/
 .pnpm-store/
 
 # ランタイムデータ（Gitに戻さない）
-artifacts/api-server/fanza-bot/
-artifacts/fanza-bot/
-fanza-bot/
+artifacts/api-server/fanza-bot/data/
+artifacts/fanza-bot/data/
+fanza-bot/data/
 *.mp4

@@ -1,5 +1,4 @@
 import { TwitterApi } from 'twitter-api-v2';
-import fsp from 'fs/promises';
 import { readJson, writeJson } from './cloudStore.js';
 
 const client = new TwitterApi({
@@ -133,8 +132,10 @@ export async function uploadMediaBuffer(buf: Buffer, mimeType: string): Promise<
 }
 
 export async function uploadLocalMediaFile(filePath: string, mimeType: string): Promise<string> {
-  const buf = await fsp.readFile(filePath);
-  return uploadMediaBuffer(buf, mimeType);
+  return await rw.v1.uploadMedia(filePath, {
+    mimeType,
+    chunkLength: 2 * 1024 * 1024,
+  });
 }
 
 export async function postTweet(text: string, mediaIds: string[] = []): Promise<string> {
@@ -229,9 +230,73 @@ export interface SearchedTweet {
   like_count: number;
   retweet_count: number;
   reply_count: number;
+  quote_count?: number;
   bookmark_count: number;
   impression_count: number;
   createdAt: string;
+}
+
+export interface MarketTweetPageResult {
+  tweets: Array<SearchedTweet & {
+    username: string;
+    media_type: 'none' | 'photo' | 'video' | 'animated_gif' | 'mixed' | 'unknown';
+    has_url: boolean;
+    possibly_sensitive: boolean;
+    hashtags: string[];
+    author_followers_count?: number;
+  }>;
+  nextToken?: string;
+  errors: string[];
+}
+
+function extractMarketTweetsFromResponse(res: any): MarketTweetPageResult {
+  const users = new Map<string, any>();
+  for (const u of res.includes?.users ?? []) users.set(u.id, u);
+  const mediaByKey = new Map<string, any>();
+  for (const m of res.includes?.media ?? []) mediaByKey.set(m.media_key, m);
+  const tweets: MarketTweetPageResult['tweets'] = [];
+
+  for (const t of res.data?.data ?? []) {
+    const m = t.public_metrics ?? {};
+    const author = users.get(t.author_id ?? '');
+    const mediaKeys = t.attachments?.media_keys ?? [];
+    const mediaTypes = new Set<string>();
+    for (const key of mediaKeys) {
+      const media = mediaByKey.get(key);
+      if (media?.type) mediaTypes.add(media.type);
+    }
+    const media_type = mediaTypes.size === 0
+      ? 'none'
+      : mediaTypes.size > 1
+        ? 'mixed'
+        : ([...mediaTypes][0] as any) ?? 'unknown';
+    const urls = t.entities?.urls ?? [];
+    const hashtags = (t.entities?.hashtags ?? []).map((h: any) => h.tag).filter(Boolean);
+    tweets.push({
+      id: t.id,
+      text: t.text,
+      authorId: t.author_id ?? '',
+      username: author?.username ? `@${author.username}` : '',
+      like_count: m.like_count ?? 0,
+      retweet_count: m.retweet_count ?? 0,
+      reply_count: m.reply_count ?? 0,
+      quote_count: m.quote_count ?? 0,
+      bookmark_count: m.bookmark_count ?? 0,
+      impression_count: m.impression_count ?? 0,
+      createdAt: t.created_at ?? new Date().toISOString(),
+      media_type,
+      has_url: urls.length > 0 || /https?:\/\/\S+/i.test(t.text ?? ''),
+      possibly_sensitive: Boolean(t.possibly_sensitive),
+      hashtags,
+      author_followers_count: author?.public_metrics?.followers_count ?? undefined,
+    });
+  }
+
+  return {
+    tweets,
+    nextToken: res.data?.meta?.next_token,
+    errors: [],
+  };
 }
 
 export async function searchTweetsByHashtag(
@@ -264,6 +329,56 @@ export async function searchTweetsByHashtag(
     });
   }
   return tweets;
+}
+
+export async function searchMarketTweetsPage(
+  query: string,
+  maxResults = 100,
+  paginationToken?: string,
+): Promise<MarketTweetPageResult> {
+  const fullQuery = `${query} -is:retweet lang:ja`;
+  try {
+    const res = await client.v2.search(fullQuery, {
+      max_results: Math.min(Math.max(maxResults, 10), 100),
+      pagination_token: paginationToken,
+      expansions: ['author_id', 'attachments.media_keys'],
+      'tweet.fields': ['public_metrics', 'created_at', 'author_id', 'entities', 'possibly_sensitive', 'attachments'],
+      'user.fields': ['username', 'public_metrics'],
+      'media.fields': ['type'],
+    } as any);
+    return extractMarketTweetsFromResponse(res);
+  } catch (e: any) {
+    const code = e?.code ?? e?.status ?? e?.statusCode ?? '?';
+    return { tweets: [], errors: [`Recent Search failed (${query}): HTTP ${code} ${e.message}`] };
+  }
+}
+
+export async function fetchUserTimelineMarketPage(
+  username: string,
+  maxResults = 100,
+  paginationToken?: string,
+): Promise<MarketTweetPageResult> {
+  try {
+    const userRes = await client.v2.userByUsername(username.replace(/^@/, ''), {
+      'user.fields': ['username', 'public_metrics'],
+    } as any);
+    const userId = userRes.data?.id;
+    if (!userId) throw new Error(`ユーザー @${username} が見つかりません`);
+    const res = await client.v2.userTimeline(userId, {
+      max_results: Math.min(Math.max(maxResults, 5), 100),
+      pagination_token: paginationToken,
+      expansions: ['author_id', 'attachments.media_keys'],
+      'tweet.fields': ['public_metrics', 'created_at', 'author_id', 'entities', 'possibly_sensitive', 'attachments'],
+      'user.fields': ['username', 'public_metrics'],
+      'media.fields': ['type'],
+      exclude: ['retweets', 'replies'],
+    } as any);
+    const page = extractMarketTweetsFromResponse(res);
+    return page;
+  } catch (e: any) {
+    const code = e?.code ?? e?.status ?? e?.statusCode ?? '?';
+    return { tweets: [], errors: [`Timeline failed (@${username}): HTTP ${code} ${e.message}`] };
+  }
 }
 
 // ─── アカウント情報取得（無料プランで動作可能）──────────────────────────────

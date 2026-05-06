@@ -7,6 +7,7 @@ import {
   checkSampleVideoPermission,
   prepareSampleVideoClip,
   createSlideshowVideo,
+  type ClipMp4Result,
   type PreparedSampleVideo,
   type SampleVideoPermission,
 } from './sample-video.js';
@@ -30,6 +31,14 @@ export interface QueueSampleVideoPostResult {
   fallbackReason?: string;
 }
 
+export interface QueueManualClipPostOptions {
+  text?: string;
+  title?: string;
+  affiliateUrl?: string;
+  sourceUrl?: string;
+  source?: 'discord' | 'dashboard' | 'api';
+}
+
 export function normalizeFanzaItemForVideo(rawItem: any): any {
   return {
     ...rawItem,
@@ -51,7 +60,7 @@ export async function queueSampleVideoPost(
   rawItem: any,
   opts: QueueSampleVideoPostOptions = {},
 ): Promise<QueueSampleVideoPostResult> {
-  const fallbackToImages = opts.fallbackToImages !== false;
+  const fallbackToImages = opts.fallbackToImages === true;
   const item = normalizeFanzaItemForVideo(rawItem);
   const permission = checkSampleVideoPermission(item);
   if (!permission.allowed) {
@@ -168,4 +177,62 @@ export async function queueSampleVideoPost(
     : { ok: false, skipped: true, error: '通知先未指定' };
 
   return { queueItem, clip, permission, email, usedImageFallback, fallbackReason };
+}
+
+export function queueManualClipPost(
+  clip: ClipMp4Result,
+  opts: QueueManualClipPostOptions = {},
+): QueueItem {
+  const title = String(opts.title || clip.filename.replace(/\.mp4$/i, '') || '動画クリップ').trim();
+  const affiliateUrl = String(opts.affiliateUrl || '').trim();
+  const sourceUrl = String(opts.sourceUrl || affiliateUrl || `manual-clip:${clip.filename}`).trim();
+  const text = String(opts.text || '').trim() || (
+    affiliateUrl
+      ? `${title}\n\n気になる方はリプ欄へ👇`
+      : title
+  );
+
+  const filterResult = filterContent(text, getRunConfig().safetyStrictness);
+  if (!filterResult.safe) {
+    throw new Error(filterResult.reason ?? 'コンテンツフィルターで除外');
+  }
+
+  const safetyScore = Math.max(0, 100 - (filterResult.blockedWords?.length ?? 0) * 20);
+  const queueItem = enqueuePost({
+    type: affiliateUrl ? 'fanza' : 'engagement',
+    text,
+    itemTitle: title,
+    affiliateUrl: affiliateUrl || undefined,
+    sourceUrl,
+    mediaFiles: [{ filename: clip.filename, url: clip.url, type: 'video/mp4' }],
+    templateType: 'manual-video-clip',
+    templateCategory: 'other',
+    filterResult,
+    safetyScore,
+  });
+
+  recordAnalytics({
+    postId: queueItem.id,
+    postedAt: queueItem.createdAt,
+    provider: 'twitter',
+    productId: sourceUrl,
+    productTitle: title,
+    category: queueItem.type,
+    templateType: 'manual-video-clip',
+    templateCategory: 'other',
+    text,
+    url: affiliateUrl,
+    shortUrl: '',
+    imageUsed: true,
+    safetyScore,
+    result: 'queued',
+    clicks: 0,
+    impressions: 0,
+    likes: 0,
+    reposts: 0,
+    replies: 0,
+    metricsUpdatedAt: null,
+  });
+
+  return queueItem;
 }
