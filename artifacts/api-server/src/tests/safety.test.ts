@@ -37,9 +37,14 @@ describe('contentFilter', () => {
     expect(result.reason).toContain('非同意');
   });
 
-  it('制服ワードをstrictモードでブロックする', () => {
+  it('成人文脈のない制服ワードをstrictモードでブロックする', () => {
     const result = filterContent('制服を脱いで', 'strict');
     expect(result.safe).toBe(false);
+  });
+
+  it('成人コスプレ文脈の制服ワードはパスする', () => {
+    const result = filterContent('20代成人女性の制服コスプレ作品', 'strict');
+    expect(result.safe).toBe(true);
   });
 
   it('複数の危険ワードを全て検出する', () => {
