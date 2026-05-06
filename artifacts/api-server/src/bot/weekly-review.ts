@@ -8,10 +8,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readJson, writeJson } from './cloudStore.js';
 import { getAnalytics, getAnalyticsStats } from './post-analytics.js';
 
-const client = new Anthropic({
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-});
+let _client: Anthropic | null = null;
+function getClient() { if (!_client) _client = new Anthropic({ baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL, apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy' }); return _client; }
+const client = new Proxy({} as Anthropic, { get: (_, p) => (getClient() as any)[p] });
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
