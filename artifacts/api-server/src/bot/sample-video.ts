@@ -4,6 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { Storage } from '@google-cloud/storage';
+import { loadAllowedMakersConfig } from './ops-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
@@ -133,10 +134,7 @@ export function getFanzaMakerNames(item: any): string[] {
 }
 
 function getAllowedMakers(): string[] {
-  return (process.env.FANZA_SAMPLE_VIDEO_ALLOWED_MAKERS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return loadAllowedMakersConfig().makers.map((maker) => maker.name).filter(Boolean);
 }
 
 export function checkSampleVideoPermission(item: any): SampleVideoPermission {
@@ -184,6 +182,19 @@ function runFfmpeg(args: string[]): Promise<void> {
       else reject(new Error(`ffmpeg failed (${code}): ${err.slice(-500)}`));
     });
   });
+}
+
+function normalizeClipRange(opts: { startSec?: number; durationSec?: number }): { startSec: number; durationSec: number } {
+  const startSec = Math.min(Math.max(Number(opts.startSec ?? 0), 0), 180);
+  const durationSec = Math.min(Math.max(Number(opts.durationSec ?? 8), 4), 60);
+  return { startSec, durationSec };
+}
+
+async function assertUsableVideo(filePath: string): Promise<void> {
+  const stat = await fsp.stat(filePath).catch(() => null);
+  if (!stat || stat.size < 2048) {
+    throw new Error('切り抜き後の動画ファイルが空です');
+  }
 }
 
 async function downloadImageToTemp(url: string, destPath: string): Promise<void> {
@@ -358,9 +369,9 @@ export async function clipMp4FromFile(
     filePath?: string;
   } = {},
 ): Promise<ClipMp4Result> {
+  if (!(await hasFfmpeg())) throw new Error('ffmpeg が利用できません');
   await fsp.mkdir(VIDEO_DIR, { recursive: true });
-  const startSec = opts.startSec ?? 0;
-  const durationSec = opts.durationSec ?? 8;
+  const { startSec, durationSec } = normalizeClipRange(opts);
   const label = opts.label ?? `clip-${Date.now()}`;
   const filename = `${safeFilename(label)}-${Date.now()}.mp4`;
   const filePath = opts.filePath ?? path.join(VIDEO_DIR, filename);
@@ -378,6 +389,7 @@ export async function clipMp4FromFile(
     '-movflags', '+faststart',
     filePath,
   ]);
+  await assertUsableVideo(filePath);
 
   return {
     filename,
@@ -398,40 +410,25 @@ export async function clipMp4FromUrl(
     filePath?: string;
   } = {},
 ): Promise<ClipMp4Result> {
+  if (!(await hasFfmpeg())) throw new Error('ffmpeg が利用できません');
   await fsp.mkdir(VIDEO_DIR, { recursive: true });
-  const startSec = opts.startSec ?? 0;
-  const durationSec = opts.durationSec ?? 8;
+  const { startSec, durationSec } = normalizeClipRange(opts);
   const label = opts.label ?? `clip-${Date.now()}`;
   const filename = `${safeFilename(label)}-${Date.now()}.mp4`;
   const filePath = opts.filePath ?? path.join(VIDEO_DIR, filename);
 
-  // 元動画をDL
   const tmpInput = path.join(VIDEO_DIR, `tmp-input-${Date.now()}.mp4`);
   try {
-    const https = await import('https');
-    const http = await import('http');
-    const fileStream = fs.createWriteStream(tmpInput);
-    await new Promise<void>((resolve, reject) => {
-      const mod = sourceUrl.startsWith('https') ? https : http;
-      const dl = (url: string) => {
-        mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
-          if (res.statusCode === 301 || res.statusCode === 302) {
-            const loc = res.headers.location;
-            if (loc) { dl(loc); return; }
-          }
-          if (res.statusCode !== 200) {
-            reject(new Error(`ダウンロード失敗: HTTP ${res.statusCode} ${sourceUrl}`));
-            return;
-          }
-          res.pipe(fileStream);
-          fileStream.on('finish', () => resolve());
-          fileStream.on('error', reject);
-        }).on('error', reject);
-      };
-      dl(sourceUrl);
+    const res = await fetch(sourceUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FanzaBot/1.0)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(60_000),
     });
+    if (!res.ok) throw new Error(`ダウンロード失敗: HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength < 2048) throw new Error('ダウンロードした動画ファイルが空です');
+    await fsp.writeFile(tmpInput, buf);
 
-    // ffmpegで切り抜き＋720x480にリサイズ
     await runFfmpeg([
       '-y',
       '-ss', String(startSec),
@@ -445,6 +442,7 @@ export async function clipMp4FromUrl(
       '-movflags', '+faststart',
       filePath,
     ]);
+    await assertUsableVideo(filePath);
   } finally {
     fsp.unlink(tmpInput).catch(() => {});
   }
