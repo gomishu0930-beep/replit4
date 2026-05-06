@@ -12,7 +12,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { getAllPosts, saveAlgoInsight, AlgoInsight } from './storage.js';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() { if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'dummy' }); return _openai; }
+const openai = new Proxy({} as OpenAI, { get: (_, p) => (getOpenAI() as any)[p] });
 
 function getAnthropicClient() {
   const baseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
