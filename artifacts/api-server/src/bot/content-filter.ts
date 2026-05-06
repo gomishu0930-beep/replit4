@@ -1,11 +1,12 @@
 /**
  * コンテンツ安全フィルター
  * 危険ワード検出・投稿テキストの安全性チェックを行う。
- * - 未成年連想ワード
+ * - 未成年・未成年を直接示すワード
  * - 非同意・強制・盗撮ワード
  * - 特定人物に似せる表現
  * をブロックする。
  */
+import { loadNgKeywordsConfig } from './ops-config.js';
 
 export interface FilterResult {
   safe: boolean;
@@ -14,11 +15,20 @@ export interface FilterResult {
 }
 
 const MINORS_WORDS = [
-  '未成年', '未成熟', '中学', '小学', '高校生', 'JK', 'JS', 'JC', 'JD',
-  '制服', '学生服', 'スクール', 'ランドセル', '幼い', '少女', '幼女',
+  '未成年', '未成熟', '中学', '小学', '高校生', 'JK', 'JS', 'JC',
+  'ランドセル', '幼い', '少女', '幼女',
   '子供', 'こども', '女子高', '女子中', '女子小', '10代', '10歳', '11歳',
   '12歳', '13歳', '14歳', '15歳', '16歳', '17歳', 'ロリ', 'ろり',
   'ペド', 'loli', 'lolita', 'underage', 'teen', 'minor',
+];
+
+const ADULT_CONTEXT_WORDS = [
+  '成人', '大人', '20歳', '20代', '30代', '社会人', 'OL', '人妻', '熟女',
+  'コスプレ', '成人向け', 'FANZA', 'AV', '女優',
+];
+
+const ADULT_ALLOWED_WORDS = [
+  'JD', '制服', '学生服', 'スクール',
 ];
 
 const NONCONSENT_WORDS = [
@@ -28,7 +38,7 @@ const NONCONSENT_WORDS = [
 ];
 
 const REAL_PERSON_WORDS = [
-  'アイドル', '芸能人', '女優', 'gravure', 'グラビア', '有名人',
+  '芸能人', '有名人',
   '〇〇似', '似てる', '似せた',
 ];
 
@@ -51,12 +61,19 @@ const STRICT_FORBIDDEN = [
 export type FilterStrictness = 'normal' | 'strict' | 'relaxed';
 
 export function filterContent(text: string, strictness: FilterStrictness = 'strict'): FilterResult {
-  const wordList = strictness === 'relaxed' ? ALL_FORBIDDEN : STRICT_FORBIDDEN;
+  const extraWords = loadNgKeywordsConfig().keywords ?? [];
+  const wordList = strictness === 'relaxed' ? [...ALL_FORBIDDEN, ...extraWords] : [...STRICT_FORBIDDEN, ...extraWords];
   const lower = text.toLowerCase();
   const blocked: string[] = [];
+  const hasAdultContext = ADULT_CONTEXT_WORDS.some(w => lower.includes(w.toLowerCase()));
 
   for (const word of wordList) {
     if (lower.includes(word.toLowerCase())) {
+      blocked.push(word);
+    }
+  }
+  for (const word of ADULT_ALLOWED_WORDS) {
+    if (lower.includes(word.toLowerCase()) && !hasAdultContext) {
       blocked.push(word);
     }
   }
