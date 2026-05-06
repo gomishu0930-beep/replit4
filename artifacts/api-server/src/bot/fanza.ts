@@ -42,6 +42,22 @@ function pickNUnique(items: any[], n: number): any[] {
   return shuffle(pool).slice(0, n);
 }
 
+// 重複を除いてスコア順を維持したままN件選ぶ。投稿作成UIと自動収益候補で使う。
+function topNUnique(items: any[], n: number): any[] {
+  const postedIds = getRecentlyPostedIds(30);
+  const seen = new Set<string>();
+  const fresh: any[] = [];
+  const posted: any[] = [];
+  for (const item of items) {
+    const id = item?.content_id ?? item?.title;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    if (postedIds.has(item.content_id)) posted.push(item);
+    else fresh.push(item);
+  }
+  return (fresh.length >= n ? fresh : [...fresh, ...posted]).slice(0, n);
+}
+
 function randomOffset(max = 300): string {
   return String(Math.floor(Math.random() * max) + 1);
 }
@@ -222,6 +238,7 @@ export interface FanzaRevenueScore {
   score: number;
   qualityScore: number;
   clickBoost: number;
+  impressionBoost: number;
   detail: {
     review: number;
     rating: number;
@@ -231,6 +248,7 @@ export interface FanzaRevenueScore {
     actress: number;
     freshness: number;
     affinity: number;
+    impression: number;
   };
   reasons: string[];
 }
@@ -252,7 +270,8 @@ export function scoreFanzaItem(item: any): FanzaRevenueScore {
       score: 0,
       qualityScore: 0,
       clickBoost: 0,
-      detail: { review: 0, rating: 0, sale: 0, sample: 0, genre: 0, actress: 0, freshness: 0, affinity: 0 },
+      impressionBoost: 0,
+      detail: { review: 0, rating: 0, sale: 0, sample: 0, genre: 0, actress: 0, freshness: 0, affinity: 0, impression: 0 },
       reasons: ['レビュー不足'],
     };
   }
@@ -283,9 +302,11 @@ export function scoreFanzaItem(item: any): FanzaRevenueScore {
   const actressBoost = actresses.length >= 2 ? 0.28 : actresses.length === 1 ? 0.18 : 0;
   const clickedSignals = getClickedProductSignals(80);
   let affinityBoost = 0;
+  let impressionBoost = 0;
   for (const signal of clickedSignals) {
     const signalText = `${signal.productTitle} ${signal.productId}`;
     const clickWeight = Math.min(Math.log10(signal.clicks + 1) * 0.18, 0.36);
+    const impressionWeight = Math.min(Math.log10((signal.impressions || 0) + 1) * 0.06, 0.32);
     const sameActress = actresses.some((name) => name.length >= 2 && signalText.includes(name));
     const sameGenre = genres.some((name) => name.length >= 2 && signalText.includes(name));
     const titleHit = title
@@ -293,16 +314,18 @@ export function scoreFanzaItem(item: any): FanzaRevenueScore {
       .filter((word) => word.length >= 3)
       .slice(0, 5)
       .some((word) => signalText.includes(word));
-    if (sameActress) affinityBoost += clickWeight;
-    if (sameGenre) affinityBoost += clickWeight * 0.6;
-    if (titleHit) affinityBoost += clickWeight * 0.4;
+    if (sameActress) { affinityBoost += clickWeight; impressionBoost += impressionWeight; }
+    if (sameGenre) { affinityBoost += clickWeight * 0.6; impressionBoost += impressionWeight * 0.7; }
+    if (titleHit) { affinityBoost += clickWeight * 0.4; impressionBoost += impressionWeight * 0.5; }
   }
   affinityBoost = Math.min(affinityBoost, 0.95);
+  impressionBoost = Math.min(impressionBoost, 0.75);
 
   if (count >= 50) reasons.push(`レビュー${count}件`);
   if (avg >= 4.5) reasons.push(`高評価${avg.toFixed(1)}`);
   if (priorClicks > 0) reasons.push(`過去クリック${priorClicks}`);
   if (affinityBoost > 0) reasons.push('近い作品でクリック実績');
+  if (impressionBoost > 0) reasons.push('近い作品でインプ実績');
   if (sampleBoost > 0) reasons.push(`サンプル${sampleCount}枚`);
   if (saleBoost > 0) reasons.push('セール訴求向き');
   if (genreBoost > 0) reasons.push(`強ジャンル:${matchedGenres.slice(0, 2).join('/')}`);
@@ -311,9 +334,10 @@ export function scoreFanzaItem(item: any): FanzaRevenueScore {
   if (count < 15) reasons.push('レビュー少なめ');
 
   return {
-    score: Number((qualityScore + clickBoost + affinityBoost + sampleBoost + saleBoost + genreBoost + actressBoost + freshBoost).toFixed(3)),
+    score: Number((qualityScore + clickBoost + affinityBoost + impressionBoost + sampleBoost + saleBoost + genreBoost + actressBoost + freshBoost).toFixed(3)),
     qualityScore: Number(qualityScore.toFixed(3)),
     clickBoost: Number(clickBoost.toFixed(3)),
+    impressionBoost: Number(impressionBoost.toFixed(3)),
     detail: {
       review: Number(reviewScore.toFixed(3)),
       rating: Number(ratingScore.toFixed(3)),
@@ -323,6 +347,7 @@ export function scoreFanzaItem(item: any): FanzaRevenueScore {
       actress: Number(actressBoost.toFixed(3)),
       freshness: Number(freshBoost.toFixed(3)),
       affinity: Number(affinityBoost.toFixed(3)),
+      impression: Number(impressionBoost.toFixed(3)),
     },
     reasons: reasons.slice(0, 5),
   };
@@ -360,6 +385,16 @@ export function rankRevenueCandidates(items: any[], count = 10): Array<any & { r
   return [...dedupMap.values()]
     .map((item) => ({ ...item, revenueScore: scoreFanzaItem(item) }))
     .sort((a, b) => b.revenueScore.score - a.revenueScore.score)
+    .slice(0, count);
+}
+
+export function rankImpressionCandidates(items: any[], count = 10): Array<any & { revenueScore: FanzaRevenueScore }> {
+  return rankRevenueCandidates(items, Math.max(count, 10))
+    .sort((a, b) => (
+      (b.revenueScore.impressionBoost - a.revenueScore.impressionBoost) ||
+      (b.revenueScore.score - a.revenueScore.score) ||
+      ((b.review?.count ?? 0) - (a.review?.count ?? 0))
+    ))
     .slice(0, count);
 }
 
@@ -511,10 +546,10 @@ export async function getHighRatedItems(count = 2) {
 
 // ランキング上位
 export async function getRankingItems(count = 2) {
-  const offset = randomOffset(100);
+  const offset = '1';
   console.log(`  🔍 ランキング検索: offset=${offset}`);
   const items = await fetchItems({ sort: 'rank', offset });
-  return pickNUnique(items, count);
+  return topNUnique(rankImpressionCandidates(items, Math.max(count, 10)), count);
 }
 
 /**
@@ -573,13 +608,18 @@ export async function getRevenueOptimizedItems(count = 10, keyword?: string) {
   ]);
   const items = pools.flat();
   const ranked = rankRevenueCandidates(items, Math.max(count * 2, 20));
-  return pickNUnique(ranked, count);
+  return topNUnique(ranked, count);
 }
 
 // キーワード検索（手動トリガー用）
 export async function getKeywordItems(keyword: string, count = 1) {
-  const items = await fetchItems({ keyword, sort: 'rank', hits: '20' });
-  return shuffle(items).slice(0, count);
+  const pools = await Promise.all([
+    fetchItems({ keyword, sort: 'rank', hits: '40', offset: '1' }).catch(() => []),
+    fetchItems({ keyword, sort: 'review', hits: '40', offset: '1' }).catch(() => []),
+    fetchItems({ keyword, sort: 'date', hits: '40', offset: '1' }).catch(() => []),
+  ]);
+  const ranked = rankImpressionCandidates(pools.flat(), Math.max(count * 3, 15));
+  return topNUnique(ranked, count);
 }
 
 // 商品ID直接指定
