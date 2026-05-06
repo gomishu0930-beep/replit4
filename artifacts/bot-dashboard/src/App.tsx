@@ -1820,7 +1820,7 @@ interface FanzaItem {
   sampleMovieUrl?: string | null;
   makers?: string[];
   sampleVideoAllowed?: { allowed: boolean; reason: string; makers: string[]; allowedMakers: string[] };
-  revenueScore?: { score: number; qualityScore: number; clickBoost: number; reasons: string[] };
+  revenueScore?: { score: number; qualityScore: number; clickBoost: number; impressionBoost?: number; reasons: string[] };
 }
 
 function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: () => void; sampleVideoStatus?: SampleVideoStatusResponse }) {
@@ -1864,7 +1864,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
   const handleSearch = async () => {
     setSearchLoading(true); setError(""); setQueueMessage(""); setFanzaItems([]); setSelectedItem(null); setTweetResult(null); setGenStep("search"); setRefImages([]);
     try {
-      const params = new URLSearchParams({ type: searchType, count: "10" });
+      const params = new URLSearchParams({ type: searchType, count: "5" });
       if ((searchType === "keyword" || searchType === "revenue") && searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
       const res = await fetch(`${API}/api/bot/fanza-search?${params}`);
       const data = await res.json();
@@ -2080,7 +2080,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
       {studioMode === "tweet" && (
         <>
           <div className="rounded-2xl bg-zinc-900 border border-white/5 p-4">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → 投稿文生成 → キュー投入</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mb-3">FANZA作品検索 → 根拠付き上位5件 → 投稿文生成 → キュー投入</p>
 
             <div className="flex gap-1 flex-wrap mb-2">
               {[
@@ -2108,7 +2108,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
 
             <button onClick={handleSearch} disabled={searchLoading || (searchType === "keyword" && !searchKeyword.trim())}
               className="w-full py-2.5 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110">
-              {searchLoading ? "検索中..." : searchType === "revenue" ? "収益候補を検索" : "FANZA作品を検索"}
+              {searchLoading ? "検索中..." : searchType === "revenue" ? "収益候補上位5件を検索" : "インプ期待上位5件を検索"}
             </button>
             {searchType === "revenue" && (
               <button onClick={handleRevenueQueue} disabled={autoQueueLoading}
@@ -2123,7 +2123,7 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
 
           {fanzaItems.length > 0 && genStep === "search" && (
             <div className="space-y-2">
-              <p className="text-[10px] text-zinc-500 font-medium">{fanzaItems.length}件の作品 — タップで投稿文を自動生成</p>
+              <p className="text-[10px] text-zinc-500 font-medium">{fanzaItems.length}件の作品 — スコアと根拠順。タップで投稿文を自動生成</p>
               {fanzaItems.map((item) => (
                 <button key={item.content_id} onClick={() => handleSelectAndGenerate(item)} disabled={loading && selectedItem?.content_id === item.content_id}
                   className={`w-full text-left rounded-2xl border p-3 transition-all ${
@@ -2142,8 +2142,11 @@ function StudioTab({ onRevenueQueued, sampleVideoStatus }: { onRevenueQueued?: (
                       )}
                       <div className="flex items-center gap-2 mt-1">
                         {item.revenueScore && (
-                          <span className="text-[10px] text-emerald-400 font-bold">収益{item.revenueScore.score}</span>
+                          <span className="text-[10px] text-emerald-400 font-bold">期待{item.revenueScore.score}</span>
                         )}
+                        {item.revenueScore?.impressionBoost ? (
+                          <span className="text-[10px] text-blue-400">IP補正+{item.revenueScore.impressionBoost}</span>
+                        ) : null}
                         {item.reviewAvg && (
                           <span className="text-[10px] text-amber-400">★{item.reviewAvg}</span>
                         )}
