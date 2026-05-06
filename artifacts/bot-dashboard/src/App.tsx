@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import MyfansAdmin from "@/pages/myfans-admin";
+import OpsConsole from "./OpsConsole";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie,
@@ -2674,7 +2675,8 @@ export default function App() {
         <Toaster />
         <WouterRouter base={BASE}>
           <Switch>
-            <Route path="/" component={Dashboard} />
+            <Route path="/" component={OpsConsole} />
+            <Route path="/legacy" component={Dashboard} />
             <Route path="/admin/myfans" component={MyfansAdmin} />
             <Route component={NotFound} />
           </Switch>

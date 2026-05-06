@@ -6,6 +6,7 @@
  * - 特定人物に似せる表現
  * をブロックする。
  */
+import { loadNgKeywordsConfig } from './ops-config.js';
 
 export interface FilterResult {
   safe: boolean;
@@ -60,7 +61,8 @@ const STRICT_FORBIDDEN = [
 export type FilterStrictness = 'normal' | 'strict' | 'relaxed';
 
 export function filterContent(text: string, strictness: FilterStrictness = 'strict'): FilterResult {
-  const wordList = strictness === 'relaxed' ? ALL_FORBIDDEN : STRICT_FORBIDDEN;
+  const extraWords = loadNgKeywordsConfig().keywords ?? [];
+  const wordList = strictness === 'relaxed' ? [...ALL_FORBIDDEN, ...extraWords] : [...STRICT_FORBIDDEN, ...extraWords];
   const lower = text.toLowerCase();
   const blocked: string[] = [];
   const hasAdultContext = ADULT_CONTEXT_WORDS.some(w => lower.includes(w.toLowerCase()));

@@ -4,6 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { Storage } from '@google-cloud/storage';
+import { loadAllowedMakersConfig } from './ops-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '../../fanza-bot/data');
@@ -133,10 +134,7 @@ export function getFanzaMakerNames(item: any): string[] {
 }
 
 function getAllowedMakers(): string[] {
-  return (process.env.FANZA_SAMPLE_VIDEO_ALLOWED_MAKERS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return loadAllowedMakersConfig().makers.map((maker) => maker.name).filter(Boolean);
 }
 
 export function checkSampleVideoPermission(item: any): SampleVideoPermission {

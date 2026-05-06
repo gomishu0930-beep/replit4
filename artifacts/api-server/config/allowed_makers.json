@@ -1,0 +1,9 @@
+{
+  "makers": [],
+  "allowed_video_domains": [
+    "cc3001.dmm.co.jp",
+    "cc3001.dmm.com",
+    "dlsoft.dmm.co.jp"
+  ],
+  "approved_urls": []
+}
