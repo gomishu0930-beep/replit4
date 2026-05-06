@@ -58,10 +58,9 @@ const upload = multer({
   },
 });
 
-const anthropic = new Anthropic({
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-});
+let _anthropic: Anthropic | null = null;
+function getAnthropic() { if (!_anthropic) _anthropic = new Anthropic({ baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL, apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ?? 'dummy' }); return _anthropic; }
+const anthropic = new Proxy({} as Anthropic, { get: (_, p) => (getAnthropic() as any)[p] });
 
 // ─── 認証ミドルウェア ──────────────────────────────────────────────────────────
 
